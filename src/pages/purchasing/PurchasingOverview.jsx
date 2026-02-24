@@ -1,7 +1,11 @@
-import { ShoppingCart, ClipboardCheck, Truck, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { ShoppingCart, ClipboardCheck, Truck, AlertTriangle, Bot } from 'lucide-react';
 import MetricCard from '../../components/shared/MetricCard';
 import ComingSoonModule from '../../components/shared/ComingSoonModule';
 import AgentActionButton from '../../components/shared/AgentActionButton';
+import AgentChatPanel from '../../components/shared/AgentChatPanel';
+import { useToast } from '../../components/shared/ToastProvider';
+import { callAgent } from '../../agents/api';
 import { reorderAlerts } from '../../data/mock/purchasingMocks';
 
 const METRICS = [
@@ -19,9 +23,21 @@ const MODULES = [
 ];
 
 export default function PurchasingOverview() {
+  const [chatOpen, setChatOpen] = useState(false);
+  const toast = useToast();
+
   return (
     <div>
-      <h1 className="text-2xl font-light text-dark-text mb-6">Purchasing Workspace</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-light text-dark-text">Purchasing Workspace</h1>
+        <button
+          onClick={() => setChatOpen(true)}
+          className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+        >
+          <Bot size={16} />
+          Ask Purchasing Agent
+        </button>
+      </div>
 
       <div className="grid grid-cols-4 gap-4 mb-8">
         {METRICS.map((m) => (
@@ -72,7 +88,10 @@ export default function PurchasingOverview() {
                     <td className="px-4 py-3">{item.monthlyUsage}/mo</td>
                     <td className="px-4 py-3 text-secondary-text">{item.vendor}</td>
                     <td className="px-4 py-3">
-                      <AgentActionButton label="Reorder Analysis" variant="ghost" onClick={() => {}} />
+                      <AgentActionButton label="Reorder Analysis" variant="ghost" onClick={async () => {
+                        await callAgent('purchasing', 'reorderAnalysis', item);
+                        toast(`Reorder analysis complete for ${item.item}`);
+                      }} />
                     </td>
                   </tr>
                 );
@@ -91,6 +110,14 @@ export default function PurchasingOverview() {
           <ComingSoonModule key={m.title} {...m} />
         ))}
       </div>
+
+      <AgentChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        agentKey="purchasing"
+        agentName="Purchasing Agent"
+        context="Purchase orders, vendor management, inventory, and reorder alerts"
+      />
     </div>
   );
 }

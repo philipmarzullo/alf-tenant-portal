@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { FileBarChart } from 'lucide-react';
 import AgentActionButton from '../../components/shared/AgentActionButton';
 import StatusBadge from '../../components/shared/StatusBadge';
+import { useToast } from '../../components/shared/ToastProvider';
+import { callAgent } from '../../agents/api';
 
 const RECENT = [
   { id: 1, client: 'Greenfield University', quarter: 'Q4 2025', created: 'Dec 15, 2025', status: 'complete' },
@@ -11,6 +13,8 @@ const RECENT = [
 
 export default function QBUBuilder() {
   const [form, setForm] = useState({ client: '', quarter: 'Q1 2026', date: '' });
+  const [result, setResult] = useState(null);
+  const toast = useToast();
 
   return (
     <div>
@@ -59,9 +63,23 @@ export default function QBUBuilder() {
               />
             </div>
           </div>
-          <AgentActionButton label="Generate QBU" variant="primary" onClick={() => {}} />
+          <AgentActionButton label="Generate QBU" variant="primary" onClick={async () => {
+            if (!form.client) { toast('Please enter a client name', 'error'); return; }
+            const output = await callAgent('qbu', 'generateQBU', form);
+            setResult(output);
+            toast('QBU content generated');
+          }} />
         </div>
       </div>
+
+      {result && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8 max-w-xl">
+          <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-3">Generated Content</div>
+          <div className="bg-gray-50 rounded-lg p-4 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
+            {result}
+          </div>
+        </div>
+      )}
 
       {/* Recent QBUs */}
       <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent QBUs</h2>

@@ -3,6 +3,8 @@ import { ChevronDown, ChevronRight, CheckCircle, Clock, XCircle } from 'lucide-r
 import { leaveCases, LEAVE_SUMMARY } from '../../data/mock/leaveCases';
 import StatusBadge from '../../components/shared/StatusBadge';
 import AgentActionButton from '../../components/shared/AgentActionButton';
+import { useToast } from '../../components/shared/ToastProvider';
+import { callAgent } from '../../agents/api';
 
 const DOC_ICON = {
   submitted: <CheckCircle size={14} className="text-status-green" />,
@@ -11,7 +13,8 @@ const DOC_ICON = {
 };
 
 export default function LeaveManagement() {
-  const [expanded, setExpanded] = useState(new Set([1])); // first case open by default
+  const [expanded, setExpanded] = useState(new Set([1]));
+  const toast = useToast();
 
   const toggle = (id) => {
     setExpanded((prev) => {
@@ -109,10 +112,22 @@ export default function LeaveManagement() {
                     {/* Actions */}
                     {lc.status !== 'complete' && (
                       <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
-                        <AgentActionButton label="Send Reminder" onClick={() => {}} />
-                        <AgentActionButton label="Generate WinTeam Update" onClick={() => {}} />
-                        <AgentActionButton label="Notify Operations" onClick={() => {}} />
-                        <AgentActionButton label="Check Eligibility" onClick={() => {}} />
+                        <AgentActionButton label="Send Reminder" onClick={async () => {
+                          await callAgent('hr', 'sendReminder', { employeeName: lc.employee, type: lc.type });
+                          toast(`Reminder sent for ${lc.employee}`);
+                        }} />
+                        <AgentActionButton label="Generate WinTeam Update" onClick={async () => {
+                          await callAgent('hr', 'generateWinTeamUpdate', { employeeName: lc.employee, description: `${lc.type} — ${lc.stepLabel}` });
+                          toast('WinTeam update generated');
+                        }} />
+                        <AgentActionButton label="Notify Operations" onClick={async () => {
+                          await callAgent('hr', 'notifyOperations', { employeeName: lc.employee, type: lc.type, dates: lc.dates });
+                          toast('Operations team notified');
+                        }} />
+                        <AgentActionButton label="Check Eligibility" onClick={async () => {
+                          await callAgent('hr', 'checkEligibility', { employeeName: lc.employee, type: lc.type });
+                          toast('Eligibility check complete');
+                        }} />
                       </div>
                     )}
                   </div>

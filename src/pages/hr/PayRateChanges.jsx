@@ -4,6 +4,8 @@ import DataTable from '../../components/shared/DataTable';
 import StatusBadge from '../../components/shared/StatusBadge';
 import SlidePanel from '../../components/layout/SlidePanel';
 import AgentActionButton from '../../components/shared/AgentActionButton';
+import { useToast } from '../../components/shared/ToastProvider';
+import { callAgent } from '../../agents/api';
 
 const columns = [
   { key: 'employee', label: 'Employee', render: (v) => <span className="font-medium text-dark-text">{v}</span> },
@@ -26,6 +28,8 @@ const columns = [
 
 export default function PayRateChanges() {
   const [selected, setSelected] = useState(null);
+  const [agentResult, setAgentResult] = useState(null);
+  const toast = useToast();
 
   return (
     <div>
@@ -87,10 +91,36 @@ export default function PayRateChanges() {
 
             <div className="flex gap-2 pt-4 border-t border-gray-200">
               {selected.union && (
-                <AgentActionButton label="Check Union Compliance" onClick={() => {}} />
+                <AgentActionButton label="Check Union Compliance" onClick={async () => {
+                  const result = await callAgent('hr', 'checkUnionCompliance', {
+                    employeeName: selected.employee,
+                    union: selected.union,
+                    currentRate: selected.currentRate,
+                    proposedRate: selected.proposedRate,
+                  });
+                  setAgentResult(result);
+                  toast('Union compliance check complete');
+                }} />
               )}
-              <AgentActionButton label="Generate WinTeam Update" onClick={() => {}} />
+              <AgentActionButton label="Generate WinTeam Update" onClick={async () => {
+                const result = await callAgent('hr', 'generateWinTeamUpdate', {
+                  employeeName: selected.employee,
+                  description: `Pay rate change: ${selected.currentRate} → ${selected.proposedRate}`,
+                  effectiveDate: selected.effectiveDate,
+                });
+                setAgentResult(result);
+                toast('WinTeam update generated');
+              }} />
             </div>
+
+            {agentResult && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2">Agent Output</div>
+                <div className="bg-gray-50 rounded-lg p-3 text-xs text-dark-text font-mono leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+                  {agentResult}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </SlidePanel>

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Presentation } from 'lucide-react';
 import AgentActionButton from '../../components/shared/AgentActionButton';
 import StatusBadge from '../../components/shared/StatusBadge';
+import { useToast } from '../../components/shared/ToastProvider';
+import { callAgent } from '../../agents/api';
 
 const RECENT = [
   { id: 1, prospect: 'Columbia University', industry: 'Education', created: 'Feb 10, 2026', status: 'complete' },
@@ -10,6 +12,8 @@ const RECENT = [
 
 export default function SalesDeckBuilder() {
   const [form, setForm] = useState({ prospect: '', industry: '', facilityType: '', concerns: '' });
+  const [result, setResult] = useState(null);
+  const toast = useToast();
 
   return (
     <div>
@@ -75,9 +79,23 @@ export default function SalesDeckBuilder() {
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue resize-none"
             />
           </div>
-          <AgentActionButton label="Generate Sales Deck" variant="primary" onClick={() => {}} />
+          <AgentActionButton label="Generate Sales Deck" variant="primary" onClick={async () => {
+            if (!form.prospect) { toast('Please enter a prospect name', 'error'); return; }
+            const output = await callAgent('salesDeck', 'generateDeck', form);
+            setResult(output);
+            toast('Sales deck content generated');
+          }} />
         </div>
       </div>
+
+      {result && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8 max-w-xl">
+          <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-3">Generated Content</div>
+          <div className="bg-gray-50 rounded-lg p-4 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
+            {result}
+          </div>
+        </div>
+      )}
 
       {/* Recent decks */}
       <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent Decks</h2>

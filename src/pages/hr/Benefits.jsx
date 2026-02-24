@@ -3,6 +3,8 @@ import { AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { benefitsEnrollments, KANBAN_COLUMNS } from '../../data/mock/benefitsEnrollments';
 import SlidePanel from '../../components/layout/SlidePanel';
 import AgentActionButton from '../../components/shared/AgentActionButton';
+import { useToast } from '../../components/shared/ToastProvider';
+import { callAgent } from '../../agents/api';
 
 const STATUS_ICON = {
   submitted: <CheckCircle size={14} className="text-status-green" />,
@@ -12,6 +14,8 @@ const STATUS_ICON = {
 
 export default function Benefits() {
   const [selected, setSelected] = useState(null);
+  const [agentResult, setAgentResult] = useState(null);
+  const toast = useToast();
 
   const grouped = KANBAN_COLUMNS.map((col) => ({
     ...col,
@@ -24,7 +28,11 @@ export default function Benefits() {
         <p className="text-sm text-secondary-text">
           Track new hire benefits enrollment from waiting period through completion.
         </p>
-        <AgentActionButton label="Run Enrollment Audit" variant="default" onClick={() => {}} />
+        <AgentActionButton label="Run Enrollment Audit" variant="default" onClick={async () => {
+          const result = await callAgent('hr', 'runEnrollmentAudit', { count: benefitsEnrollments.length });
+          setAgentResult(result);
+          toast('Enrollment audit complete — results ready');
+        }} />
       </div>
 
       {/* Kanban */}
@@ -102,7 +110,23 @@ export default function Benefits() {
 
             {(selected.status === 'open' || selected.status === 'waiting') && (
               <div className="mt-6 pt-4 border-t border-gray-200">
-                <AgentActionButton label="Draft Reminder Email" variant="primary" onClick={() => {}} />
+                <AgentActionButton label="Draft Reminder Email" variant="primary" onClick={async () => {
+                  const result = await callAgent('hr', 'draftReminder', {
+                    employeeName: selected.name,
+                    daysRemaining: selected.daysRemaining,
+                  });
+                  setAgentResult(result);
+                  toast('Reminder email drafted');
+                }} />
+              </div>
+            )}
+
+            {agentResult && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2">Agent Output</div>
+                <div className="bg-gray-50 rounded-lg p-3 text-xs text-dark-text font-mono leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+                  {agentResult}
+                </div>
               </div>
             )}
           </div>

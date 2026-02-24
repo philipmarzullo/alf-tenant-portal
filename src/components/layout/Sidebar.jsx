@@ -27,7 +27,11 @@ export default function Sidebar({ collapsed, onToggle }) {
     >
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 h-16 border-b border-white/10 shrink-0">
-        <span className="text-aa-blue font-bold text-2xl leading-none">a&a</span>
+        <img
+          src="/logo-white.png"
+          alt="A&A"
+          className={`transition-all duration-200 ${collapsed ? 'h-6' : 'h-7'}`}
+        />
         {!collapsed && (
           <span className="text-white/70 text-xs leading-tight mt-1">
             Operations<br />Portal

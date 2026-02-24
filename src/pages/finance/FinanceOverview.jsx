@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { DollarSign, AlertTriangle, FileText, TrendingDown } from 'lucide-react';
+import { DollarSign, AlertTriangle, FileText, TrendingDown, Bot } from 'lucide-react';
 import MetricCard from '../../components/shared/MetricCard';
 import ComingSoonModule from '../../components/shared/ComingSoonModule';
 import DataTable from '../../components/shared/DataTable';
 import SlidePanel from '../../components/layout/SlidePanel';
 import AgentActionButton from '../../components/shared/AgentActionButton';
+import AgentChatPanel from '../../components/shared/AgentChatPanel';
+import { useToast } from '../../components/shared/ToastProvider';
+import { callAgent } from '../../agents/api';
 import { arAging } from '../../data/mock/financeMocks';
 
 const METRICS = [
@@ -35,10 +38,22 @@ const arColumns = [
 
 export default function FinanceOverview() {
   const [selected, setSelected] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [agentResult, setAgentResult] = useState(null);
+  const toast = useToast();
 
   return (
     <div>
-      <h1 className="text-2xl font-light text-dark-text mb-6">Finance Workspace</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-light text-dark-text">Finance Workspace</h1>
+        <button
+          onClick={() => setChatOpen(true)}
+          className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+        >
+          <Bot size={16} />
+          Ask Finance Agent
+        </button>
+      </div>
 
       <div className="grid grid-cols-4 gap-4 mb-8">
         {METRICS.map((m) => (
@@ -90,12 +105,37 @@ export default function FinanceOverview() {
             </div>
 
             <div className="flex gap-2">
-              <AgentActionButton label="Draft Collection Email" variant="primary" onClick={() => {}} />
-              <AgentActionButton label="Summarize Account" onClick={() => {}} />
+              <AgentActionButton label="Draft Collection Email" variant="primary" onClick={async () => {
+                const result = await callAgent('finance', 'draftCollectionEmail', selected);
+                setAgentResult(result);
+                toast('Collection email drafted');
+              }} />
+              <AgentActionButton label="Summarize Account" onClick={async () => {
+                const result = await callAgent('finance', 'summarizeAccount', selected);
+                setAgentResult(result);
+                toast('Account summary generated');
+              }} />
             </div>
+
+            {agentResult && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2">Agent Output</div>
+                <div className="bg-gray-50 rounded-lg p-3 text-xs text-dark-text font-mono leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+                  {agentResult}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </SlidePanel>
+
+      <AgentChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        agentKey="finance"
+        agentName="Finance Agent"
+        context="AR aging, accounts payable, budgets, and financial reporting"
+      />
     </div>
   );
 }

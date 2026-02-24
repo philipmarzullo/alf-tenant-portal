@@ -3,9 +3,12 @@ import { ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { unionCalendar } from '../../data/mock/unionCalendar';
 import StatusBadge from '../../components/shared/StatusBadge';
 import AgentActionButton from '../../components/shared/AgentActionButton';
+import { useToast } from '../../components/shared/ToastProvider';
+import { callAgent } from '../../agents/api';
 
 export default function UnionCalendar() {
   const [expandedIds, setExpandedIds] = useState(new Set());
+  const toast = useToast();
 
   const toggle = (id) => {
     setExpandedIds((prev) => {
@@ -31,7 +34,19 @@ export default function UnionCalendar() {
         <p className="text-sm text-secondary-text">
           2026 union contract rate changes — real A&A contract data.
         </p>
-        <AgentActionButton label="Generate Rate Change Batch" variant="default" onClick={() => {}} />
+        <AgentActionButton label="Generate Rate Change Batch" variant="default" onClick={async () => {
+          const upcoming = unionCalendar.filter((i) => i.status === 'upcoming');
+          if (upcoming.length === 0) { toast('No upcoming rate changes to process'); return; }
+          const first = upcoming[0];
+          await callAgent('hr', 'generateRateChangeBatch', {
+            union: first.union,
+            effectiveDate: first.effectiveDate,
+            currentRate: first.currentRate,
+            newRate: first.newRate,
+            employeesAffected: first.employeesAffected,
+          });
+          toast(`Rate change batch generated for ${first.union}`);
+        }} />
       </div>
 
       <div className="space-y-6">
@@ -89,7 +104,16 @@ export default function UnionCalendar() {
                           </div>
                           {item.status === 'upcoming' && (
                             <div className="mt-3 pt-3 border-t border-gray-100">
-                              <AgentActionButton label="Generate Rate Change Batch" onClick={() => {}} />
+                              <AgentActionButton label="Generate Rate Change Batch" onClick={async () => {
+                                await callAgent('hr', 'generateRateChangeBatch', {
+                                  union: item.union,
+                                  effectiveDate: item.effectiveDate,
+                                  currentRate: item.currentRate,
+                                  newRate: item.newRate,
+                                  employeesAffected: item.employeesAffected,
+                                });
+                                toast(`Rate change batch generated for ${item.union}`);
+                              }} />
                             </div>
                           )}
                         </div>
