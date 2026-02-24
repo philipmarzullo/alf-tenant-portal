@@ -14,6 +14,8 @@ export const DEPT_COLORS = {
   purchasing: '#7C3AED',
   ops: '#4B5563',
   sales: '#F59E0B',
+  admin: '#E12F2C',
+  tools: '#0284C7',
 };
 
 export const STATUS = {

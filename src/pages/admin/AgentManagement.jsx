@@ -56,7 +56,7 @@ export default function AgentManagement() {
           const deptColor = DEPT_COLORS[agent.department] || DEPT_COLORS.ops;
 
           return (
-            <div key={agent.key} className="bg-white rounded-lg border border-gray-200">
+            <div key={agent.key} className="bg-white rounded-lg border border-gray-200" style={{ borderLeftWidth: 4, borderLeftColor: deptColor }}>
               <div
                 onClick={() => toggle(agent.key)}
                 className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50/50 transition-colors"

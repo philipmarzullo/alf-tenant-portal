@@ -2,7 +2,7 @@ import { SHARED_RULES } from '../prompts';
 
 export const adminAgent = {
   name: 'Admin Agent',
-  department: 'ops',
+  department: 'admin',
   status: 'active',
   model: 'claude-sonnet-4-20250514',
   systemPrompt: `You are a strategic operations advisor for A&A Elevated Facility Solutions, thinking from the perspective of the CEO. You have visibility across all departments — HR, Finance, Purchasing, Sales, and Operations.
