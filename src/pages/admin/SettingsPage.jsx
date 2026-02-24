@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { Key, Shield, Bell, Database } from 'lucide-react';
 
 export default function SettingsPage() {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(() => {
+    try { return localStorage.getItem('aa_anthropic_key') || ''; } catch { return ''; }
+  });
   const [saved, setSaved] = useState(false);
+  const hasStoredKey = !!apiKey;
 
   const handleSave = () => {
     if (apiKey) {
@@ -45,7 +48,15 @@ export default function SettingsPage() {
               {saved ? 'Saved' : 'Save'}
             </button>
           </div>
-          <p className="text-[11px] text-secondary-text mt-2">
+          <div className="flex items-center gap-2 mt-2">
+            <div className={`w-2 h-2 rounded-full ${hasStoredKey ? 'bg-green-500' : 'bg-gray-300'}`} />
+            <p className="text-[11px] text-secondary-text">
+              {hasStoredKey
+                ? 'API key connected — agents will return live Claude responses.'
+                : 'No key set — agents return demo mock responses.'}
+            </p>
+          </div>
+          <p className="text-[11px] text-secondary-text mt-1">
             Key is stored in browser localStorage only. Never sent anywhere except the Anthropic API.
           </p>
         </div>
