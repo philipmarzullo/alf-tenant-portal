@@ -13,6 +13,12 @@ const BREADCRUMB_MAP = {
   '/purchasing': ['Workspaces', 'Purchasing'],
   '/tools/qbu': ['Tools', 'QBU Builder'],
   '/tools/sales-deck': ['Tools', 'Sales Deck Builder'],
+  '/sales': ['Workspaces', 'Sales'],
+  '/sales/contracts': ['Workspaces', 'Sales', 'Contracts'],
+  '/sales/apc': ['Workspaces', 'Sales', 'APC Tracker'],
+  '/sales/tbi': ['Workspaces', 'Sales', 'TBI Tracker'],
+  '/ops': ['Workspaces', 'Operations'],
+  '/admin/users': ['Admin', 'User Management'],
   '/admin/agents': ['Admin', 'Agent Management'],
   '/admin/settings': ['Admin', 'Settings'],
 };

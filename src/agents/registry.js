@@ -3,11 +3,17 @@ import { financeAgent } from './configs/finance';
 import { purchasingAgent } from './configs/purchasing';
 import { qbuAgent } from './configs/qbu';
 import { salesDeckAgent } from './configs/salesDeck';
+import { salesAgent } from './configs/sales';
+import { opsAgent } from './configs/ops';
+import { adminAgent } from './configs/admin';
 
 const agents = {
   hr: hrAgent,
   finance: financeAgent,
   purchasing: purchasingAgent,
+  sales: salesAgent,
+  ops: opsAgent,
+  admin: adminAgent,
   qbu: qbuAgent,
   salesDeck: salesDeckAgent,
 };

@@ -13,6 +13,7 @@ export const DEPT_COLORS = {
   finance: '#0D9488',
   purchasing: '#7C3AED',
   ops: '#4B5563',
+  sales: '#F59E0B',
 };
 
 export const STATUS = {
@@ -31,35 +32,41 @@ export const STATUS = {
   enrolled: { label: 'Enrolled', color: '#16A34A', bg: '#DCFCE7', text: '#166534' },
   upcoming: { label: 'Upcoming', color: '#EAB308', bg: '#FEF9C3', text: '#854D0E' },
   processed: { label: 'Processed', color: '#16A34A', bg: '#DCFCE7', text: '#166534' },
+  expiringSoon: { label: 'Expiring Soon', color: '#EAB308', bg: '#FEF9C3', text: '#854D0E' },
+  inRenewal: { label: 'In Renewal', color: '#009ADE', bg: '#DBEAFE', text: '#1E40AF' },
+  expired: { label: 'Expired', color: '#9CA3AF', bg: '#F3F4F6', text: '#4B5563' },
 };
 
 export const NAV_ITEMS = [
   {
     group: 'OVERVIEW',
     items: [
-      { label: 'Dashboard', path: '/', icon: 'LayoutDashboard' },
+      { label: 'Dashboard', path: '/', icon: 'LayoutDashboard', moduleKey: null },
     ],
   },
   {
     group: 'WORKSPACES',
     items: [
-      { label: 'HR', path: '/hr', icon: 'Users' },
-      { label: 'Finance', path: '/finance', icon: 'DollarSign' },
-      { label: 'Purchasing', path: '/purchasing', icon: 'ShoppingCart' },
+      { label: 'HR', path: '/hr', icon: 'Users', moduleKey: 'hr' },
+      { label: 'Finance', path: '/finance', icon: 'DollarSign', moduleKey: 'finance' },
+      { label: 'Purchasing', path: '/purchasing', icon: 'ShoppingCart', moduleKey: 'purchasing' },
+      { label: 'Sales', path: '/sales', icon: 'Briefcase', moduleKey: 'sales' },
+      { label: 'Operations', path: '/ops', icon: 'HardHat', moduleKey: 'ops' },
     ],
   },
   {
     group: 'TOOLS',
     items: [
-      { label: 'QBU Builder', path: '/tools/qbu', icon: 'FileBarChart' },
-      { label: 'Sales Deck Builder', path: '/tools/sales-deck', icon: 'Presentation' },
+      { label: 'QBU Builder', path: '/tools/qbu', icon: 'FileBarChart', moduleKey: 'qbu' },
+      { label: 'Sales Deck Builder', path: '/tools/sales-deck', icon: 'Presentation', moduleKey: 'salesDeck' },
     ],
   },
   {
     group: 'ADMIN',
     items: [
-      { label: 'Agent Management', path: '/admin/agents', icon: 'Bot' },
-      { label: 'Settings', path: '/admin/settings', icon: 'Settings' },
+      { label: 'User Management', path: '/admin/users', icon: 'UserCog', moduleKey: 'admin' },
+      { label: 'Agent Management', path: '/admin/agents', icon: 'Bot', moduleKey: 'admin' },
+      { label: 'Settings', path: '/admin/settings', icon: 'Settings', moduleKey: 'admin' },
     ],
   },
 ];

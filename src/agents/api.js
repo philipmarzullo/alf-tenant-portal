@@ -260,6 +260,92 @@ Recommended Actions:
 3. Request expected payment timeline
 4. Consider escalation if no response within 10 business days`,
     },
+    ops: {
+      vpPerformanceSummary: `VP PERFORMANCE SUMMARY — ${data.vp || '[VP Name]'}
+
+Portfolio: ${data.jobCount || 'N/A'} jobs under management
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+INSPECTION COMPLIANCE
+• Safety Inspection Rate: ${data.revenueInspectedSafety || 'N/A'}% ${data.revenueInspectedSafety && data.revenueInspectedSafety < 90 ? '⚠ BELOW 90% TARGET' : '✓ Meets target'}
+• Commercial Inspection Rate: ${data.revenueInspectedCommercial || 'N/A'}% ${data.revenueInspectedCommercial && data.revenueInspectedCommercial < 90 ? '⚠ BELOW 90% TARGET' : '✓ Meets target'}
+• Safety Inspections Completed: ${data.safetyInspections || 'N/A'}
+• Commercial Inspections Completed: ${data.commercialInspections || 'N/A'}
+
+DEFICIENCY MANAGEMENT
+• Sites with Deficiencies: ${data.sitesWithDeficiencies || 'N/A'}
+• Avg Close Days: ${data.avgDeficiencyClosedDays || 'N/A'}d ${data.avgDeficiencyClosedDays && data.avgDeficiencyClosedDays > 2 ? '⚠ ABOVE 2-DAY TARGET' : '✓ Within target'}
+• Deficiency rate: ${data.sitesWithDeficiencies && data.jobCount ? Math.round((data.sitesWithDeficiencies / data.jobCount) * 100) + '% of managed sites' : 'N/A'}
+
+INCIDENT & RECOGNITION
+• Incidents: ${data.incidents || 0} ${data.incidents > 2 ? '⚠ ELEVATED — review required' : '✓ Within acceptable range'}
+• Good Saves: ${data.goodSaves || 0} — proactive hazard identification
+• Compliments: ${data.compliments || 0} — positive client feedback
+
+OVERALL ASSESSMENT
+${data.revenueInspectedSafety >= 90 && data.revenueInspectedCommercial >= 90 && data.incidents <= 2 && data.avgDeficiencyClosedDays <= 2
+  ? 'Strong performance across all key metrics. Continue current operational approach.'
+  : 'Some metrics need attention. See flagged items above for specific improvement areas.'}
+
+RECOMMENDED ACTIONS
+1. ${data.revenueInspectedSafety < 90 ? 'Prioritize safety inspection coverage — schedule catch-up inspections for uncovered sites' : 'Maintain current safety inspection cadence'}
+2. ${data.incidents > 2 ? 'Conduct incident review meetings for all reported incidents — identify root causes' : 'Continue incident prevention protocols'}
+3. ${data.avgDeficiencyClosedDays > 2 ? 'Accelerate deficiency resolution — target same-day closure where possible' : 'Maintain strong deficiency closure times'}
+4. Document good saves and compliments for QBU reporting`,
+
+      inspectionAnalysis: `INSPECTION ANALYSIS — ALL VPS
+
+This analysis covers inspection compliance across the operations team. Key findings:
+
+1. Safety inspection rates range from 86.3% to 94.2% — company average is approximately 89.3%
+2. Commercial inspection rates range from 88.7% to 96.1% — company average is approximately 91.8%
+3. VPs below the 90% safety target need immediate inspection catch-up plans
+4. Best performer for combined compliance: Edita Gargovic (94.2% safety, 96.1% commercial)
+
+Recommended actions:
+• Schedule weekly inspection cadence reviews for VPs below target
+• Share best practices from top-performing VPs
+• Track week-over-week improvement for flagged VPs`,
+    },
+    admin: {
+      executiveBriefing: `EXECUTIVE BRIEFING — A&A ELEVATED FACILITY SOLUTIONS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TOP 3 PRIORITIES THIS WEEK
+1. Contract renewals: 4 contracts expiring within 90 days — renewal conversations should be in progress
+2. Operations: 2 VPs below 90% safety inspection target — needs management attention
+3. AR Collections: 3 clients with 60+ day balances — follow up before quarter end
+
+CROSS-DEPARTMENT RISKS
+• Rising AR aging combined with upcoming contract renewals could affect retention negotiations
+• Elevated incidents in one VP territory may signal staffing or training gaps
+• Benefits enrollment deadlines approaching — incomplete enrollments create compliance exposure
+
+OPPORTUNITIES
+• TBI pending amounts represent immediate invoicing opportunity ($286K+ across portfolio)
+• Strong compliment and good save numbers — use in QBU presentations and renewal meetings
+• Glide Path shared-savings positioning for renewal discussions
+
+RECOMMENDED EXECUTIVE ACTIONS
+1. Schedule VP operations review for territories below inspection targets
+2. Brief sales team on AR status before renewal meetings — ensure clean billing relationship
+3. Confirm all benefits enrollments complete before deadline
+4. Review TBI invoicing pipeline with finance team`,
+
+      crossModuleAnalysis: `CROSS-MODULE ANALYSIS
+
+Analyzing connections across departments reveals several actionable insights:
+
+1. SALES + FINANCE: Contracts approaching renewal with outstanding AR balances should be prioritized for collection before renewal meetings begin. Clean billing relationships strengthen renewal negotiations.
+
+2. OPS + SALES: VP performance data (inspection rates, incident counts) should be packaged for QBU presentations and renewal briefs. Strong metrics are the best retention tool.
+
+3. HR + OPS: Union rate changes impact operational budgets. Coordinate with finance on APC adjustments for affected contracts.
+
+4. PURCHASING + OPS: Reorder alerts for cleaning supplies could indicate increased operational demand. Cross-reference with work ticket volume.`,
+    },
     purchasing: {
       reorderAnalysis: `Reorder Analysis — ${data.item || 'Item'}
 
@@ -368,58 +454,191 @@ Note: Items marked [PLACEHOLDER] require data from the intake form.
 ${photoCount > 0 ? `📷 ${photoCount} photo${photoCount > 1 ? 's' : ''} ready for deck insertion.` : ''}`;
       })(),
     },
+    sales: {
+      renewalBrief: `CONTRACT RENEWAL BRIEF
+
+Client: ${data.client || '[Client]'}
+Site: ${data.site || '[Site]'}
+Contract Expiry: ${data.contractEnd || '[Date]'} (${data.daysRemaining || '?'} days remaining)
+Account Manager: ${data.accountManager || '[N/A]'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+RELATIONSHIP SUMMARY
+This is a valued A&A client with a strong service history. Annual APC of ${data.apcAnnual || '[N/A]'} positions this as a significant account. ${data.apcPriorYear ? `Prior year APC was ${data.apcPriorYear}, reflecting steady growth in the partnership.` : ''}
+
+PERFORMANCE HIGHLIGHTS TO LEAD WITH
+• 98%+ client retention rate — A&A's track record speaks for itself
+• Consistent SLA compliance across all service areas
+• Dedicated account management with proactive communication
+• People First™ approach driving frontline quality
+
+PRICING CONSIDERATIONS
+${data.apcPriorYear && data.apcAnnual ? `Year-over-year change: ${(((Number(String(data.apcAnnual).replace(/[^0-9]/g, '')) - Number(String(data.apcPriorYear).replace(/[^0-9]/g, ''))) / Number(String(data.apcPriorYear).replace(/[^0-9]/g, ''))) * 100).toFixed(1)}%. This aligns with typical CPI and wage adjustments.` : '[PLACEHOLDER: need prior year data for variance]'}
+• Review union rate change impacts for the upcoming period
+• Consider Glide Path shared-savings as a retention incentive
+
+TBI UPSELL OPPORTUNITY
+${data.tbiYtd ? `TBI YTD of ${data.tbiYtd} shows consistent demand for extra/tag work. Consider rolling recurring TBI items into the base contract scope to simplify billing and lock in revenue.` : 'Review TBI history for upsell opportunities.'}
+
+RECOMMENDED NEXT STEPS
+1. Schedule renewal meeting ${data.daysRemaining && Number(data.daysRemaining) < 60 ? '— URGENT, less than 60 days remaining' : 'within the next 2 weeks'}
+2. Prepare performance summary from AA360 data
+3. Draft renewal proposal with updated pricing
+4. Identify scope expansion opportunities from TBI patterns
+5. Confirm account manager availability for client presentation`,
+
+      apcVarianceAnalysis: `APC VARIANCE ANALYSIS — ${data.client || '[Client]'}
+
+Current Annual APC: ${data.apcAnnual || '[N/A]'}
+Prior Year APC: ${data.apcPriorYear || '[N/A]'}
+Service Type: ${data.serviceType || '[N/A]'}
+
+${data.apcPriorYear && data.apcAnnual ? `Year-over-Year Variance: ${(((Number(String(data.apcAnnual).replace(/[^0-9]/g, '')) - Number(String(data.apcPriorYear).replace(/[^0-9]/g, ''))) / Number(String(data.apcPriorYear).replace(/[^0-9]/g, ''))) * 100).toFixed(1)}%` : '[PLACEHOLDER: need both years for calculation]'}
+
+LIKELY DRIVERS
+• Union wage increases (32BJ, SEIU schedules applied annually)
+• CPI-based escalation clauses in the contract
+• Scope adjustments from prior-period change orders
+• Benefits cost pass-through increases
+
+ASSESSMENT
+${data.apcPriorYear && data.apcAnnual ? 'The variance falls within the typical 2-5% annual escalation range, consistent with labor cost increases and contractual adjustment clauses. No anomalies detected.' : '[PLACEHOLDER: need data to assess]'}
+
+RECOMMENDATION
+• No pricing discussion needed at this time — variance is within expected parameters
+• Document the drivers for renewal negotiation preparation
+• Track TBI separately to identify scope creep vs. true extra work`,
+
+      tbiSummary: `TBI SUMMARY — ${data.client || '[Client]'}
+
+YTD Invoiced: ${data.tbiYtd || '[N/A]'}
+Pending (Uninvoiced): ${data.tbiPending || '[N/A]'}
+Annual APC: ${data.apcAnnual || '[N/A]'}
+${data.tbiYtd && data.apcAnnual ? `TBI as % of APC: ${((Number(String(data.tbiYtd).replace(/[^0-9]/g, '')) + Number(String(data.tbiPending || '0').replace(/[^0-9]/g, ''))) / Number(String(data.apcAnnual).replace(/[^0-9]/g, '')) * 100).toFixed(1)}%` : ''}
+
+ANALYSIS
+${data.tbiPending && Number(String(data.tbiPending).replace(/[^0-9]/g, '')) > 0 ? `⚠ There is ${data.tbiPending} in pending TBI that needs immediate invoicing attention. Delayed invoicing impacts cash flow and can create client disputes when old charges surface.` : '✓ No pending TBI — all extra work has been invoiced.'}
+
+RECOMMENDATIONS
+1. ${data.tbiPending && Number(String(data.tbiPending).replace(/[^0-9]/g, '')) > 0 ? 'Invoice all pending TBI within the next billing cycle' : 'Continue current invoicing cadence'}
+2. Review recurring TBI items for contract scope inclusion at renewal
+3. Ensure all extra work has proper authorization documentation
+4. Brief account manager on TBI trends for renewal discussions`,
+
+      pipelineSummary: `SALES PIPELINE SUMMARY
+
+Active Contracts: ${data.activeCount || '[N/A]'}
+Total Annual APC: ${data.totalApc || '[N/A]'}
+Expiring Within 90 Days: ${data.expiringSoonCount || '[N/A]'}
+In Renewal: ${data.inRenewalCount || '[N/A]'}
+TBI Pending: ${data.totalTbiPending || '[N/A]'}
+
+PIPELINE HEALTH: GOOD
+A&A's 98%+ retention rate means the renewal pipeline is primarily a timing and execution exercise, not a risk exercise. However, attention is needed on upcoming expirations.
+
+PRIORITY ACTIONS (NEXT 30 DAYS)
+1. Schedule renewal meetings for all contracts expiring within 60 days
+2. Prepare performance packages (AA360 data, QBU summaries) for each renewal
+3. Invoice all pending TBI before renewal conversations begin
+4. Brief account managers on pricing strategy for each renewal
+
+RISK AREAS
+${data.expiringSoonCount && Number(data.expiringSoonCount) > 0 ? `• ${data.expiringSoonCount} contracts approaching expiration — ensure all have active renewal conversations` : '• No immediate expiration risks'}
+${data.inRenewalCount && Number(data.inRenewalCount) > 0 ? `• ${data.inRenewalCount} contracts in active renewal — monitor negotiation progress` : ''}
+
+REVENUE AT RISK
+Contracts expiring in the next 90 days represent significant annual APC. With A&A's retention track record, conversion probability is high, but proactive engagement is essential.`,
+    },
     salesDeck: {
       generateDeck: `SALES PRESENTATION — ${data.prospect || '[Prospect]'}
 Industry: ${data.industry || '[Industry]'}
 Facility Type: ${data.facilityType || '[Type]'}
+${data.approxSqft ? `Approx. Size: ${data.approxSqft}` : ''}
+${data.presentingTo ? `Audience: ${data.presentingTo}` : ''}
+${data.presentationDate ? `Date: ${data.presentationDate}` : ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 SLIDE 1: COVER
 A&A Elevated Facility Solutions
 "The Performance-Focused Choice"
-Prepared for: ${data.prospect || '[Prospect]'}
+Prepared for: ${data.prospect || '[Prospect]'}${data.site ? ` — ${data.site}` : ''}
+${data.aaTeam ? `\nPresented by: ${data.aaTeam}` : ''}
+${data.presentationDate ? `Date: ${data.presentationDate}` : ''}
+
+Presenter Notes: Open with a warm, confident introduction. Reference any prior conversations or site visits. Set the tone: "We're here to show you why performance matters more than scale."
 
 SLIDE 2: WHY PERFORMANCE MATTERS
-• 98%+ client retention rate
+• 98%+ client retention rate — our clients stay because we deliver
 • 99%+ SLA compliance across all accounts
-• 7+ year average client relationship
+• 7+ year average client relationship duration
 • Cost efficiency consistently below industry benchmarks
+• 53 years of continuous operations under stable leadership
+
+Presenter Notes: This is A&A's strongest opening. Let the numbers speak. Pause after retention rate — it's our most differentiating metric. If asked about comparison to ${data.currentProvider || 'their current provider'}, stay positive: "We focus on what we deliver, not what others don't."
 
 SLIDE 3: UNDERSTANDING YOUR NEEDS
-${data.concerns ? `Key concerns identified:\n${data.concerns}` : '[PLACEHOLDER: prospect-specific pain points]'}
+${data.concerns ? `Key challenges identified:\n${data.concerns.split('\n').filter(Boolean).map(line => `• ${line.trim()}`).join('\n') || data.concerns}` : '[PLACEHOLDER: prospect-specific pain points]'}
+${data.reasonForChange ? `\nDriver for change: ${data.reasonForChange}` : ''}
+${data.specialRequirements ? `\nSpecial requirements noted:\n• ${data.specialRequirements}` : ''}
 
-SLIDE 4: OUR APPROACH — ${(data.industry || 'Your Industry').toUpperCase()}
-• Deep experience in ${data.industry || '[industry]'} environments
-• Specialized protocols for ${data.facilityType || '[facility type]'} operations
-• Manager-heavy model ensures daily accountability
-• Single-point accountability across janitorial, grounds, and MEP
+Presenter Notes: Mirror the prospect's language back to them. Show that you listened during discovery. ${data.presentingTo ? `Address ${data.presentingTo} directly by name when discussing their specific pain points.` : 'Address each stakeholder by name when discussing their specific concerns.'}
 
-SLIDE 5: PEOPLE FIRST™
-• Employee-owned (ESOP) — our team is invested in your success
-• People First™ operating philosophy drives quality from the ground up
-• 25+ years managing union workforces with zero labor disruptions
-• SYNC task-based model: 5 specialist roles for clarity
+SLIDE 4: OUR APPROACH — ${(data.industry || 'YOUR INDUSTRY').toUpperCase()}
+• Deep experience in ${data.industry || '[industry]'} environments — we understand the regulatory, operational, and cultural nuances
+• ${data.facilityType ? `Specialized protocols for ${data.facilityType} operations` : 'Facility-specific protocols tailored to your environment'}
+• Manager-heavy model ensures daily on-site accountability and oversight
+• Single-point accountability across ${data.servicesRequested || 'janitorial, grounds, and MEP'}
 
-SLIDE 6: TECHNOLOGY THAT SUPPORTS
-• AA360 platform: QA tracking, analytics, AI-powered validation
-• Real-time work verification and multilingual training
-• Predictive maintenance capabilities via TMA integration
-• Transparent reporting dashboards
+Presenter Notes: This is where we connect A&A's capabilities to their specific environment. Reference similar clients in ${data.industry || 'their industry'} (check with sales team for approved references).
+
+SLIDE 5: PEOPLE FIRST™ & ESOP
+• Employee-owned (ESOP) — every A&A team member has a stake in your facility's success
+• People First™ is our operating philosophy — employee dignity drives service quality
+• SYNC task-based model: 5 specialist roles for clarity and accountability
+• 25+ years managing union workforces seamlessly
+${data.specialRequirements && data.specialRequirements.toLowerCase().includes('union') ? '• Direct experience with 32BJ, SEIU, and other major building service unions in the market' : ''}
+
+Presenter Notes: People First™ is not a slogan — it's how we operate. Give a concrete example: "When our team members feel respected and valued, they take ownership of your facility. That's why our frontline retention is among the highest in the industry."
+
+SLIDE 6: TECHNOLOGY & INNOVATION
+• AA360 platform: QA tracking, multilingual training, AI-powered validation
+• Lighthouse: real-time task completion tracking — full visibility into daily operations
+• Predictive maintenance via TMA/CMMS integration
+• Transparent reporting dashboards — no surprises, no black boxes
+• Robotics and autonomous equipment where they improve outcomes, not replace people
+
+Presenter Notes: Don't lead with tech — lead with what it solves. "You mentioned ${data.concerns ? 'visibility into daily operations' : 'wanting better reporting'} — here's exactly how we deliver that." Demo AA360 if possible.
 
 SLIDE 7: PARTNERSHIP MODEL
-• Glide Path shared-savings program — verified efficiency returned to you
-• Dedicated account management team
-• Regular QBU presentations with actionable metrics
-• Continuous improvement built into the contract
+• Glide Path shared-savings program — verified efficiency gains returned to you
+• Dedicated account management team with regional VP oversight
+• Regular QBU (Quarterly Business Update) presentations with actionable metrics
+• Continuous improvement built into the contract structure
+• Transition plan: 90-day onboarding with milestone checkpoints
 
-SLIDE 8: NEXT STEPS
-• Facility walkthrough and needs assessment
-• Customized proposal within [PLACEHOLDER: timeline]
+Presenter Notes: Glide Path is a powerful differentiator. Frame it as aligned incentives: "We only save money when we find real efficiencies — and we share those savings with you. That's alignment you won't find with other providers."
+
+SLIDE 8: WHY A&A
+• Performance-focused, not scale-focused — we choose partnerships carefully
+• 2,000+ employee-owners invested in your success
+• 41 years of leadership stability under one CEO
+• ${data.emphasisAreas || 'Enterprise capabilities with relationship-driven service'}
 • References available from similar ${data.industry || '[industry]'} accounts
 
+Presenter Notes: Close strong. "We're not the biggest — we're the best fit. And our 98%+ retention rate proves that our clients agree." Make eye contact with the decision maker.
+
+SLIDE 9: NEXT STEPS
+• Facility walkthrough and detailed needs assessment
+• Customized scope and pricing proposal within 2 weeks of walkthrough
+• Reference calls with similar ${data.industry || '[industry]'} clients
+• Proposed transition timeline if we move forward together
+
+Presenter Notes: Be specific about next steps and timelines. Offer to schedule the walkthrough before leaving the meeting. Leave behind: company overview one-pager + contact card.
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Note: Items marked [PLACEHOLDER] require prospect-specific data.`,
+Note: Review all content against A&A claim governance before presenting. Items marked [PLACEHOLDER] require prospect-specific data.`,
     },
   };
 

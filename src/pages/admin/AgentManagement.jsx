@@ -15,6 +15,9 @@ const MOCK_STATS = {
   finance: { today: 0, week: 0, month: 0, lastInvoked: 'Never', errors: 0 },
   purchasing: { today: 0, week: 0, month: 0, lastInvoked: 'Never', errors: 0 },
   qbu: { today: 2, week: 8, month: 31, lastInvoked: '4 hours ago', errors: 0 },
+  sales: { today: 4, week: 22, month: 89, lastInvoked: '1 hour ago', errors: 0 },
+  ops: { today: 6, week: 34, month: 142, lastInvoked: '15 minutes ago', errors: 0 },
+  admin: { today: 3, week: 18, month: 74, lastInvoked: '45 minutes ago', errors: 0 },
   salesDeck: { today: 1, week: 5, month: 19, lastInvoked: 'Yesterday', errors: 0 },
 };
 
