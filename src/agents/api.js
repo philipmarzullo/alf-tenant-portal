@@ -11,6 +11,10 @@ const API_URL = 'https://api.anthropic.com/v1/messages';
  * @param {string} [apiKey] - Anthropic API key (from env or user input)
  * @returns {Promise<string>} - The assistant's response text
  */
+function getStoredKey() {
+  try { return localStorage.getItem('aa_anthropic_key') || ''; } catch { return ''; }
+}
+
 export async function callAgent(agentKey, actionKey, data, apiKey) {
   const agent = getAgent(agentKey);
   const action = getAgentAction(agentKey, actionKey);
@@ -20,9 +24,10 @@ export async function callAgent(agentKey, actionKey, data, apiKey) {
   }
 
   const userMessage = action.promptTemplate(data);
+  const key = apiKey || getStoredKey();
 
   // If no API key, return a mock response for demo purposes
-  if (!apiKey) {
+  if (!key) {
     return getMockResponse(agentKey, actionKey, data);
   }
 
@@ -30,7 +35,7 @@ export async function callAgent(agentKey, actionKey, data, apiKey) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
+      'x-api-key': key,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
@@ -58,15 +63,17 @@ export async function chatWithAgent(agentKey, messages, apiKey) {
   const agent = getAgent(agentKey);
   if (!agent) throw new Error(`Agent not found: ${agentKey}`);
 
-  if (!apiKey) {
-    return 'To enable live AI responses, add your Anthropic API key in Settings. For now, this is a demo of the chat interface — the HR Agent would respond with context-aware answers based on loaded SOPs and company knowledge.';
+  const key = apiKey || getStoredKey();
+
+  if (!key) {
+    return 'To enable live AI responses, add your Anthropic API key in Settings. For now, this is a demo of the chat interface — the agent would respond with context-aware answers based on loaded SOPs and company knowledge.';
   }
 
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
+      'x-api-key': key,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },

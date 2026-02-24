@@ -4,6 +4,11 @@ import { useLocation } from 'react-router-dom';
 const BREADCRUMB_MAP = {
   '/': ['Dashboard'],
   '/hr': ['Workspaces', 'HR'],
+  '/hr/benefits': ['Workspaces', 'HR', 'Benefits'],
+  '/hr/pay-rates': ['Workspaces', 'HR', 'Pay Rate Changes'],
+  '/hr/leave': ['Workspaces', 'HR', 'Leave Management'],
+  '/hr/unemployment': ['Workspaces', 'HR', 'Unemployment'],
+  '/hr/union-calendar': ['Workspaces', 'HR', 'Union Calendar'],
   '/finance': ['Workspaces', 'Finance'],
   '/purchasing': ['Workspaces', 'Purchasing'],
   '/tools/qbu': ['Tools', 'QBU Builder'],
