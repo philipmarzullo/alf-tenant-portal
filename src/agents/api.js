@@ -271,40 +271,102 @@ Lead Time: ${data.leadTime || 'N/A'}
 Recommendation: Order ${data.monthlyUsage ? Math.ceil(data.monthlyUsage * 2) : 'XX'} units to cover 2 months of usage plus safety stock.`,
     },
     qbu: {
-      generateQBU: `QUARTERLY BUSINESS UPDATE
-${data.client || '[Client Name]'} — ${data.quarter || 'Q1 2026'}
-Prepared: ${data.date || 'February 2026'}
+      generateQBU: (() => {
+        const c = data.cover || data;
+        const clientName = c.clientName || c.client || '[Client Name]';
+        const quarter = c.quarter || 'Q1 2026';
+        const safetyTheme = data.safety?.theme || '[PLACEHOLDER: safety theme]';
+        const achievements = data.executive?.achievements?.filter(Boolean) || [];
+        const challenges = data.executive?.challenges?.filter(Boolean) || [];
+        const innovations = data.executive?.innovations?.filter(Boolean) || [];
+        const projects = data.projects?.completed?.filter(r => r.description) || [];
+        const testimonials = data.projects?.testimonials?.filter(r => r.quote) || [];
+        const photoCount = data.projects?.photos?.length || 0;
+        const goalStatement = data.roadmap?.goalStatement || '[PLACEHOLDER: quarter goal]';
+
+        return `QUARTERLY BUSINESS UPDATE
+${clientName} — ${quarter}
+${c.jobName ? `Job: ${c.jobName} (${c.jobNumber || ''})` : ''}
+Prepared: ${c.date || 'February 2026'}
+${c.regionVP ? `Region VP: ${c.regionVP}` : ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-EXECUTIVE SUMMARY
-A&A continued to deliver consistent, high-quality service across all contracted areas during ${data.quarter || 'Q1 2026'}. Key highlights include maintained SLA compliance above 99%, successful implementation of updated cleaning protocols, and positive feedback from facility occupants.
+SLIDE 1: COVER
+A&A Elevated Facility Solutions
+Quarterly Business Update — ${quarter}
+${clientName}
+${c.aaTeam?.filter(t => t.name).length ? `\nA&A Team: ${c.aaTeam.filter(t => t.name).map(t => `${t.name}, ${t.title}`).join(' | ')}` : ''}
+${c.clientTeam?.filter(t => t.name).length ? `Client Team: ${c.clientTeam.filter(t => t.name).map(t => `${t.name}, ${t.title}`).join(' | ')}` : ''}
 
-PERFORMANCE METRICS
-• SLA Compliance: [PLACEHOLDER: actual %] (target: 99%+)
-• Quality Inspection Average: [PLACEHOLDER: score]/100
-• Work Order Response Time: [PLACEHOLDER: avg hours]
-• Client Satisfaction Score: [PLACEHOLDER: score]/5.0
-• Staff Retention (site-level): [PLACEHOLDER: %]
+SLIDE 2: SAFETY MOMENT — ${safetyTheme.toUpperCase()}
+${data.safety?.keyTips || '[PLACEHOLDER: 3-4 key safety tips]'}
 
-SERVICE HIGHLIGHTS
-• [PLACEHOLDER: specific achievements for this client]
-• Maintained full staffing levels throughout the quarter
-• Zero safety incidents reported
-• Completed [PLACEHOLDER: number] preventive maintenance tasks ahead of schedule
+Quick Reminders:
+${data.safety?.quickReminders || '[PLACEHOLDER: 2-3 quick reminders]'}
 
-CONTINUOUS IMPROVEMENT
-• Implemented updated sanitization protocols per latest ISSA standards
-• [PLACEHOLDER: site-specific improvements]
-• Staff training hours: [PLACEHOLDER: hours] (target exceeded)
+Why It Matters:
+${data.safety?.whyItMatters || '[PLACEHOLDER: explanation]'}
 
-NEXT QUARTER OUTLOOK
-• Seasonal grounds maintenance transition planning
-• [PLACEHOLDER: upcoming initiatives]
-• Scheduled deep-clean projects: [PLACEHOLDER: details]
+Recordable Incidents: ${data.safety?.incidents?.filter(r => r.location).length ? data.safety.incidents.filter(r => r.location).map(r => `${r.location}: ${[r.q1,r.q2,r.q3,r.q4].filter(Boolean).reduce((s,v) => s + Number(v), 0)} total`).join(', ') : '0 — zero recordables this period'}
+
+${data.safety?.goodSaves?.filter(r => r.location).length ? `Good Saves:\n${data.safety.goodSaves.filter(r => r.location).map(r => `• ${r.location}: ${r.hazard} → ${r.action}`).join('\n')}` : ''}
+
+SLIDE 3: WORK TICKETS — YoY COMPARISON
+${data.workTickets?.locations?.filter(r => r.location).length ? data.workTickets.locations.filter(r => r.location).map(r => {
+  const pct = r.priorYear && r.currentYear ? (((Number(r.currentYear) - Number(r.priorYear)) / Number(r.priorYear)) * 100).toFixed(1) : 'N/A';
+  return `• ${r.location}: ${r.priorYear || '?'} → ${r.currentYear || '?'} (${pct}% change)`;
+}).join('\n') : '[PLACEHOLDER: work ticket data by location]'}
+
+Key Takeaway: ${data.workTickets?.keyTakeaway || '[PLACEHOLDER: what drove the change]'}
+${data.workTickets?.eventsSupported ? `\nEvents Supported:\n${data.workTickets.eventsSupported}` : ''}
+
+SLIDE 4: AUDITS & CORRECTIVE ACTIONS
+${data.audits?.auditExplanation ? `Audit Trend: ${data.audits.auditExplanation}` : '[PLACEHOLDER: audit trend explanation]'}
+${data.audits?.actionExplanation ? `Action Trend: ${data.audits.actionExplanation}` : ''}
+
+${data.audits?.topAreas?.filter(r => r.count).length ? `Top Corrective Action Areas:\n${data.audits.topAreas.filter(r => r.count).map(r => `• ${r.area}: ${r.count}`).join('\n')}` : '[PLACEHOLDER: top corrective action areas with counts]'}
+
+SLIDE 5: EXECUTIVE SUMMARY
+
+Key Achievements:
+${achievements.length ? achievements.map((a, i) => `${i+1}. ${a}`).join('\n') : '[PLACEHOLDER: 3-5 concrete accomplishments]'}
+
+Strategic Challenges:
+${challenges.length ? challenges.map((c, i) => `${i+1}. ${c}`).join('\n') : '[PLACEHOLDER: 2-3 honest challenges]'}
+
+Innovation Milestones:
+${innovations.length ? innovations.map((n, i) => `${i+1}. ${n}`).join('\n') : '[PLACEHOLDER: 2-5 tech/process improvements]'}
+
+SLIDE 6: COMPLETED PROJECTS
+${projects.length ? projects.map(p => `• [${p.category}] ${p.description}`).join('\n') : '[PLACEHOLDER: completed projects by category]'}
+
+${photoCount > 0 ? `[${photoCount} project photo${photoCount > 1 ? 's' : ''} to be inserted — see captions below]\n${data.projects.photos.filter(p => p.caption).map(p => `  📷 ${p.caption}${p.location ? ` (${p.location})` : ''}`).join('\n')}` : '[PLACEHOLDER: project photos]'}
+
+${testimonials.length ? `\nClient Testimonials:\n${testimonials.map(t => `"${t.quote}"\n  — ${t.attribution}, ${t.location}`).join('\n\n')}` : ''}
+
+SLIDE 7: CHALLENGES & ACTIONS
+${data.challenges?.items?.filter(r => r.challenge).length ? data.challenges.items.filter(r => r.challenge).map(r => `• ${r.location}: ${r.challenge}\n  → Action: ${r.action}`).join('\n') : '[PLACEHOLDER: recurring challenges with corresponding actions]'}
+
+${data.challenges?.priorFollowUp?.filter(r => r.action).length ? `\nPrior Quarter Follow-Up:\n${data.challenges.priorFollowUp.filter(r => r.action).map(r => `• ${r.action} — ${r.status}${r.notes ? ` (${r.notes})` : ''}`).join('\n')}` : ''}
+
+SLIDE 8: FINANCIAL OVERVIEW
+${data.financial?.totalOutstanding ? `Total Outstanding: ${data.financial.totalOutstanding} (as of ${data.financial.asOfDate || 'current'})` : '[PLACEHOLDER: financial data]'}
+${data.financial?.bucket30 ? `Aging: 1-30: ${data.financial.bucket30} | 31-60: ${data.financial.bucket60} | 61-90: ${data.financial.bucket90} | 91+: ${data.financial.bucket91}` : ''}
+${data.financial?.strategyNotes?.filter(Boolean).length ? `\nStrategy Notes:\n${data.financial.strategyNotes.filter(Boolean).map((n, i) => `${i+1}. ${n}`).join('\n')}` : ''}
+
+SLIDE 9: INNOVATION & ROADMAP
+${data.roadmap?.highlights?.filter(h => h.innovation).length ? data.roadmap.highlights.filter(h => h.innovation).map(h => `• ${h.innovation}: ${h.description} → ${h.benefit}`).join('\n') : '[PLACEHOLDER: innovation highlights]'}
+
+Next Quarter Plan:
+${data.roadmap?.schedule?.filter(s => s.initiative).length ? data.roadmap.schedule.filter(s => s.initiative).map(s => `• ${s.month}: ${s.initiative} — ${s.details}`).join('\n') : '[PLACEHOLDER: month-by-month roadmap]'}
+
+Quarter Goal: ${goalStatement}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Note: Items marked [PLACEHOLDER] require actual data from operations.`,
+Note: Items marked [PLACEHOLDER] require data from the intake form.
+${photoCount > 0 ? `📷 ${photoCount} photo${photoCount > 1 ? 's' : ''} ready for deck insertion.` : ''}`;
+      })(),
     },
     salesDeck: {
       generateDeck: `SALES PRESENTATION — ${data.prospect || '[Prospect]'}
