@@ -1037,7 +1037,6 @@ export default function QBUBuilder() {
           >
             <Download size={12} /> Download QBU Template
           </a>
-          <AgentActionButton label="Generate QBU" variant="primary" onClick={handleGenerate} />
         </div>
       </div>
       <p className="text-sm text-secondary-text mb-4">
