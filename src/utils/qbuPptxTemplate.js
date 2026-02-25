@@ -373,7 +373,7 @@ function addIntroductionsSlide(pptx, form, logoColor) {
 
 // ── Slide 3: A.1 Safety Moment ──────────────────────────
 
-function addSafetyMomentSlide(pptx, form, logoColor) {
+function addSafetyMomentSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
 
@@ -382,10 +382,11 @@ function addSafetyMomentSlide(pptx, form, logoColor) {
   addSectionTitle(slide, `A.1: Safety Moment \u2014 ${theme}`);
 
   const cardY = 1.15;
-  const tips = s.keyTips ? s.keyTips.split('\n').filter(Boolean) : [];
-  const reminders = s.quickReminders ? s.quickReminders.split('\n').filter(Boolean) : [];
+  const tips = getNarrativeLines(narratives, 'A1:TIPS') || (s.keyTips ? s.keyTips.split('\n').filter(Boolean) : []);
+  const reminders = getNarrativeLines(narratives, 'A1:REMINDERS') || (s.quickReminders ? s.quickReminders.split('\n').filter(Boolean) : []);
   const maxBullets = Math.max(tips.length, reminders.length, 1);
-  const hasWhyItMatters = !!s.whyItMatters;
+  const whyItMatters = getNarrativeText(narratives, 'A1:WHYITMATTERS') || s.whyItMatters;
+  const hasWhyItMatters = !!whyItMatters;
   const maxCardBottom = hasWhyItMatters ? 4.05 : 4.85;
   const cardH = Math.min(calcCardH(maxBullets, { headerH: 0.55, itemH: 0.4 }), maxCardBottom - cardY);
   const x1 = MARGIN;
@@ -417,7 +418,7 @@ function addSafetyMomentSlide(pptx, form, logoColor) {
     const callY = cardY + cardH + 0.2;
     addCalloutBox(slide, {
       x: MARGIN, y: callY, w: CONTENT_W, h: 0.85,
-      label: 'Why It Matters:', text: s.whyItMatters,
+      label: 'Why It Matters:', text: whyItMatters,
     });
   }
 
@@ -670,7 +671,7 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
 
 // ── Slide 8: C.3 Top Action Areas (Charts) ──────────────
 
-function addTopAreasSlide(pptx, form, logoColor) {
+function addTopAreasSlide(pptx, form, logoColor, narratives) {
   const areas = (form.audits.topAreas || []).filter((a) => a.count);
   if (!areas.length) return; // Skip slide entirely when no data
 
@@ -733,13 +734,15 @@ function addTopAreasSlide(pptx, form, logoColor) {
     chartColors: chartColors.slice(0, areas.length),
   });
 
-  // Key Takeaway callout at bottom
+  // Key Takeaway callout at bottom — prefer agent narrative over auto-generated
+  const takeawayText = getNarrativeText(narratives, 'C3:TAKEAWAY')
+    || (total > 0
+      ? `${areas[0].area} accounts for ${((Number(areas[0].count) / total) * 100).toFixed(0)}% of corrective actions this quarter.`
+      : '');
   addCalloutBox(slide, {
     x: MARGIN, y: 5.0, w: CONTENT_W, h: 0.5,
     label: 'Key Takeaway:',
-    text: total > 0
-      ? `${areas[0].area} accounts for ${((Number(areas[0].count) / total) * 100).toFixed(0)}% of corrective actions this quarter.`
-      : '',
+    text: takeawayText,
   });
 
   addLogoBottomRight(slide, logoColor);
@@ -747,7 +750,7 @@ function addTopAreasSlide(pptx, form, logoColor) {
 
 // ── Slide 9: D.1 Completed Projects Showcase ────────────
 
-function addCompletedProjectsSlide(pptx, form, logoColor) {
+function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
   addSectionTitle(slide, 'D.1: Completed Projects Showcase');
@@ -762,13 +765,29 @@ function addCompletedProjectsSlide(pptx, form, logoColor) {
     return;
   }
 
-  // Group projects by category for multi-column card layout
+  // Group projects by category — prefer agent narrative over raw form data
   const categories = {};
-  projects.forEach((p) => {
-    const cat = p.category || 'General';
-    if (!categories[cat]) categories[cat] = [];
-    categories[cat].push(p.description);
-  });
+  const narrativeLines = getNarrativeLines(narratives, 'D1:PROJECTS');
+  if (narrativeLines) {
+    // Parse "category | description" lines from agent
+    narrativeLines.forEach((line) => {
+      const parts = line.split('|').map(p => p.trim());
+      if (parts.length >= 2) {
+        const cat = parts[0] || 'General';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(parts[1]);
+      } else {
+        if (!categories['General']) categories['General'] = [];
+        categories['General'].push(line);
+      }
+    });
+  } else {
+    projects.forEach((p) => {
+      const cat = p.category || 'General';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(p.description);
+    });
+  }
 
   const catKeys = Object.keys(categories).slice(0, 3);
   const numCols = catKeys.length;
@@ -851,12 +870,29 @@ async function addPhotoSlides(pptx, form, logoColor) {
 
 // ── Slide 11: D.3 Service & Client Satisfaction ─────────
 
-function addTestimonialsSlide(pptx, form, logoColor) {
+function addTestimonialsSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
   addSectionTitle(slide, 'D.3: Service & Client Satisfaction');
 
-  const testimonials = (form.projects.testimonials || []).filter((t) => t.quote);
+  // Build testimonials list — prefer agent narrative for organization, but quotes stay exact
+  const narrativeLines = getNarrativeLines(narratives, 'D3:TESTIMONIALS');
+  let testimonials;
+  if (narrativeLines) {
+    // Parse "location | quote | attribution" lines from agent
+    testimonials = narrativeLines.map((line) => {
+      const parts = line.split('|').map(p => p.trim());
+      if (parts.length >= 3) {
+        return { location: parts[0], quote: parts[1], attribution: parts[2] };
+      } else if (parts.length === 2) {
+        return { quote: parts[0], attribution: parts[1], location: '' };
+      }
+      return { quote: line, attribution: '', location: '' };
+    }).filter((t) => t.quote);
+  } else {
+    testimonials = (form.projects.testimonials || []).filter((t) => t.quote);
+  }
+
   if (!testimonials.length) {
     slide.addText('No testimonials reported this quarter.', {
       x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
@@ -945,7 +981,19 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
     for (const line of agentChallengeLines) {
       const parts = line.split('|').map(p => p.trim());
       if (parts.length >= 3) {
-        agentChallenges.push(parts[0] ? `${parts[1]} (${parts[0]})` : parts[1]);
+        // Strip any trailing "(Location)" the agent may have left in the text
+        const loc = parts[0];
+        let text = parts[1];
+        if (loc) {
+          const escaped = loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // Match "(Location)" optionally followed by punctuation, at end of string
+          const trailingLoc = new RegExp(`\\s*\\(${escaped}\\)\\.?\\s*$`, 'i');
+          text = text.replace(trailingLoc, '');
+          // Also strip if location appears as a standalone suffix like " - Post" or " — Post"
+          const trailingSuffix = new RegExp(`\\s*[\\-\\u2014]\\s*${escaped}\\.?\\s*$`, 'i');
+          text = text.replace(trailingSuffix, '');
+        }
+        agentChallenges.push(loc ? `${text} (${loc})` : text);
         agentActions.push(parts[2]);
       } else if (parts.length === 2) {
         agentChallenges.push(parts[0]);
@@ -973,7 +1021,13 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
   });
 
   const challengeTexts = agentChallenges || (items.length
-    ? items.map((r) => r.location ? `${r.challenge} (${r.location})` : r.challenge)
+    ? items.map((r) => {
+        if (!r.location) return r.challenge;
+        // Strip trailing "(Location)" if already present in challenge text before appending
+        const locPattern = new RegExp(`\\s*\\(${r.location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)\\s*\\.?\\s*$`, 'i');
+        const cleaned = r.challenge.replace(locPattern, '');
+        return `${cleaned} (${r.location})`;
+      })
     : []);
   if (challengeTexts.length) {
     addCardBullets(slide, challengeTexts, { x: x1, y: cardY + 0.6, w: COL2_W, h: cardH - 0.8 });
@@ -1006,7 +1060,7 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
 
 // ── Slide 13: F.1 Current Financial Overview ────────────
 
-function addFinancialSlide(pptx, form, logoColor) {
+function addFinancialSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
   addSectionTitle(slide, 'F.1: Current Financial Overview');
@@ -1080,13 +1134,14 @@ function addFinancialSlide(pptx, form, logoColor) {
     rowH: 0.32,
   });
 
-  // Right: Financial Strategy card (blue left border)
+  // Right: Financial Strategy card (blue left border) — prefer agent narrative
   addCard(slide, { x: x2, y: cardY, w: COL2_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
   slide.addText('FINANCIAL STRATEGY', {
     x: x2 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
     fontSize: 11, fontFace: FONT, color: DARK, bold: true,
   });
-  const notes = (f.strategyNotes || []).filter(Boolean);
+  const strategyNarrative = getNarrativeLines(narratives, 'F1:STRATEGY');
+  const notes = strategyNarrative || (f.strategyNotes || []).filter(Boolean);
   if (notes.length) {
     addCardBullets(slide, notes, { x: x2, y: cardY + 0.6, w: COL2_W, h: cardH - 0.8 });
   }
@@ -1096,7 +1151,7 @@ function addFinancialSlide(pptx, form, logoColor) {
 
 // ── Slide 14: G.1 Innovation & Technology Integration ───
 
-function addInnovationSlide(pptx, form, logoColor) {
+function addInnovationSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
   addSectionTitle(slide, 'G.1: Innovation & Technology Integration');
@@ -1111,15 +1166,34 @@ function addInnovationSlide(pptx, form, logoColor) {
     return;
   }
 
-  // Merge highlights that share the same innovation name
-  const merged = {};
-  rawHighlights.forEach((h) => {
-    const key = (h.innovation || '').toLowerCase().trim();
-    if (!merged[key]) merged[key] = { innovation: h.innovation, bullets: [] };
-    if (h.description) merged[key].bullets.push(h.description);
-    if (h.benefit) merged[key].bullets.push(`Benefit: ${h.benefit}`);
-  });
-  const highlights = Object.values(merged);
+  // Prefer agent narrative — parse "innovation name | description with benefit" lines
+  const narrativeLines = getNarrativeLines(narratives, 'G1:INNOVATIONS');
+  let highlights;
+  if (narrativeLines) {
+    const merged = {};
+    narrativeLines.forEach((line) => {
+      const parts = line.split('|').map(p => p.trim());
+      if (parts.length >= 2) {
+        const key = parts[0].toLowerCase().trim();
+        if (!merged[key]) merged[key] = { innovation: parts[0], bullets: [] };
+        merged[key].bullets.push(parts[1]);
+      } else {
+        const key = line.toLowerCase().trim();
+        if (!merged[key]) merged[key] = { innovation: line, bullets: [] };
+      }
+    });
+    highlights = Object.values(merged);
+  } else {
+    // Merge highlights that share the same innovation name
+    const merged = {};
+    rawHighlights.forEach((h) => {
+      const key = (h.innovation || '').toLowerCase().trim();
+      if (!merged[key]) merged[key] = { innovation: h.innovation, bullets: [] };
+      if (h.description) merged[key].bullets.push(h.description);
+      if (h.benefit) merged[key].bullets.push(`Benefit: ${h.benefit}`);
+    });
+    highlights = Object.values(merged);
+  }
 
   const cardY = 1.15;
   const gap = 0.3;
@@ -1147,7 +1221,7 @@ function addInnovationSlide(pptx, form, logoColor) {
 
 // ── Slide 15: G.2 Roadmap — Strategic Initiatives ───────
 
-function addRoadmapSlide(pptx, form, logoColor) {
+function addRoadmapSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
 
@@ -1155,8 +1229,22 @@ function addRoadmapSlide(pptx, form, logoColor) {
   const q = form.cover.quarter || '';
   addSectionTitle(slide, `G.2: ${q ? q.replace(/Q(\d)/, (_, n) => `Q${(Number(n) % 4) + 1}`) + ' ' : ''}Roadmap \u2014 Strategic Initiatives`);
 
-  const schedule = (r.schedule || []).filter((s) => s.initiative);
-  const MONTH_COLORS = [AA_BLUE, AA_BLUE, AA_BLUE]; // All blue month blocks
+  // Prefer agent narrative for roadmap items — parse "month | initiative | details" lines
+  const narrativeLines = getNarrativeLines(narratives, 'G2:ROADMAP');
+  let schedule;
+  if (narrativeLines) {
+    schedule = narrativeLines.map((line) => {
+      const parts = line.split('|').map(p => p.trim());
+      if (parts.length >= 3) {
+        return { month: parts[0], initiative: parts[1], details: parts[2] };
+      } else if (parts.length === 2) {
+        return { month: parts[0], initiative: parts[1], details: '' };
+      }
+      return { month: '', initiative: line, details: '' };
+    }).filter((s) => s.initiative);
+  } else {
+    schedule = (r.schedule || []).filter((s) => s.initiative);
+  }
 
   schedule.forEach((item, i) => {
     const y = 1.2 + i * 1.35;
@@ -1198,9 +1286,10 @@ function addRoadmapSlide(pptx, form, logoColor) {
     });
   });
 
-  // Goal statement at bottom — deduplicate if lines are identical
-  if (r.goalStatement) {
-    const goalLines = r.goalStatement.split('\n').filter(Boolean);
+  // Goal statement at bottom — prefer agent narrative, fall back to form data
+  const goalText = getNarrativeText(narratives, 'G2:GOAL') || r.goalStatement;
+  if (goalText) {
+    const goalLines = goalText.split('\n').filter(Boolean);
     const uniqueGoal = [...new Set(goalLines)].join('\n');
     const goalY = Math.min(1.2 + schedule.length * 1.35 + 0.15, 4.85);
     slide.addText(
@@ -1295,19 +1384,19 @@ export async function generateQBUPptx(form, agentOutput) {
   // Build slides in section order matching the QBU skill template
   addCoverSlide(pptx, form, logoWhite);                              // 1  — Title
   addIntroductionsSlide(pptx, form, logoColor);                      // 2  — Introductions
-  addSafetyMomentSlide(pptx, form, logoColor);                      // 3  — A.1
+  addSafetyMomentSlide(pptx, form, logoColor, narratives);           // 3  — A.1
   addSafetyComplianceSlide(pptx, form, logoColor);                  // 4  — A.2
   addExecutiveSummarySlide(pptx, form, logoColor, narratives);      // 5  — B.1
   addWorkTicketsSlide(pptx, form, logoColor, narratives);           // 6  — C.1
   addAuditsSlide(pptx, form, logoColor, narratives);                // 7  — C.2
-  addTopAreasSlide(pptx, form, logoColor);                           // 8  — C.3
-  addCompletedProjectsSlide(pptx, form, logoColor);                  // 9  — D.1
+  addTopAreasSlide(pptx, form, logoColor, narratives);               // 8  — C.3
+  addCompletedProjectsSlide(pptx, form, logoColor, narratives);     // 9  — D.1
   await addPhotoSlides(pptx, form, logoColor);                       // 10 — D.2
-  addTestimonialsSlide(pptx, form, logoColor);                       // 11 — D.3
+  addTestimonialsSlide(pptx, form, logoColor, narratives);          // 11 — D.3
   addChallengesSlide(pptx, form, logoColor, narratives);            // 12 — E.1
-  addFinancialSlide(pptx, form, logoColor);                          // 13 — F.1
-  addInnovationSlide(pptx, form, logoColor);                         // 14 — G.1
-  addRoadmapSlide(pptx, form, logoColor);                            // 15 — G.2
+  addFinancialSlide(pptx, form, logoColor, narratives);             // 13 — F.1
+  addInnovationSlide(pptx, form, logoColor, narratives);            // 14 — G.1
+  addRoadmapSlide(pptx, form, logoColor, narratives);               // 15 — G.2
   addThankYouSlide(pptx, form, logoWhite);                           // 16 — Thank You
 
   // Generate filename and trigger download
