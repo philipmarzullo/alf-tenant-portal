@@ -75,7 +75,7 @@ function addSectionTitle(slide, title) {
 /** Logo in bottom-right corner — actual ratio is 2.83:1 */
 function addLogoBottomRight(slide, logoColor) {
   if (logoColor) {
-    slide.addImage({ data: logoColor, x: 8.5, y: 5.0, w: 1.0, h: 0.35 });
+    slide.addImage({ data: logoColor, x: 8.85, y: 5.15, w: 0.65, h: 0.23 });
   }
 }
 
@@ -300,7 +300,7 @@ function addCoverSlide(pptx, form, logoWhite) {
 
   // Logo bottom-left — actual ratio is 2.83:1
   if (logoWhite) {
-    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.5, w: 1.6, h: 0.56 });
+    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.7, w: 1.1, h: 0.39 });
   }
 
   // aaefs.com bottom-right
@@ -379,7 +379,7 @@ function addSafetyMomentSlide(pptx, form, logoColor, narratives) {
 
   const s = form.safety;
   const theme = s.theme || 'Safety Awareness';
-  addSectionTitle(slide, `A.1: Safety Moment \u2014 ${theme}`);
+  addSectionTitle(slide, `Safety Moment \u2014 ${theme}`);
 
   const cardY = 1.15;
   const tips = getNarrativeLines(narratives, 'A1:TIPS') || (s.keyTips ? s.keyTips.split('\n').filter(Boolean) : []);
@@ -430,7 +430,7 @@ function addSafetyMomentSlide(pptx, form, logoColor, narratives) {
 function addSafetyComplianceSlide(pptx, form, logoColor) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
-  addSectionTitle(slide, 'A.2: Safety & Compliance Review');
+  addSectionTitle(slide, 'Safety & Compliance Review');
 
   const incidents = (form.safety.incidents || []).filter((r) => r.location);
 
@@ -509,12 +509,12 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
 function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
-  addSectionTitle(slide, 'B.1: Executive Summary');
+  addSectionTitle(slide, 'Executive Summary');
 
   const e = form.executive;
   const cardY = 1.15;
   const gap = 0.3;
-  const maxCardH = SLIDE_H - cardY - 0.45;
+  const maxCardH = SLIDE_H - cardY - 0.25;
 
   const cols = [
     { title: 'KEY ACHIEVEMENTS', items: getNarrativeLines(narratives, 'B1:ACHIEVEMENTS') || (e.achievements || []).filter(Boolean), color: AA_BLUE },
@@ -525,8 +525,8 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
   // Use the tallest column's content to set card height
   const maxBulletH = Math.max(...cols.map((c) => estimateBulletH(c.items, COL3_W - 0.5)));
   const cardH = Math.min(maxBulletH + 0.8, maxCardH);
-  // Shrink font if content is heavy
-  const bulletFontSize = maxBulletH > 3.5 ? 8 : 10;
+  // Shrink font if content is heavy — floor at 7pt for dense content
+  const bulletFontSize = maxBulletH > 3.5 ? 7 : 10;
 
   cols.forEach((col, i) => {
     const x = MARGIN + i * (COL3_W + gap);
@@ -555,7 +555,7 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
 function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
-  addSectionTitle(slide, 'C.1: Operational Performance \u2014 Work Tickets');
+  addSectionTitle(slide, 'Operational Performance \u2014 Work Tickets');
 
   const locs = (form.workTickets.locations || []).filter((r) => r.location);
   if (locs.length) {
@@ -610,7 +610,7 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
 function addAuditsSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
-  addSectionTitle(slide, 'C.2: Audits and Corrective Actions');
+  addSectionTitle(slide, 'Audits and Corrective Actions');
 
   const a = form.audits;
   // Only include columns that have a location name
@@ -677,7 +677,7 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
 
   const slide = pptx.addSlide();
   setContentBackground(slide);
-  addSectionTitle(slide, 'C.3: Top Action Areas');
+  addSectionTitle(slide, 'Top Action Areas');
 
   const chartColors = [AA_BLUE, '0077B6', '48CAE4', NEAR_BLACK, AA_RED, MED_GREY];
   const total = areas.reduce((s, a) => s + (Number(a.count) || 0), 0);
@@ -751,12 +751,11 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
 // ── Slide 9: D.1 Completed Projects Showcase ────────────
 
 function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
-  const slide = pptx.addSlide();
-  setContentBackground(slide);
-  addSectionTitle(slide, 'D.1: Completed Projects Showcase');
-
   const projects = (form.projects.completed || []).filter((p) => p.description);
   if (!projects.length) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, 'Completed Projects Showcase');
     slide.addText('No completed projects reported this quarter.', {
       x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
       fontSize: 12, fontFace: FONT, color: MED_GREY, italic: true, align: 'center',
@@ -769,7 +768,6 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
   const categories = {};
   const narrativeLines = getNarrativeLines(narratives, 'D1:PROJECTS');
   if (narrativeLines) {
-    // Parse "category | description" lines from agent
     narrativeLines.forEach((line) => {
       const parts = line.split('|').map(p => p.trim());
       if (parts.length >= 2) {
@@ -789,47 +787,46 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
     });
   }
 
-  const catKeys = Object.keys(categories).slice(0, 3);
-  const numCols = catKeys.length;
-  const cardY = 1.15;
-  const gap = 0.3;
-  const colW = numCols === 1 ? CONTENT_W : numCols === 2 ? COL2_W : COL3_W;
-  const colGap = numCols === 2 ? 0.3 : gap;
-  const maxCardH = SLIDE_H - cardY - 0.45;
+  // Render in batches of 3 categories per slide
+  const allCatKeys = Object.keys(categories);
+  for (let batch = 0; batch < allCatKeys.length; batch += 3) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, batch === 0
+      ? 'Completed Projects Showcase'
+      : 'Completed Projects Showcase (cont.)');
 
-  // Calculate height based on longest column content
-  const maxBulletH = Math.max(...catKeys.map((k) => estimateBulletH(categories[k], colW - 0.5)));
-  const cardH = Math.min(maxBulletH + 0.8, maxCardH);
-  const bulletFontSize = maxBulletH > 3.5 ? 8 : 10;
+    const catKeys = allCatKeys.slice(batch, batch + 3);
+    const numCols = catKeys.length;
+    const cardY = 1.15;
+    const gap = 0.3;
+    const colW = numCols === 1 ? CONTENT_W : numCols === 2 ? COL2_W : COL3_W;
+    const colGap = numCols === 2 ? 0.3 : gap;
+    const maxCardH = SLIDE_H - cardY - 0.45;
 
-  catKeys.forEach((cat, i) => {
-    const x = MARGIN + i * (colW + colGap);
-    addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
-    slide.addText(cat.toUpperCase(), {
-      x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
-      fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+    const maxBulletH = Math.max(...catKeys.map((k) => estimateBulletH(categories[k], colW - 0.5)));
+    const cardH = Math.min(maxBulletH + 0.8, maxCardH);
+    const bulletFontSize = maxBulletH > 3.5 ? 8 : 10;
+
+    catKeys.forEach((cat, i) => {
+      const x = MARGIN + i * (colW + colGap);
+      addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
+      slide.addText(cat.toUpperCase(), {
+        x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
+        fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+      });
+      slide.addText(
+        categories[cat].map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
+        {
+          x: x + 0.25, y: cardY + 0.6, w: colW - 0.5, h: cardH - 0.8,
+          fontSize: bulletFontSize, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
+          valign: 'top',
+        }
+      );
     });
-    slide.addText(
-      categories[cat].map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
-      {
-        x: x + 0.25, y: cardY + 0.6, w: colW - 0.5, h: cardH - 0.8,
-        fontSize: bulletFontSize, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
-        valign: 'top',
-      }
-    );
-  });
 
-  // If more than 3 categories, list remaining below
-  if (Object.keys(categories).length > 3) {
-    const extra = Object.keys(categories).slice(3);
-    const items = extra.flatMap((cat) => categories[cat].map((d) => `[${cat}] ${d}`));
-    slide.addText(items.join('; '), {
-      x: MARGIN, y: 5.1, w: CONTENT_W, h: 0.4,
-      fontSize: 8, fontFace: FONT, color: MED_GREY, valign: 'top',
-    });
+    addLogoBottomRight(slide, logoColor);
   }
-
-  addLogoBottomRight(slide, logoColor);
 }
 
 // ── Slide 10: D.2 Project Photos ────────────────────────
@@ -843,7 +840,7 @@ async function addPhotoSlides(pptx, form, logoColor) {
   for (let i = 0; i < withFiles.length; i += 2) {
     const slide = pptx.addSlide();
     setContentBackground(slide);
-    addSectionTitle(slide, 'D.2: Completed Projects \u2014 Photos');
+    addSectionTitle(slide, 'Completed Projects \u2014 Photos');
 
     for (let j = 0; j < 2 && i + j < withFiles.length; j++) {
       const photo = withFiles[i + j];
@@ -873,7 +870,7 @@ async function addPhotoSlides(pptx, form, logoColor) {
 function addTestimonialsSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
-  addSectionTitle(slide, 'D.3: Service & Client Satisfaction');
+  addSectionTitle(slide, 'Service & Client Satisfaction');
 
   // Build testimonials list — prefer agent narrative for organization, but quotes stay exact
   const narrativeLines = getNarrativeLines(narratives, 'D3:TESTIMONIALS');
@@ -958,104 +955,110 @@ function addTestimonialsSlide(pptx, form, logoColor, narratives) {
 // ── Slide 12: E.1 Addressing Key Operational Challenges ─
 
 function addChallengesSlide(pptx, form, logoColor, narratives) {
-  const slide = pptx.addSlide();
-  setContentBackground(slide);
-  addSectionTitle(slide, 'E.1: Addressing Key Operational Challenges');
-
   const items = (form.challenges.items || []).filter((r) => r.challenge);
-  const x1 = MARGIN;
-  const x2 = MARGIN + COL2_W + 0.3;
-  const cardY = 1.15;
-  const maxCardH = SLIDE_H - cardY - 0.45;
-  const bulletCount = Math.max(items.length, 1);
-  const cardH = Math.min(calcCardH(bulletCount, { headerH: 0.55, itemH: 0.5, maxH: maxCardH }), maxCardH);
 
   // Parse agent narrative for challenges if available
   // Format: "location | challenge text | action text" per line
   const agentChallengeLines = getNarrativeLines(narratives, 'E1:CHALLENGES');
-  let agentChallenges = null;
-  let agentActions = null;
+  let allChallengeTexts = [];
+  let allActionTexts = [];
   if (agentChallengeLines) {
-    agentChallenges = [];
-    agentActions = [];
     for (const line of agentChallengeLines) {
       const parts = line.split('|').map(p => p.trim());
       if (parts.length >= 3) {
-        // Strip any trailing "(Location)" the agent may have left in the text
         const loc = parts[0];
         let text = parts[1];
         if (loc) {
           const escaped = loc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          // Match "(Location)" optionally followed by punctuation, at end of string
           const trailingLoc = new RegExp(`\\s*\\(${escaped}\\)\\.?\\s*$`, 'i');
           text = text.replace(trailingLoc, '');
-          // Also strip if location appears as a standalone suffix like " - Post" or " — Post"
           const trailingSuffix = new RegExp(`\\s*[\\-\\u2014]\\s*${escaped}\\.?\\s*$`, 'i');
           text = text.replace(trailingSuffix, '');
         }
-        agentChallenges.push(loc ? `${text} (${loc})` : text);
-        agentActions.push(parts[2]);
+        allChallengeTexts.push(loc ? `${text} (${loc})` : text);
+        allActionTexts.push(parts[2]);
       } else if (parts.length === 2) {
-        agentChallenges.push(parts[0]);
-        agentActions.push(parts[1]);
+        allChallengeTexts.push(parts[0]);
+        allActionTexts.push(parts[1]);
       } else {
-        agentChallenges.push(line);
-        agentActions.push('\u2014');
+        allChallengeTexts.push(line);
+        allActionTexts.push('\u2014');
       }
     }
+  } else {
+    allChallengeTexts = items.length
+      ? items.map((r) => {
+          if (!r.location) return r.challenge;
+          const locPattern = new RegExp(`\\s*\\(${r.location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)\\s*\\.?\\s*$`, 'i');
+          const cleaned = r.challenge.replace(locPattern, '');
+          return `${cleaned} (${r.location})`;
+        })
+      : [];
+    allActionTexts = items.length
+      ? items.map((r) => r.action || '\u2014')
+      : [];
   }
 
-  // Challenges Identified card (amber header)
-  addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH });
-  slide.addShape('rect', {
-    x: x1, y: cardY, w: COL2_W, h: 0.4,
-    fill: { color: AMBER }, rectRadius: 0.03,
-  });
-  slide.addShape('rect', {
-    x: x1, y: cardY + 0.2, w: COL2_W, h: 0.2,
-    fill: { color: AMBER },
-  });
-  slide.addText('CHALLENGES IDENTIFIED', {
-    x: x1, y: cardY, w: COL2_W, h: 0.4,
-    fontSize: 11, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
-  });
+  // Render in batches of 4 per slide
+  const perSlide = 4;
+  const totalBatches = Math.max(1, Math.ceil(allChallengeTexts.length / perSlide));
 
-  const challengeTexts = agentChallenges || (items.length
-    ? items.map((r) => {
-        if (!r.location) return r.challenge;
-        // Strip trailing "(Location)" if already present in challenge text before appending
-        const locPattern = new RegExp(`\\s*\\(${r.location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)\\s*\\.?\\s*$`, 'i');
-        const cleaned = r.challenge.replace(locPattern, '');
-        return `${cleaned} (${r.location})`;
-      })
-    : []);
-  if (challengeTexts.length) {
-    addCardBullets(slide, challengeTexts, { x: x1, y: cardY + 0.6, w: COL2_W, h: cardH - 0.8 });
+  for (let batch = 0; batch < totalBatches; batch++) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, batch === 0
+      ? 'Addressing Key Operational Challenges'
+      : 'Addressing Key Operational Challenges (cont.)');
+
+    const startIdx = batch * perSlide;
+    const challengeTexts = allChallengeTexts.slice(startIdx, startIdx + perSlide);
+    const actionTexts = allActionTexts.slice(startIdx, startIdx + perSlide);
+
+    const x1 = MARGIN;
+    const x2 = MARGIN + COL2_W + 0.3;
+    const cardY = 1.15;
+    const maxCardH = SLIDE_H - cardY - 0.45;
+    const bulletCount = Math.max(challengeTexts.length, 1);
+    const cardH = Math.min(calcCardH(bulletCount, { headerH: 0.55, itemH: 0.5, maxH: maxCardH }), maxCardH);
+
+    // Challenges Identified card (amber header)
+    addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH });
+    slide.addShape('rect', {
+      x: x1, y: cardY, w: COL2_W, h: 0.4,
+      fill: { color: AMBER }, rectRadius: 0.03,
+    });
+    slide.addShape('rect', {
+      x: x1, y: cardY + 0.2, w: COL2_W, h: 0.2,
+      fill: { color: AMBER },
+    });
+    slide.addText('CHALLENGES IDENTIFIED', {
+      x: x1, y: cardY, w: COL2_W, h: 0.4,
+      fontSize: 11, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
+    });
+    if (challengeTexts.length) {
+      addCardBullets(slide, challengeTexts, { x: x1, y: cardY + 0.6, w: COL2_W, h: cardH - 0.8 });
+    }
+
+    // Actions Taken card (green header)
+    addCard(slide, { x: x2, y: cardY, w: COL2_W, h: cardH });
+    slide.addShape('rect', {
+      x: x2, y: cardY, w: COL2_W, h: 0.4,
+      fill: { color: GREEN }, rectRadius: 0.03,
+    });
+    slide.addShape('rect', {
+      x: x2, y: cardY + 0.2, w: COL2_W, h: 0.2,
+      fill: { color: GREEN },
+    });
+    slide.addText('ACTIONS TAKEN', {
+      x: x2, y: cardY, w: COL2_W, h: 0.4,
+      fontSize: 11, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
+    });
+    if (actionTexts.length) {
+      addCardBullets(slide, actionTexts, { x: x2, y: cardY + 0.6, w: COL2_W, h: cardH - 0.8 });
+    }
+
+    addLogoBottomRight(slide, logoColor);
   }
-
-  // Actions Taken card (green header)
-  addCard(slide, { x: x2, y: cardY, w: COL2_W, h: cardH });
-  slide.addShape('rect', {
-    x: x2, y: cardY, w: COL2_W, h: 0.4,
-    fill: { color: GREEN }, rectRadius: 0.03,
-  });
-  slide.addShape('rect', {
-    x: x2, y: cardY + 0.2, w: COL2_W, h: 0.2,
-    fill: { color: GREEN },
-  });
-  slide.addText('ACTIONS TAKEN', {
-    x: x2, y: cardY, w: COL2_W, h: 0.4,
-    fontSize: 11, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
-  });
-
-  const actionTexts = agentActions || (items.length
-    ? items.map((r) => r.action || '\u2014')
-    : []);
-  if (actionTexts.length) {
-    addCardBullets(slide, actionTexts, { x: x2, y: cardY + 0.6, w: COL2_W, h: cardH - 0.8 });
-  }
-
-  addLogoBottomRight(slide, logoColor);
 }
 
 // ── Slide 13: F.1 Current Financial Overview ────────────
@@ -1063,7 +1066,7 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
 function addFinancialSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
-  addSectionTitle(slide, 'F.1: Current Financial Overview');
+  addSectionTitle(slide, 'Current Financial Overview');
 
   const f = form.financial;
   const x1 = MARGIN;
@@ -1152,12 +1155,11 @@ function addFinancialSlide(pptx, form, logoColor, narratives) {
 // ── Slide 14: G.1 Innovation & Technology Integration ───
 
 function addInnovationSlide(pptx, form, logoColor, narratives) {
-  const slide = pptx.addSlide();
-  setContentBackground(slide);
-  addSectionTitle(slide, 'G.1: Innovation & Technology Integration');
-
   const rawHighlights = (form.roadmap.highlights || []).filter((h) => h.innovation);
   if (!rawHighlights.length) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, 'Innovation & Technology Integration');
     slide.addText('No innovation highlights reported this quarter.', {
       x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
       fontSize: 12, fontFace: FONT, color: MED_GREY, italic: true, align: 'center',
@@ -1184,7 +1186,6 @@ function addInnovationSlide(pptx, form, logoColor, narratives) {
     });
     highlights = Object.values(merged);
   } else {
-    // Merge highlights that share the same innovation name
     const merged = {};
     rawHighlights.forEach((h) => {
       const key = (h.innovation || '').toLowerCase().trim();
@@ -1195,39 +1196,46 @@ function addInnovationSlide(pptx, form, logoColor, narratives) {
     highlights = Object.values(merged);
   }
 
-  const cardY = 1.15;
-  const gap = 0.3;
-  const show = Math.min(highlights.length, 3);
-  const colW = show === 1 ? CONTENT_W : show === 2 ? COL2_W : COL3_W;
-  const colGap = show === 2 ? 0.3 : gap;
-  const maxCardH = SLIDE_H - cardY - 0.45;
-  const maxBulletH = Math.max(...highlights.slice(0, show).map((h) => estimateBulletH(h.bullets, colW - 0.5)));
-  const cardH = Math.min(maxBulletH + 0.8, maxCardH);
+  // Render in batches of 3 per slide
+  for (let batch = 0; batch < highlights.length; batch += 3) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, batch === 0
+      ? 'Innovation & Technology Integration'
+      : 'Innovation & Technology Integration (cont.)');
 
-  highlights.slice(0, show).forEach((h, i) => {
-    const x = MARGIN + i * (colW + colGap);
-    addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
-    slide.addText((h.innovation || '').toUpperCase(), {
-      x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
-      fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+    const batchItems = highlights.slice(batch, batch + 3);
+    const cardY = 1.15;
+    const gap = 0.3;
+    const show = batchItems.length;
+    const colW = show === 1 ? CONTENT_W : show === 2 ? COL2_W : COL3_W;
+    const colGap = show === 2 ? 0.3 : gap;
+    const maxCardH = SLIDE_H - cardY - 0.45;
+    const maxBulletH = Math.max(...batchItems.map((h) => estimateBulletH(h.bullets, colW - 0.5)));
+    const cardH = Math.min(maxBulletH + 0.8, maxCardH);
+
+    batchItems.forEach((h, i) => {
+      const x = MARGIN + i * (colW + colGap);
+      addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
+      slide.addText((h.innovation || '').toUpperCase(), {
+        x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
+        fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+      });
+      if (h.bullets.length) {
+        addCardBullets(slide, h.bullets, { x, y: cardY + 0.6, w: colW, h: cardH - 0.8 });
+      }
     });
-    if (h.bullets.length) {
-      addCardBullets(slide, h.bullets, { x, y: cardY + 0.6, w: colW, h: cardH - 0.8 });
-    }
-  });
 
-  addLogoBottomRight(slide, logoColor);
+    addLogoBottomRight(slide, logoColor);
+  }
 }
 
 // ── Slide 15: G.2 Roadmap — Strategic Initiatives ───────
 
 function addRoadmapSlide(pptx, form, logoColor, narratives) {
-  const slide = pptx.addSlide();
-  setContentBackground(slide);
-
   const r = form.roadmap;
   const q = form.cover.quarter || '';
-  addSectionTitle(slide, `G.2: ${q ? q.replace(/Q(\d)/, (_, n) => `Q${(Number(n) % 4) + 1}`) + ' ' : ''}Roadmap \u2014 Strategic Initiatives`);
+  const titleBase = `${q ? q.replace(/Q(\d)/, (_, n) => `Q${(Number(n) % 4) + 1}`) + ' ' : ''}Roadmap \u2014 Strategic Initiatives`;
 
   // Prefer agent narrative for roadmap items — parse "month | initiative | details" lines
   const narrativeLines = getNarrativeLines(narratives, 'G2:ROADMAP');
@@ -1246,65 +1254,79 @@ function addRoadmapSlide(pptx, form, logoColor, narratives) {
     schedule = (r.schedule || []).filter((s) => s.initiative);
   }
 
-  schedule.forEach((item, i) => {
-    const y = 1.2 + i * 1.35;
-    if (y > 4.5) return;
-
-    // Show month label intelligently — full short text, not just 3 chars
-    const rawMonth = (item.month || '').trim();
-    const monthLabel = rawMonth.length <= 5
-      ? rawMonth.toUpperCase()
-      : rawMonth.toUpperCase().replace(/QUARTER\s*/i, 'Q').replace(/MONTH\s*/i, 'M').substring(0, 5);
-
-    // Month block (blue rounded rect)
-    slide.addShape('roundRect', {
-      x: MARGIN, y, w: 1.1, h: 1.0,
-      fill: { color: AA_BLUE }, rectRadius: 0.05,
-    });
-    // Red accent on top-left of month block
-    slide.addShape('rect', {
-      x: MARGIN + 0.05, y, w: 0.3, h: 0.04,
-      fill: { color: AA_RED },
-    });
-    slide.addText(monthLabel, {
-      x: MARGIN, y: y + 0.15, w: 1.1, h: 0.7,
-      fontSize: 20, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
-    });
-
-    // Content card next to month block
-    const cardX = MARGIN + 1.3;
-    const cardW = CONTENT_W - 1.3;
-    addCard(slide, { x: cardX, y, w: cardW, h: 1.0 });
-
-    slide.addText(item.initiative || '', {
-      x: cardX + 0.2, y: y + 0.08, w: cardW - 0.4, h: 0.3,
-      fontSize: 11, fontFace: FONT, color: DARK, bold: true,
-    });
-    slide.addText(item.details || '', {
-      x: cardX + 0.2, y: y + 0.38, w: cardW - 0.4, h: 0.55,
-      fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
-    });
-  });
-
-  // Goal statement at bottom — prefer agent narrative, fall back to form data
+  // Goal statement — prefer agent narrative, fall back to form data
   const goalText = getNarrativeText(narratives, 'G2:GOAL') || r.goalStatement;
-  if (goalText) {
-    const goalLines = goalText.split('\n').filter(Boolean);
-    const uniqueGoal = [...new Set(goalLines)].join('\n');
-    const goalY = Math.min(1.2 + schedule.length * 1.35 + 0.15, 4.85);
-    slide.addText(
-      [
-        { text: `${q || 'Quarter'} Goal: `, options: { bold: true, color: AA_BLUE, fontSize: 10 } },
-        { text: uniqueGoal, options: { bold: false, color: DARK, fontSize: 10 } },
-      ],
-      {
-        x: MARGIN, y: goalY, w: CONTENT_W, h: 0.5,
-        fontFace: FONT, valign: 'top',
-      }
-    );
-  }
 
-  addLogoBottomRight(slide, logoColor);
+  // Render in batches of 3 items per slide, goal on the LAST slide
+  const perSlide = 3;
+  const totalBatches = Math.max(1, Math.ceil(schedule.length / perSlide));
+
+  for (let batch = 0; batch < totalBatches; batch++) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, batch === 0 ? titleBase : `${titleBase} (cont.)`);
+
+    const startIdx = batch * perSlide;
+    const batchItems = schedule.slice(startIdx, startIdx + perSlide);
+
+    batchItems.forEach((item, i) => {
+      const y = 1.2 + i * 1.35;
+
+      const rawMonth = (item.month || '').trim();
+      const monthLabel = rawMonth.length <= 3
+        ? rawMonth.toUpperCase()
+        : rawMonth.toUpperCase().substring(0, 3);
+
+      // Month block (blue rounded rect)
+      slide.addShape('roundRect', {
+        x: MARGIN, y, w: 1.1, h: 1.0,
+        fill: { color: AA_BLUE }, rectRadius: 0.05,
+      });
+      // Red accent on top-left of month block
+      slide.addShape('rect', {
+        x: MARGIN + 0.05, y, w: 0.3, h: 0.04,
+        fill: { color: AA_RED },
+      });
+      slide.addText(monthLabel, {
+        x: MARGIN, y: y + 0.15, w: 1.1, h: 0.7,
+        fontSize: 16, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
+      });
+
+      // Content card next to month block
+      const cardX = MARGIN + 1.3;
+      const cardW = CONTENT_W - 1.3;
+      addCard(slide, { x: cardX, y, w: cardW, h: 1.0 });
+
+      slide.addText(item.initiative || '', {
+        x: cardX + 0.2, y: y + 0.08, w: cardW - 0.4, h: 0.3,
+        fontSize: 11, fontFace: FONT, color: DARK, bold: true,
+      });
+      slide.addText(item.details || '', {
+        x: cardX + 0.2, y: y + 0.38, w: cardW - 0.4, h: 0.55,
+        fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
+      });
+    });
+
+    // Goal statement on the LAST slide only
+    const isLastSlide = batch === totalBatches - 1;
+    if (isLastSlide && goalText) {
+      const goalLines = goalText.split('\n').filter(Boolean);
+      const uniqueGoal = [...new Set(goalLines)].join('\n');
+      const goalY = Math.min(1.2 + batchItems.length * 1.35 + 0.15, 4.85);
+      slide.addText(
+        [
+          { text: `${q || 'Quarter'} Goal: `, options: { bold: true, color: AA_BLUE, fontSize: 10 } },
+          { text: uniqueGoal, options: { bold: false, color: DARK, fontSize: 10 } },
+        ],
+        {
+          x: MARGIN, y: goalY, w: CONTENT_W, h: 0.5,
+          fontFace: FONT, valign: 'top',
+        }
+      );
+    }
+
+    addLogoBottomRight(slide, logoColor);
+  }
 }
 
 // ── Slide 16: Thank You ─────────────────────────────────
@@ -1346,7 +1368,7 @@ function addThankYouSlide(pptx, form, logoWhite) {
 
   // Logo bottom-left — actual ratio is 2.83:1
   if (logoWhite) {
-    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.5, w: 1.6, h: 0.56 });
+    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.7, w: 1.1, h: 0.39 });
   }
 
   // Red diamond accent
