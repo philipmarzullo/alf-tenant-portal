@@ -1030,6 +1030,13 @@ export default function QBUBuilder() {
               <Image size={12} /> {form.projects.photos.length + form.roadmap.photos.length} photo{(form.projects.photos.length + form.roadmap.photos.length) !== 1 ? 's' : ''}
             </span>
           )}
+          <a
+            href="/qbu-intake-template.xlsx"
+            download
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-aa-blue border border-aa-blue/30 rounded-md hover:bg-aa-blue/5 transition-colors"
+          >
+            <Download size={12} /> Download QBU Template
+          </a>
           <AgentActionButton label="Generate QBU" variant="primary" onClick={handleGenerate} />
         </div>
       </div>
