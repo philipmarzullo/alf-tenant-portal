@@ -41,7 +41,7 @@ export async function callAgent(agentKey, actionKey, data, apiKey) {
     },
     body: JSON.stringify({
       model: agent.model,
-      max_tokens: 1024,
+      max_tokens: agent.maxTokens || 4096,
       system: agent.systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
     }),

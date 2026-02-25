@@ -1,22 +1,29 @@
 import { useState } from 'react';
-import { Users, UserCheck, Shield, Boxes, Plus } from 'lucide-react';
+import { Users, UserCheck, Shield, Boxes, Plus, Loader2, Mail } from 'lucide-react';
 import MetricCard from '../../components/shared/MetricCard';
 import DataTable from '../../components/shared/DataTable';
 import SlidePanel from '../../components/layout/SlidePanel';
-import { MODULE_DEFINITIONS, createUser, updateUser } from '../../data/users';
+import { MODULE_DEFINITIONS } from '../../data/users';
 import { useUser } from '../../contexts/UserContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
-const EMPTY_FORM = { name: '', email: '', title: '', role: 'user', modules: [], active: true };
+const EMPTY_FORM = { name: '', email: '', title: '', role: 'user', modules: [], active: true, password: '' };
 
 export default function UserManagement() {
   const { currentUser, allUsers, refreshUsers } = useUser();
+  const { session, resetPassword } = useAuth();
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [resetSending, setResetSending] = useState(false);
 
   const openAdd = () => {
     setEditingUser(null);
     setForm(EMPTY_FORM);
+    setSaveError(null);
     setPanelOpen(true);
   };
 
@@ -29,19 +36,97 @@ export default function UserManagement() {
       role: user.role,
       modules: [...user.modules],
       active: user.active,
+      password: '',
     });
+    setSaveError(null);
     setPanelOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim() || !form.email.trim()) return;
+    setSaving(true);
+    setSaveError(null);
+
+    const modules = form.role === 'admin'
+      ? MODULE_DEFINITIONS.map((m) => m.key)
+      : form.modules;
+
     if (editingUser) {
-      updateUser(editingUser.id, form);
+      // Update existing profile
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          title: form.title.trim(),
+          role: form.role,
+          modules,
+          active: form.active,
+        })
+        .eq('id', editingUser.id);
+
+      if (error) {
+        setSaveError(error.message);
+        setSaving(false);
+        return;
+      }
     } else {
-      createUser(form);
+      // Create new user via Edge Function
+      if (!form.password || form.password.length < 6) {
+        setSaveError('Password is required and must be at least 6 characters.');
+        setSaving(false);
+        return;
+      }
+
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-user`;
+
+        const res = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentSession.access_token}`,
+          },
+          body: JSON.stringify({
+            email: form.email.trim(),
+            password: form.password,
+            name: form.name.trim(),
+            title: form.title.trim(),
+            role: form.role,
+            modules,
+          }),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          setSaveError(result.error || 'Failed to create user. Is the Edge Function deployed?');
+          setSaving(false);
+          return;
+        }
+      } catch {
+        setSaveError(
+          'Could not reach the admin-create-user Edge Function. ' +
+          'You can create users directly in the Supabase Dashboard (Authentication > Users) until the function is deployed.'
+        );
+        setSaving(false);
+        return;
+      }
     }
-    refreshUsers();
+
+    await refreshUsers();
+    setSaving(false);
     setPanelOpen(false);
+  };
+
+  const handleSendReset = async () => {
+    if (!editingUser) return;
+    setResetSending(true);
+    await resetPassword(editingUser.email);
+    setResetSending(false);
+    // The toast for this would come from a toast context if wired up
+    alert(`Password reset email sent to ${editingUser.email}`);
   };
 
   const toggleModule = (key) => {
@@ -53,7 +138,7 @@ export default function UserManagement() {
     }));
   };
 
-  const isSelf = editingUser?.id === currentUser.id;
+  const isSelf = editingUser?.id === currentUser?.id;
   const activeCount = allUsers.filter((u) => u.active).length;
   const adminCount = allUsers.filter((u) => u.role === 'admin' && u.active).length;
   const avgModules =
@@ -207,8 +292,27 @@ export default function UserManagement() {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
               placeholder="email@aaefs.com"
+              disabled={!!editingUser}
             />
           </div>
+
+          {/* Password — only when creating */}
+          {!editingUser && (
+            <div>
+              <label className="block text-sm font-medium text-dark-text mb-1">Temporary Password</label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
+                placeholder="At least 6 characters"
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-secondary-text mt-1">
+                The user will use this to sign in the first time. You can send a reset email after.
+              </p>
+            </div>
+          )}
 
           {/* Title */}
           <div>
@@ -307,13 +411,36 @@ export default function UserManagement() {
             </div>
           )}
 
+          {/* Send Password Reset — edit mode, non-self users */}
+          {editingUser && !isSelf && (
+            <div>
+              <button
+                type="button"
+                onClick={handleSendReset}
+                disabled={resetSending}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 text-sm font-medium text-secondary-text rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                {resetSending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+                Send Password Reset Email
+              </button>
+            </div>
+          )}
+
+          {/* Error display */}
+          {saveError && (
+            <div className="text-sm text-aa-red bg-red-50 rounded-lg px-3 py-2">
+              {saveError}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             <button
               onClick={handleSave}
-              disabled={!form.name.trim() || !form.email.trim()}
-              className="flex-1 px-4 py-2 bg-aa-blue text-white text-sm font-medium rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={saving || !form.name.trim() || !form.email.trim()}
+              className="flex-1 px-4 py-2 bg-aa-blue text-white text-sm font-medium rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
+              {saving && <Loader2 size={14} className="animate-spin" />}
               {editingUser ? 'Save Changes' : 'Create User'}
             </button>
             <button

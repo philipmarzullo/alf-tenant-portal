@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
-  ChevronLeft, ChevronRight, ChevronDown, Check,
+  ChevronLeft, ChevronRight, LogOut,
 } from 'lucide-react';
 import { NAV_ITEMS } from '../../data/constants';
 import { useUser } from '../../contexts/UserContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ICON_MAP = {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
@@ -15,9 +15,8 @@ const ICON_MAP = {
 
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
-  const { currentUser, activeUsers, switchUser } = useUser();
-  const [switcherOpen, setSwitcherOpen] = useState(false);
-  const switcherRef = useRef(null);
+  const { currentUser } = useUser();
+  const { signOut } = useAuth();
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
@@ -30,28 +29,15 @@ export default function Sidebar({ collapsed, onToggle }) {
       ...group,
       items: group.items.filter((item) => {
         if (!item.moduleKey) return true;
-        if (currentUser.role === 'admin') return true;
-        return currentUser.modules.includes(item.moduleKey);
+        if (currentUser?.role === 'admin') return true;
+        return currentUser?.modules?.includes(item.moduleKey);
       }),
     }))
     .filter((group) => group.items.length > 0);
 
-  // Close switcher on outside click
-  useEffect(() => {
-    function handleClick(e) {
-      if (switcherRef.current && !switcherRef.current.contains(e.target)) {
-        setSwitcherOpen(false);
-      }
-    }
-    if (switcherOpen) document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [switcherOpen]);
-
-  const initials = currentUser.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
+  const initials = currentUser?.name
+    ? currentUser.name.split(' ').map((n) => n[0]).join('').toUpperCase()
+    : '?';
 
   return (
     <aside
@@ -107,14 +93,9 @@ export default function Sidebar({ collapsed, onToggle }) {
         ))}
       </nav>
 
-      {/* User info + switcher */}
-      <div className="border-t border-white/10 shrink-0 relative" ref={switcherRef}>
-        <button
-          onClick={() => !collapsed && setSwitcherOpen(!switcherOpen)}
-          className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors ${
-            !collapsed ? 'hover:bg-white/5 cursor-pointer' : ''
-          }`}
-        >
+      {/* User info + logout */}
+      <div className="border-t border-white/10 shrink-0">
+        <div className="w-full px-4 py-3 flex items-center gap-3">
           {collapsed ? (
             <div className="w-8 h-8 rounded-full bg-aa-blue/20 flex items-center justify-center text-aa-blue text-xs font-bold">
               {initials}
@@ -125,48 +106,19 @@ export default function Sidebar({ collapsed, onToggle }) {
                 {initials}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-white text-sm font-medium truncate">{currentUser.name}</div>
-                <div className="text-white/40 text-xs truncate">{currentUser.title}</div>
+                <div className="text-white text-sm font-medium truncate">{currentUser?.name}</div>
+                <div className="text-white/40 text-xs truncate">{currentUser?.title}</div>
               </div>
-              <ChevronDown
-                size={14}
-                className={`text-white/30 transition-transform ${switcherOpen ? 'rotate-180' : ''}`}
-              />
+              <button
+                onClick={signOut}
+                title="Sign out"
+                className="text-white/30 hover:text-white/70 transition-colors cursor-pointer"
+              >
+                <LogOut size={14} />
+              </button>
             </>
           )}
-        </button>
-
-        {/* Switcher dropdown — opens upward */}
-        {switcherOpen && !collapsed && (
-          <div className="absolute bottom-full left-2 right-2 mb-1 bg-[#232840] border border-white/10 rounded-lg shadow-xl overflow-hidden">
-            <div className="px-3 py-2 text-[11px] font-semibold tracking-wider text-white/30 uppercase border-b border-white/10">
-              Switch User
-            </div>
-            <div className="max-h-60 overflow-y-auto py-1">
-              {activeUsers.map((user) => (
-                <button
-                  key={user.id}
-                  onClick={() => {
-                    switchUser(user.id);
-                    setSwitcherOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-white/5 transition-colors"
-                >
-                  <div className="w-7 h-7 rounded-full bg-aa-blue/20 flex items-center justify-center text-aa-blue text-[10px] font-bold shrink-0">
-                    {user.name.split(' ').map((n) => n[0]).join('').toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-white text-sm truncate">{user.name}</div>
-                    <div className="text-white/40 text-[11px] truncate">{user.title}</div>
-                  </div>
-                  {user.id === currentUser.id && (
-                    <Check size={14} className="text-aa-blue shrink-0" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Collapse toggle */}
