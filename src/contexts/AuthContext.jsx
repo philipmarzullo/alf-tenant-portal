@@ -32,12 +32,18 @@ export function AuthProvider({ children }) {
 
   const signIn = useCallback(async (email, password) => {
     setAuthError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setAuthError(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setAuthError(error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('[auth] signIn threw:', err);
+      setAuthError(err.message || 'Sign-in failed');
       return false;
     }
-    return true;
   }, []);
 
   const signOut = useCallback(async () => {
