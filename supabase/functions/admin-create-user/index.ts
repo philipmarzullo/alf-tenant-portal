@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(token);
 
     if (authError || !caller) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+      return new Response(JSON.stringify({ error: `Invalid token: ${authError?.message || 'no user returned'}` }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

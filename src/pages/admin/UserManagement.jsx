@@ -103,7 +103,7 @@ export default function UserManagement() {
         const result = await res.json();
 
         if (!res.ok) {
-          setSaveError(result.error || `Failed to create user (${res.status})`);
+          setSaveError(result.error || result.message || `Failed to create user (${res.status})`);
           setSaving(false);
           return;
         }
