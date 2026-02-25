@@ -217,6 +217,7 @@ const TABS = [
   { key: 'audits', label: 'Audits' },
   { key: 'executive', label: 'Executive' },
   { key: 'projects', label: 'Projects' },
+  { key: 'testimonials', label: 'Testimonials' },
   { key: 'challenges', label: 'Challenges' },
   { key: 'financial', label: 'Financial' },
   { key: 'roadmap', label: 'Innovation' },
@@ -673,27 +674,6 @@ export default function QBUBuilder() {
             <AddRowBtn onClick={() => addArrayRow('projects', 'completed', { category: 'Renovation/Deep Clean', description: '' })} label="Add project" />
           </div>
 
-          <SectionHeading description="Direct quotes from emails, texts, or meetings. Attribute by name.">Client Testimonials</SectionHeading>
-          <div className="space-y-3">
-            {form.projects.testimonials.map((row, i) => (
-              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Testimonial {i + 1}</span>
-                  {form.projects.testimonials.length > 1 && <RemoveBtn onClick={() => removeArrayRow('projects', 'testimonials', i)} />}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Location</Label><Input value={row.location} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { location: v })} placeholder="Building / campus" /></div>
-                  <div><Label>Attribution</Label><Input value={row.attribution} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { attribution: v })} placeholder="Name & Title" /></div>
-                </div>
-                <div>
-                  <Label>Quote</Label>
-                  <Area value={row.quote} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { quote: v })} placeholder="Direct quote..." rows={2} />
-                </div>
-              </div>
-            ))}
-            <AddRowBtn onClick={() => addArrayRow('projects', 'testimonials', { location: '', quote: '', attribution: '' })} label="Add testimonial" />
-          </div>
-
           {/* Photo Upload */}
           <SectionHeading description="Upload photos to include in the QBU deck. Add captions and locations.">Project Photos (Optional)</SectionHeading>
           <div>
@@ -747,6 +727,32 @@ export default function QBUBuilder() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      );
+
+      // ── CLIENT TESTIMONIALS ──
+      case 'testimonials': return (
+        <div className="space-y-6">
+          <SectionHeading description="Direct quotes from emails, texts, or meetings. Attribute by name.">Client Testimonials</SectionHeading>
+          <div className="space-y-3">
+            {form.projects.testimonials.map((row, i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Testimonial {i + 1}</span>
+                  {form.projects.testimonials.length > 1 && <RemoveBtn onClick={() => removeArrayRow('projects', 'testimonials', i)} />}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Location</Label><Input value={row.location} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { location: v })} placeholder="Building / campus" /></div>
+                  <div><Label>Attribution</Label><Input value={row.attribution} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { attribution: v })} placeholder="Name & Title" /></div>
+                </div>
+                <div>
+                  <Label>Quote</Label>
+                  <Area value={row.quote} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { quote: v })} placeholder="Direct quote..." rows={2} />
+                </div>
+              </div>
+            ))}
+            <AddRowBtn onClick={() => addArrayRow('projects', 'testimonials', { location: '', quote: '', attribution: '' })} label="Add testimonial" />
           </div>
         </div>
       );
