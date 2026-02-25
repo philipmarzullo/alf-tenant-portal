@@ -47,7 +47,7 @@ export default function UserManagement() {
     setSaving(true);
     setSaveError(null);
 
-    const modules = form.role === 'admin'
+    const modules = (form.role === 'admin' || form.role === 'super-admin')
       ? MODULE_DEFINITIONS.map((m) => m.key)
       : form.modules;
 
@@ -140,7 +140,7 @@ export default function UserManagement() {
 
   const isSelf = editingUser?.id === currentUser?.id;
   const activeCount = allUsers.filter((u) => u.active).length;
-  const adminCount = allUsers.filter((u) => u.role === 'admin' && u.active).length;
+  const adminCount = allUsers.filter((u) => (u.role === 'admin' || u.role === 'super-admin') && u.active).length;
   const avgModules =
     allUsers.length > 0
       ? (allUsers.reduce((sum, u) => sum + u.modules.length, 0) / allUsers.length).toFixed(1)
@@ -168,24 +168,28 @@ export default function UserManagement() {
     {
       key: 'role',
       label: 'Role',
-      render: (val) => (
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            val === 'admin'
-              ? 'bg-purple-50 text-purple-700'
-              : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          {val === 'admin' ? 'Admin' : 'User'}
-        </span>
-      ),
+      render: (val) => {
+        const styles =
+          val === 'super-admin'
+            ? 'bg-red-50 text-red-700'
+            : val === 'admin'
+            ? 'bg-purple-50 text-purple-700'
+            : 'bg-gray-100 text-gray-600';
+        const label =
+          val === 'super-admin' ? 'Super Admin' : val === 'admin' ? 'Admin' : 'User';
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles}`}>
+            {label}
+          </span>
+        );
+      },
     },
     {
       key: 'modules',
       label: 'Modules',
       render: (modules, row) => {
-        if (row.role === 'admin') {
-          return <span className="text-xs text-secondary-text italic">All (admin)</span>;
+        if (row.role === 'admin' || row.role === 'super-admin') {
+          return <span className="text-xs text-secondary-text italic">All ({row.role})</span>;
         }
         return (
           <div className="flex flex-wrap gap-1">
@@ -337,14 +341,15 @@ export default function UserManagement() {
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
+              <option value="super-admin">Super Admin</option>
             </select>
             {isSelf && (
               <p className="text-xs text-secondary-text mt-1">You cannot change your own role.</p>
             )}
           </div>
 
-          {/* Modules — hidden when admin */}
-          {form.role !== 'admin' && (
+          {/* Modules — hidden when admin or super-admin */}
+          {form.role !== 'admin' && form.role !== 'super-admin' && (
             <div>
               <label className="block text-sm font-medium text-dark-text mb-2">Module Access</label>
               <div className="space-y-4">
@@ -377,10 +382,10 @@ export default function UserManagement() {
             </div>
           )}
 
-          {form.role === 'admin' && (
+          {(form.role === 'admin' || form.role === 'super-admin') && (
             <div className="bg-purple-50 rounded-lg px-4 py-3">
               <p className="text-sm text-purple-700">
-                Admins automatically have access to all modules.
+                {form.role === 'super-admin' ? 'Super Admins' : 'Admins'} automatically have access to all modules.
               </p>
             </div>
           )}

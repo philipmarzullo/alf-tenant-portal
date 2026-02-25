@@ -105,8 +105,8 @@ function AuthGate({ children }) {
 }
 
 function ProtectedRoute({ moduleKey, adminOnly, children }) {
-  const { hasModule, isAdmin } = useUser();
-  if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
+  const { hasModule, isSuperAdmin } = useUser();
+  if (adminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
   if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/" replace />;
   return children;
 }

@@ -69,17 +69,18 @@ export function UserProvider({ children }) {
     (moduleKey) => {
       if (!currentUser) return false;
       if (!moduleKey) return true;
-      if (currentUser.role === 'admin') return true;
+      if (currentUser.role === 'admin' || currentUser.role === 'super-admin') return true;
       return currentUser.modules.includes(moduleKey);
     },
     [currentUser],
   );
 
-  const isAdmin = currentUser?.role === 'admin';
+  const isSuperAdmin = currentUser?.role === 'super-admin';
+  const isAdmin = currentUser?.role === 'admin' || isSuperAdmin;
 
   return (
     <UserContext.Provider
-      value={{ currentUser, allUsers, activeUsers, refreshUsers, hasModule, isAdmin, profileLoading }}
+      value={{ currentUser, allUsers, activeUsers, refreshUsers, hasModule, isAdmin, isSuperAdmin, profileLoading }}
     >
       {children}
     </UserContext.Provider>

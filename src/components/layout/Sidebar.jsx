@@ -15,7 +15,7 @@ const ICON_MAP = {
 
 export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
-  const { currentUser } = useUser();
+  const { currentUser, isSuperAdmin, isAdmin } = useUser();
   const { signOut } = useAuth();
 
   const isActive = (path) => {
@@ -29,7 +29,8 @@ export default function Sidebar({ collapsed, onToggle }) {
       ...group,
       items: group.items.filter((item) => {
         if (!item.moduleKey) return true;
-        if (currentUser?.role === 'admin') return true;
+        if (item.moduleKey === 'admin') return isSuperAdmin;
+        if (isAdmin) return true;
         return currentUser?.modules?.includes(item.moduleKey);
       }),
     }))
