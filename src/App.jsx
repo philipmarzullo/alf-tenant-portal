@@ -93,20 +93,20 @@ function DeactivatedScreen() {
 
 function AuthGate({ children }) {
   const { loading: authLoading, isConfigured, session } = useAuth();
-  const { currentUser, profileLoading } = useUser();
+  const { realUser, profileLoading } = useUser();
 
   if (!isConfigured) return <SetupScreen />;
   if (authLoading) return <LoadingScreen />;
   if (!session) return <Navigate to="/auth/login" replace />;
   if (profileLoading) return <LoadingScreen />;
-  if (currentUser && !currentUser.active) return <DeactivatedScreen />;
+  if (realUser && !realUser.active) return <DeactivatedScreen />;
 
   return children;
 }
 
 function ProtectedRoute({ moduleKey, adminOnly, children }) {
-  const { hasModule, isSuperAdmin } = useUser();
-  if (adminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
+  const { hasModule, realIsSuperAdmin } = useUser();
+  if (adminOnly && !realIsSuperAdmin) return <Navigate to="/" replace />;
   if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/" replace />;
   return children;
 }

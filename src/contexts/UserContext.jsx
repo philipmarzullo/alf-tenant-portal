@@ -6,14 +6,16 @@ const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
   const { session } = useAuth();
-  const [currentUser, setCurrentUser] = useState(null);
+  const [realUser, setRealUser] = useState(null);
+  const [viewingAs, setViewingAsState] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
   const [profileLoading, setProfileLoading] = useState(true);
 
   // Fetch current user's profile when session changes
   useEffect(() => {
     if (!session?.user?.id || !supabase) {
-      setCurrentUser(null);
+      setRealUser(null);
+      setViewingAsState(null);
       setProfileLoading(false);
       return;
     }
@@ -30,9 +32,9 @@ export function UserProvider({ children }) {
         if (cancelled) return;
         if (error) {
           console.error('Failed to fetch profile:', error);
-          setCurrentUser(null);
+          setRealUser(null);
         } else {
-          setCurrentUser(data);
+          setRealUser(data);
         }
         setProfileLoading(false);
       });
@@ -56,14 +58,32 @@ export function UserProvider({ children }) {
 
   // Load all users when we have a profile (admin may need the list)
   useEffect(() => {
-    if (currentUser) {
+    if (realUser) {
       refreshUsers();
     } else {
       setAllUsers([]);
     }
-  }, [currentUser, refreshUsers]);
+  }, [realUser, refreshUsers]);
 
   const activeUsers = allUsers.filter((u) => u.active);
+
+  // Impersonation — only super-admin can use this
+  const realIsSuperAdmin = realUser?.role === 'super-admin';
+
+  const setViewingAs = useCallback(
+    (user) => {
+      if (!realIsSuperAdmin) return;
+      setViewingAsState(user);
+    },
+    [realIsSuperAdmin],
+  );
+
+  const clearViewingAs = useCallback(() => {
+    setViewingAsState(null);
+  }, []);
+
+  // effectiveUser drives all permission checks
+  const currentUser = viewingAs || realUser;
 
   const hasModule = useCallback(
     (moduleKey) => {
@@ -80,7 +100,21 @@ export function UserProvider({ children }) {
 
   return (
     <UserContext.Provider
-      value={{ currentUser, allUsers, activeUsers, refreshUsers, hasModule, isAdmin, isSuperAdmin, profileLoading }}
+      value={{
+        currentUser,
+        realUser,
+        allUsers,
+        activeUsers,
+        refreshUsers,
+        hasModule,
+        isAdmin,
+        isSuperAdmin,
+        realIsSuperAdmin,
+        viewingAs,
+        setViewingAs,
+        clearViewingAs,
+        profileLoading,
+      }}
     >
       {children}
     </UserContext.Provider>
