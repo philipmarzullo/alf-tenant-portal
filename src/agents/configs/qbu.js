@@ -109,8 +109,8 @@ For each slide, output:
 
 *Speaker Notes: [talking points for the presenter]*
 
-For narrative sections (A.1 Safety Moment, B.1 Executive Summary, C.1 Key Takeaway, C.2 Analysis, E.1 Challenges),
-also output a structured block that the PPTX generator can parse:
+For EVERY narrative section, also output a structured NARRATIVE block that the PPTX generator can parse.
+The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and G.2 — output ALL of them:
 
 <!-- NARRATIVE:A1:TIPS -->
 [3-5 actionable safety tips for the given theme, one per line. Incorporate any provided tips. Build out a complete set grounded in the theme.]
