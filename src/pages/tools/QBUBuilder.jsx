@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { FileBarChart, Plus, Trash2, Upload, X, Image, ChevronLeft, ChevronRight, Download, Clock, RotateCcw, FileText, ChevronDown, ChevronUp, FileSpreadsheet, AlertTriangle } from 'lucide-react';
+import { FileBarChart, Plus, Trash2, Upload, X, Image, ChevronLeft, ChevronRight, Download, Clock, RotateCcw, FileText, ChevronDown, ChevronUp, FileSpreadsheet, AlertTriangle, Bot } from 'lucide-react';
 import { extractText } from '../../utils/docExtractor';
 import { parseQBUExcel } from '../../utils/qbuExcelParser';
 import AgentActionButton from '../../components/shared/AgentActionButton';
@@ -8,6 +8,7 @@ import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { getQBUHistory, saveQBU, getQBUById, deleteQBU } from '../../data/qbuHistory';
 import { generateQBUPptx } from '../../utils/qbuPptxTemplate';
+import AgentChatPanel from '../../components/shared/AgentChatPanel';
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -244,6 +245,7 @@ export default function QBUBuilder() {
   const [parseWarnings, setParseWarnings] = useState([]);
   const [populatedCount, setPopulatedCount] = useState(0);
   const [showDataReview, setShowDataReview] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const toast = useToast();
   const photoInputRef = useRef(null);
   const innovationPhotoInputRef = useRef(null);
@@ -1030,6 +1032,12 @@ export default function QBUBuilder() {
               <Image size={12} /> {form.projects.photos.length + form.roadmap.photos.length} photo{(form.projects.photos.length + form.roadmap.photos.length) !== 1 ? 's' : ''}
             </span>
           )}
+          <button
+            onClick={() => setChatOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-md hover:bg-aa-blue/10 transition-colors"
+          >
+            <Bot size={12} /> Ask QBU Agent
+          </button>
           <a
             href="/qbu-intake-template.xlsx"
             download
@@ -1452,6 +1460,15 @@ export default function QBUBuilder() {
           </table>
         )}
       </div>
+
+      {/* QBU Agent Chat Panel */}
+      <AgentChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        agentKey="qbu"
+        agentName="QBU Agent"
+        context="Quarterly Business Updates — formatting, content, client data, and A&A service metrics"
+      />
     </div>
   );
 }
