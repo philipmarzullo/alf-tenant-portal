@@ -198,6 +198,7 @@ const INITIAL = {
   },
   roadmap: {
     highlights: [{ innovation: '', description: '', benefit: '' }],
+    photos: [],
     schedule: [
       { month: 'Month 1', initiative: '', details: '' },
       { month: 'Month 2', initiative: '', details: '' },
@@ -245,6 +246,7 @@ export default function QBUBuilder() {
   const [showDataReview, setShowDataReview] = useState(false);
   const toast = useToast();
   const photoInputRef = useRef(null);
+  const innovationPhotoInputRef = useRef(null);
   const excelInputRef = useRef(null);
 
   // ── State updaters ───────────────
@@ -322,7 +324,7 @@ export default function QBUBuilder() {
 
   // ── Photo handling ───────────────
 
-  const handlePhotoUpload = (files) => {
+  const handlePhotoUpload = (files, section = 'projects') => {
     const newPhotos = Array.from(files)
       .filter((f) => f.type.startsWith('image/'))
       .map((file) => ({
@@ -331,20 +333,22 @@ export default function QBUBuilder() {
         caption: '',
         location: '',
         name: file.name,
+        type: 'general',
       }));
-    updateSection('projects', { photos: [...form.projects.photos, ...newPhotos] });
+    const existing = section === 'roadmap' ? form.roadmap.photos : form.projects.photos;
+    updateSection(section, { photos: [...existing, ...newPhotos] });
   };
 
-  const removePhoto = (index) => {
-    const photo = form.projects.photos[index];
-    if (photo.preview) URL.revokeObjectURL(photo.preview);
-    updateSection('projects', { photos: form.projects.photos.filter((_, i) => i !== index) });
+  const removePhoto = (index, section = 'projects') => {
+    const photos = section === 'roadmap' ? form.roadmap.photos : form.projects.photos;
+    if (photos[index]?.preview) URL.revokeObjectURL(photos[index].preview);
+    updateSection(section, { photos: photos.filter((_, i) => i !== index) });
   };
 
-  const updatePhoto = (index, updates) => {
-    const photos = [...form.projects.photos];
+  const updatePhoto = (index, updates, section = 'projects') => {
+    const photos = [...(section === 'roadmap' ? form.roadmap.photos : form.projects.photos)];
     photos[index] = { ...photos[index], ...updates };
-    updateSection('projects', { photos });
+    updateSection(section, { photos });
   };
 
   // ── Excel handling ─────────────
@@ -363,7 +367,7 @@ export default function QBUBuilder() {
         projects: { ...prev.projects, ...data.projects, photos: prev.projects.photos },
         challenges: { ...prev.challenges, ...data.challenges },
         financial: { ...prev.financial, ...data.financial },
-        roadmap: { ...prev.roadmap, ...data.roadmap },
+        roadmap: { ...prev.roadmap, ...data.roadmap, photos: prev.roadmap.photos },
         documents: prev.documents,
       }));
       setExcelFile(file);
@@ -393,10 +397,11 @@ export default function QBUBuilder() {
     setParseWarnings([]);
     setPopulatedCount(0);
     setShowDataReview(false);
-    // Reset form but preserve docs and photos
+    // Reset form but preserve docs and photos (both sections)
     setForm((prev) => ({
       ...INITIAL,
       documents: prev.documents,
+      roadmap: { ...INITIAL.roadmap, photos: prev.roadmap.photos },
       projects: { ...INITIAL.projects, photos: prev.projects.photos },
     }));
     toast('Excel removed — form data cleared');
@@ -741,6 +746,15 @@ export default function QBUBuilder() {
                     <div className="p-3 space-y-2">
                       <Input value={photo.caption} onChange={(v) => updatePhoto(i, { caption: v })} placeholder="Caption" />
                       <Input value={photo.location} onChange={(v) => updatePhoto(i, { location: v })} placeholder="Location / building" />
+                      <select
+                        value={photo.type || 'general'}
+                        onChange={(e) => updatePhoto(i, { type: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
+                      >
+                        <option value="general">General</option>
+                        <option value="before">Before</option>
+                        <option value="after">After</option>
+                      </select>
                     </div>
                   </div>
                 ))}
@@ -849,6 +863,61 @@ export default function QBUBuilder() {
             <AddRowBtn onClick={() => addArrayRow('roadmap', 'highlights', { innovation: '', description: '', benefit: '' })} label="Add highlight" />
           </div>
 
+          {/* Innovation Photos */}
+          <SectionHeading description="Upload photos of new technology, equipment, or before/after results.">Innovation Photos (optional)</SectionHeading>
+          <div>
+            <input
+              ref={innovationPhotoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => { handlePhotoUpload(e.target.files, 'roadmap'); e.target.value = ''; }}
+            />
+            <div
+              onClick={() => innovationPhotoInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-aa-blue', 'bg-aa-blue/5'); }}
+              onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-aa-blue', 'bg-aa-blue/5'); }}
+              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-aa-blue', 'bg-aa-blue/5'); handlePhotoUpload(e.dataTransfer.files, 'roadmap'); }}
+              className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center cursor-pointer hover:border-aa-blue hover:bg-aa-blue/5 transition-colors"
+            >
+              <Upload size={24} className="mx-auto text-gray-400 mb-2" />
+              <div className="text-sm font-medium text-dark-text">Drop photos here or click to upload</div>
+              <div className="text-xs text-secondary-text mt-1">JPG, PNG — innovation and technology photos</div>
+            </div>
+
+            {form.roadmap.photos.length > 0 && (
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                {form.roadmap.photos.map((photo, i) => (
+                  <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="relative aspect-video bg-gray-100">
+                      <img src={photo.preview} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => removePhoto(i, 'roadmap')}
+                        className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      <Input value={photo.caption} onChange={(v) => updatePhoto(i, { caption: v }, 'roadmap')} placeholder="Caption" />
+                      <Input value={photo.location} onChange={(v) => updatePhoto(i, { location: v }, 'roadmap')} placeholder="Location / building" />
+                      <select
+                        value={photo.type || 'general'}
+                        onChange={(e) => updatePhoto(i, { type: e.target.value }, 'roadmap')}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
+                      >
+                        <option value="general">General</option>
+                        <option value="before">Before</option>
+                        <option value="after">After</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <SectionHeading description="Concrete operational items — not vague goals. This becomes the outline for the next QBU.">Next Quarter Roadmap</SectionHeading>
           <div className="space-y-2">
             {form.roadmap.schedule.map((row, i) => (
@@ -901,7 +970,7 @@ export default function QBUBuilder() {
   const handleLoadQBU = (id) => {
     const entry = getQBUById(id);
     if (!entry) return;
-    setForm({ ...INITIAL, ...entry.formData, projects: { ...entry.formData.projects, photos: entry.formData.projects?.photos || [] } });
+    setForm({ ...INITIAL, ...entry.formData, projects: { ...entry.formData.projects, photos: entry.formData.projects?.photos || [] }, roadmap: { ...entry.formData.roadmap, photos: entry.formData.roadmap?.photos || [] } });
     setResult(entry.agentOutput);
     setShowResult(true);
     setActiveTab('cover');
@@ -940,9 +1009,9 @@ export default function QBUBuilder() {
               <FileText size={12} /> {form.documents.files.length} doc{form.documents.files.length !== 1 ? 's' : ''}
             </span>
           )}
-          {form.projects.photos.length > 0 && (
+          {(form.projects.photos.length + form.roadmap.photos.length) > 0 && (
             <span className="inline-flex items-center gap-1 text-xs text-secondary-text bg-gray-100 px-2 py-1 rounded">
-              <Image size={12} /> {form.projects.photos.length} photo{form.projects.photos.length !== 1 ? 's' : ''}
+              <Image size={12} /> {form.projects.photos.length + form.roadmap.photos.length} photo{(form.projects.photos.length + form.roadmap.photos.length) !== 1 ? 's' : ''}
             </span>
           )}
           <AgentActionButton label="Generate QBU" variant="primary" onClick={handleGenerate} />
@@ -1127,7 +1196,7 @@ export default function QBUBuilder() {
 
           {/* Section 3: Project Photos */}
           <div className="border-t border-gray-200 pt-6 mt-6">
-            <SectionHeading description="Upload photos to include in the QBU deck. Add captions and locations.">
+            <SectionHeading description="Upload photos to include in the QBU deck. Add captions, locations, and before/after tags.">
               Project Photos (Optional)
             </SectionHeading>
             <input
@@ -1166,6 +1235,72 @@ export default function QBUBuilder() {
                     <div className="p-3 space-y-2">
                       <Input value={photo.caption} onChange={(v) => updatePhoto(i, { caption: v })} placeholder="Caption" />
                       <Input value={photo.location} onChange={(v) => updatePhoto(i, { location: v })} placeholder="Location / building" />
+                      <select
+                        value={photo.type || 'general'}
+                        onChange={(e) => updatePhoto(i, { type: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
+                      >
+                        <option value="general">General</option>
+                        <option value="before">Before</option>
+                        <option value="after">After</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Innovation Photos */}
+          <div className="border-t border-gray-200 pt-6 mt-6">
+            <SectionHeading description="Upload photos of new technology, equipment, or before/after results.">
+              Innovation Photos (Optional)
+            </SectionHeading>
+            <input
+              ref={innovationPhotoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => { handlePhotoUpload(e.target.files, 'roadmap'); e.target.value = ''; }}
+            />
+            <div
+              onClick={() => innovationPhotoInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-aa-blue', 'bg-aa-blue/5'); }}
+              onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-aa-blue', 'bg-aa-blue/5'); }}
+              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-aa-blue', 'bg-aa-blue/5'); handlePhotoUpload(e.dataTransfer.files, 'roadmap'); }}
+              className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-aa-blue hover:bg-aa-blue/5 transition-colors"
+            >
+              <Image size={20} className="mx-auto text-gray-400 mb-1.5" />
+              <div className="text-sm font-medium text-dark-text">Drop photos here or click to upload</div>
+              <div className="text-xs text-secondary-text mt-1">JPG, PNG — innovation and technology photos</div>
+            </div>
+
+            {form.roadmap.photos.length > 0 && (
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                {form.roadmap.photos.map((photo, i) => (
+                  <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="relative aspect-video bg-gray-100">
+                      <img src={photo.preview} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => removePhoto(i, 'roadmap')}
+                        className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      <Input value={photo.caption} onChange={(v) => updatePhoto(i, { caption: v }, 'roadmap')} placeholder="Caption" />
+                      <Input value={photo.location} onChange={(v) => updatePhoto(i, { location: v }, 'roadmap')} placeholder="Location / building" />
+                      <select
+                        value={photo.type || 'general'}
+                        onChange={(e) => updatePhoto(i, { type: e.target.value }, 'roadmap')}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
+                      >
+                        <option value="general">General</option>
+                        <option value="before">Before</option>
+                        <option value="after">After</option>
+                      </select>
                     </div>
                   </div>
                 ))}

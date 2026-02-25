@@ -67,7 +67,7 @@ If a document contradicts structured form data, flag the discrepancy.
 
 ### D — Projects & Satisfaction
 - D.1: Organize by category. Be specific: name buildings, describe what was done. Polish raw project descriptions into concise, professional summaries that convey scope and impact.
-- D.2: Real photos with captions.
+- D.2: Real photos with captions. Photos tagged as Before/After will be automatically paired on slides. Reference before/after transformations in your D.1 narrative where relevant.
 - D.3: Actual client quotes from emails/texts/meetings. Attribute by name. Organize by location. Keep all quotes EXACTLY as provided — only improve framing and organization.
 
 ### E — Challenges
@@ -82,7 +82,7 @@ If a document contradicts structured form data, flag the discrepancy.
 - Include financial strategy notes. Polish raw strategy notes into professional bullets that frame the financial position clearly — address collection efforts, payment trends, and next steps.
 
 ### G — Innovation & Roadmap
-- G.1: New tech, equipment, or process improvements. Connect each to an operational benefit. Polish raw innovation descriptions into clear, benefit-driven summaries.
+- G.1: New tech, equipment, or process improvements. Connect each to an operational benefit. Polish raw innovation descriptions into clear, benefit-driven summaries. Innovation photos appear on their own slides after G.1. Reference visual evidence in your G.1 narrative when photos exist.
 - G.2: Concrete next-quarter look-ahead — this becomes the outline for the next QBU. Not vague goals. Polish initiative descriptions and connect the goal statement to operational outcomes.
 
 ## NARRATIVE FLOW
@@ -320,9 +320,9 @@ These NARRATIVE blocks are REQUIRED — ALWAYS output them. The PPTX generator p
             p.completed.filter(r => r.description).forEach(r => sections.push(`  [${r.category}] ${r.description}`));
           }
           if (p.photos?.length) {
-            sections.push(`\nPhotos: ${p.photos.length} uploaded`);
+            sections.push(`\nProject Photos: ${p.photos.length} uploaded`);
             p.photos.filter(ph => ph.caption).forEach(ph =>
-              sections.push(`  Photo: "${ph.caption}"${ph.location ? ` at ${ph.location}` : ''}`)
+              sections.push(`  Photo (${ph.type || 'general'}): "${ph.caption}"${ph.location ? ` at ${ph.location}` : ''}`)
             );
           }
           if (p.testimonials?.filter(r => r.quote).length) {
@@ -374,6 +374,12 @@ These NARRATIVE blocks are REQUIRED — ALWAYS output them. The PPTX generator p
             sections.push(`Innovation Highlights:`);
             r.highlights.filter(h => h.innovation).forEach(h =>
               sections.push(`  ${h.innovation}: ${h.description} → Benefit: ${h.benefit}`)
+            );
+          }
+          if (r.photos?.length) {
+            sections.push(`\nInnovation Photos: ${r.photos.length} uploaded`);
+            r.photos.filter(ph => ph.caption).forEach(ph =>
+              sections.push(`  Photo (${ph.type || 'general'}): "${ph.caption}"${ph.location ? ` at ${ph.location}` : ''}`)
             );
           }
           if (r.schedule?.filter(s => s.initiative).length) {

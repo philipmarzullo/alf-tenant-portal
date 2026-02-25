@@ -302,6 +302,7 @@ function parseRoadmap(wb, warnings) {
 
   return {
     highlights: highlights.length ? highlights : [{ innovation: '', description: '', benefit: '' }],
+    photos: [],
     schedule: schedule.length ? schedule : [
       { month: 'Month 1', initiative: '', details: '' },
       { month: 'Month 2', initiative: '', details: '' },

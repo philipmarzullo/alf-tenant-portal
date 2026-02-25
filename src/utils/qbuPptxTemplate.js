@@ -831,19 +831,89 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
 
 // ── Slide 10: D.2 Project Photos ────────────────────────
 
+/** Pair before/after photos by matching captions (case-insensitive) */
+function pairBeforeAfterPhotos(photos) {
+  const befores = photos.filter(p => p.type === 'before');
+  const afters = photos.filter(p => p.type === 'after');
+  const generals = photos.filter(p => !p.type || p.type === 'general');
+  const pairs = [];
+  const unmatchedAfters = [...afters];
+
+  for (const b of befores) {
+    const key = (b.caption || b.location || '').toLowerCase().trim();
+    const matchIdx = unmatchedAfters.findIndex(a =>
+      (a.caption || a.location || '').toLowerCase().trim() === key
+    );
+    if (matchIdx >= 0) {
+      pairs.push({ before: b, after: unmatchedAfters.splice(matchIdx, 1)[0] });
+    } else {
+      generals.push(b); // No match — treat as general
+    }
+  }
+  generals.push(...unmatchedAfters); // Unmatched afters also become general
+  return { pairs, singles: generals };
+}
+
+/** Render a before/after pair slide — left = BEFORE, right = AFTER */
+async function addBeforeAfterSlide(pptx, pair, title, logoColor) {
+  const slide = pptx.addSlide();
+  setContentBackground(slide);
+  addSectionTitle(slide, title);
+
+  for (let j = 0; j < 2; j++) {
+    const photo = j === 0 ? pair.before : pair.after;
+    const label = j === 0 ? 'BEFORE' : 'AFTER';
+    const base64 = await fileToBase64(photo.file);
+    const xPos = j === 0 ? MARGIN : MARGIN + COL2_W + 0.3;
+
+    // Label above image
+    slide.addText(label, {
+      x: xPos, y: 1.0, w: COL2_W, h: 0.3,
+      fontSize: 10, fontFace: FONT, color: j === 0 ? MED_GREY : AA_BLUE, bold: true, align: 'center',
+    });
+
+    // Card frame
+    addCard(slide, { x: xPos, y: 1.3, w: COL2_W, h: 3.65 });
+    slide.addImage({
+      data: base64, x: xPos + 0.15, y: 1.45, w: COL2_W - 0.3, h: 2.85,
+      rounding: true,
+    });
+
+    const caption = [photo.caption, photo.location].filter(Boolean).join(' \u2014 ') || photo.name;
+    slide.addText(caption, {
+      x: xPos + 0.15, y: 4.4, w: COL2_W - 0.3, h: 0.4,
+      fontSize: 9, fontFace: FONT, color: MED_GREY, align: 'center', italic: true,
+    });
+  }
+
+  addLogoBottomRight(slide, logoColor);
+}
+
 async function addPhotoSlides(pptx, form, logoColor) {
   const photos = form.projects?.photos || [];
   const withFiles = photos.filter((p) => p.file instanceof File);
   if (!withFiles.length) return; // Skip photo slides entirely when no photos
 
-  // 2 photos per slide in rounded-corner white card frames
-  for (let i = 0; i < withFiles.length; i += 2) {
+  const { pairs, singles } = pairBeforeAfterPhotos(withFiles);
+
+  // Render before/after pairs first — one pair per slide
+  for (let i = 0; i < pairs.length; i++) {
+    const title = i === 0 && !singles.length
+      ? 'Completed Projects \u2014 Photos'
+      : i === 0 ? 'Completed Projects \u2014 Before & After' : 'Completed Projects \u2014 Before & After (cont.)';
+    await addBeforeAfterSlide(pptx, pairs[i], title, logoColor);
+  }
+
+  // Render remaining singles — 2 per slide
+  for (let i = 0; i < singles.length; i += 2) {
     const slide = pptx.addSlide();
     setContentBackground(slide);
-    addSectionTitle(slide, 'Completed Projects \u2014 Photos');
+    addSectionTitle(slide, pairs.length > 0 || i > 0
+      ? 'Completed Projects \u2014 Photos (cont.)'
+      : 'Completed Projects \u2014 Photos');
 
-    for (let j = 0; j < 2 && i + j < withFiles.length; j++) {
-      const photo = withFiles[i + j];
+    for (let j = 0; j < 2 && i + j < singles.length; j++) {
+      const photo = singles[i + j];
       const base64 = await fileToBase64(photo.file);
       const xPos = j === 0 ? MARGIN : MARGIN + COL2_W + 0.3;
 
@@ -1154,6 +1224,53 @@ function addFinancialSlide(pptx, form, logoColor, narratives) {
 
 // ── Slide 14: G.1 Innovation & Technology Integration ───
 
+// ── Slide G.1a: Innovation Photos ────────────────────────
+
+async function addInnovationPhotoSlides(pptx, form, logoColor) {
+  const photos = form.roadmap?.photos || [];
+  const withFiles = photos.filter((p) => p.file instanceof File);
+  if (!withFiles.length) return; // Skip when no innovation photos
+
+  const { pairs, singles } = pairBeforeAfterPhotos(withFiles);
+
+  // Render before/after pairs first — one pair per slide
+  for (let i = 0; i < pairs.length; i++) {
+    const title = i === 0 && !singles.length
+      ? 'Innovation & Technology \u2014 Photos'
+      : i === 0 ? 'Innovation & Technology \u2014 Before & After' : 'Innovation & Technology \u2014 Before & After (cont.)';
+    await addBeforeAfterSlide(pptx, pairs[i], title, logoColor);
+  }
+
+  // Render remaining singles — 2 per slide
+  for (let i = 0; i < singles.length; i += 2) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, pairs.length > 0 || i > 0
+      ? 'Innovation & Technology \u2014 Photos (cont.)'
+      : 'Innovation & Technology \u2014 Photos');
+
+    for (let j = 0; j < 2 && i + j < singles.length; j++) {
+      const photo = singles[i + j];
+      const base64 = await fileToBase64(photo.file);
+      const xPos = j === 0 ? MARGIN : MARGIN + COL2_W + 0.3;
+
+      addCard(slide, { x: xPos, y: 1.15, w: COL2_W, h: 3.8 });
+      slide.addImage({
+        data: base64, x: xPos + 0.15, y: 1.3, w: COL2_W - 0.3, h: 3.0,
+        rounding: true,
+      });
+
+      const caption = [photo.caption, photo.location].filter(Boolean).join(' \u2014 ') || photo.name;
+      slide.addText(caption, {
+        x: xPos + 0.15, y: 4.4, w: COL2_W - 0.3, h: 0.4,
+        fontSize: 9, fontFace: FONT, color: MED_GREY, align: 'center', italic: true,
+      });
+    }
+
+    addLogoBottomRight(slide, logoColor);
+  }
+}
+
 function addInnovationSlide(pptx, form, logoColor, narratives) {
   const rawHighlights = (form.roadmap.highlights || []).filter((h) => h.innovation);
   if (!rawHighlights.length) {
@@ -1418,6 +1535,7 @@ export async function generateQBUPptx(form, agentOutput) {
   addChallengesSlide(pptx, form, logoColor, narratives);            // 12 — E.1
   addFinancialSlide(pptx, form, logoColor, narratives);             // 13 — F.1
   addInnovationSlide(pptx, form, logoColor, narratives);            // 14 — G.1
+  await addInnovationPhotoSlides(pptx, form, logoColor);            //      G.1a
   addRoadmapSlide(pptx, form, logoColor, narratives);               // 15 — G.2
   addThankYouSlide(pptx, form, logoWhite);                           // 16 — Thank You
 
