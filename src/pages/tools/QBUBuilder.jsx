@@ -212,7 +212,6 @@ const INITIAL = {
 
 const TABS = [
   { key: 'cover', label: 'Cover' },
-  { key: 'documents', label: 'Documents' },
   { key: 'safety', label: 'Safety' },
   { key: 'workTickets', label: 'Work Tickets' },
   { key: 'audits', label: 'Audits' },
@@ -462,48 +461,6 @@ export default function QBUBuilder() {
         </div>
       );
 
-      // ── DOCUMENTS ──
-      case 'documents': return (
-        <div className="space-y-6">
-          <SectionHeading description="Upload site manager questionnaires, deck review call transcripts, or meeting notes. The AI agent uses these to write richer, situation-aware narrative content.">
-            Supporting Documents
-          </SectionHeading>
-          <div>
-            <input
-              ref={docInputRef}
-              type="file"
-              accept=".pdf,.docx,.doc,.txt"
-              multiple
-              className="hidden"
-              onChange={(e) => { handleDocUpload(e.target.files); e.target.value = ''; }}
-            />
-            <div
-              onClick={() => docInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-aa-blue', 'bg-aa-blue/5'); }}
-              onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-aa-blue', 'bg-aa-blue/5'); }}
-              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-aa-blue', 'bg-aa-blue/5'); handleDocUpload(e.dataTransfer.files); }}
-              className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center cursor-pointer hover:border-aa-blue hover:bg-aa-blue/5 transition-colors"
-            >
-              <Upload size={24} className="mx-auto text-gray-400 mb-2" />
-              <div className="text-sm font-medium text-dark-text">Drop documents here or click to upload</div>
-              <div className="text-xs text-secondary-text mt-1">PDF, DOCX, TXT — questionnaires, call transcripts, meeting notes</div>
-            </div>
-          </div>
-
-          {form.documents.files.length > 0 && (
-            <div className="space-y-3">
-              {form.documents.files.map((doc, i) => (
-                <DocumentCard key={i} doc={doc} index={i} onRemove={removeDoc} onLabelChange={updateDocLabel} />
-              ))}
-              <div className="text-xs text-secondary-text">
-                {form.documents.files.length} document{form.documents.files.length !== 1 ? 's' : ''} &middot;{' '}
-                {form.documents.files.reduce((s, d) => s + d.extractedText.length, 0).toLocaleString()} characters of context for the agent
-              </div>
-            </div>
-          )}
-        </div>
-      );
-
       // ── SAFETY ──
       case 'safety': return (
         <div className="space-y-6">
@@ -689,26 +646,56 @@ export default function QBUBuilder() {
       // ── PROJECTS & SATISFACTION ──
       case 'projects': return (
         <div className="space-y-6">
-          <SectionHeading description="Name buildings, describe what was done. Be specific.">Completed Projects by Category</SectionHeading>
-          <div className="space-y-2">
+          <SectionHeading description="Name buildings, describe what was done. Be specific.">Completed Projects</SectionHeading>
+          <div className="space-y-3">
             {form.projects.completed.map((row, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <select
-                  value={row.category}
-                  onChange={(e) => updateArrayRow('projects', 'completed', i, { category: e.target.value })}
-                  className="w-48 shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
-                >
-                  {PROJECT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                </select>
-                <Input value={row.description} onChange={(v) => updateArrayRow('projects', 'completed', i, { description: v })} placeholder="What was done? Which building?" className="flex-1" />
-                {form.projects.completed.length > 1 && <RemoveBtn onClick={() => removeArrayRow('projects', 'completed', i)} />}
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Project {i + 1}</span>
+                  {form.projects.completed.length > 1 && <RemoveBtn onClick={() => removeArrayRow('projects', 'completed', i)} />}
+                </div>
+                <div>
+                  <Label>Category</Label>
+                  <select
+                    value={row.category}
+                    onChange={(e) => updateArrayRow('projects', 'completed', i, { category: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
+                  >
+                    {PROJECT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label hint="Name buildings, describe scope">Description</Label>
+                  <Area value={row.description} onChange={(v) => updateArrayRow('projects', 'completed', i, { description: v })} placeholder="What was done? Which building? Scope and outcome..." rows={2} />
+                </div>
               </div>
             ))}
             <AddRowBtn onClick={() => addArrayRow('projects', 'completed', { category: 'Renovation/Deep Clean', description: '' })} label="Add project" />
           </div>
 
+          <SectionHeading description="Direct quotes from emails, texts, or meetings. Attribute by name.">Client Testimonials</SectionHeading>
+          <div className="space-y-3">
+            {form.projects.testimonials.map((row, i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Testimonial {i + 1}</span>
+                  {form.projects.testimonials.length > 1 && <RemoveBtn onClick={() => removeArrayRow('projects', 'testimonials', i)} />}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Location</Label><Input value={row.location} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { location: v })} placeholder="Building / campus" /></div>
+                  <div><Label>Attribution</Label><Input value={row.attribution} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { attribution: v })} placeholder="Name & Title" /></div>
+                </div>
+                <div>
+                  <Label>Quote</Label>
+                  <Area value={row.quote} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { quote: v })} placeholder="Direct quote..." rows={2} />
+                </div>
+              </div>
+            ))}
+            <AddRowBtn onClick={() => addArrayRow('projects', 'testimonials', { location: '', quote: '', attribution: '' })} label="Add testimonial" />
+          </div>
+
           {/* Photo Upload */}
-          <SectionHeading description="Upload photos to include in the QBU deck. Add captions and locations.">Project Photos</SectionHeading>
+          <SectionHeading description="Upload photos to include in the QBU deck. Add captions and locations.">Project Photos (Optional)</SectionHeading>
           <div>
             <input
               ref={photoInputRef}
@@ -761,21 +748,6 @@ export default function QBUBuilder() {
               </div>
             )}
           </div>
-
-          <SectionHeading description="Direct quotes from emails, texts, or meetings. Attribute by name.">Client Testimonials</SectionHeading>
-          <div className="space-y-2">
-            {form.projects.testimonials.map((row, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <Input value={row.location} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { location: v })} placeholder="Location" className="w-36 shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <Area value={row.quote} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { quote: v })} placeholder="Direct quote..." rows={2} />
-                  <Input value={row.attribution} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { attribution: v })} placeholder="Name & Title" />
-                </div>
-                {form.projects.testimonials.length > 1 && <RemoveBtn onClick={() => removeArrayRow('projects', 'testimonials', i)} />}
-              </div>
-            ))}
-            <AddRowBtn onClick={() => addArrayRow('projects', 'testimonials', { location: '', quote: '', attribution: '' })} label="Add testimonial" />
-          </div>
         </div>
       );
 
@@ -783,32 +755,58 @@ export default function QBUBuilder() {
       case 'challenges': return (
         <div className="space-y-6">
           <SectionHeading description="Recurring issues only — not one-time incidents. Every challenge must have a corresponding action.">Operational Challenges & Actions Taken</SectionHeading>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {form.challenges.items.map((row, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <Input value={row.location} onChange={(v) => updateArrayRow('challenges', 'items', i, { location: v })} placeholder="Location" className="w-36 shrink-0" />
-                <Input value={row.challenge} onChange={(v) => updateArrayRow('challenges', 'items', i, { challenge: v })} placeholder="Challenge (recurring issue)" className="flex-1" />
-                <Input value={row.action} onChange={(v) => updateArrayRow('challenges', 'items', i, { action: v })} placeholder="Action taken / planned" className="flex-1" />
-                {form.challenges.items.length > 1 && <RemoveBtn onClick={() => removeArrayRow('challenges', 'items', i)} />}
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Challenge {i + 1}</span>
+                  {form.challenges.items.length > 1 && <RemoveBtn onClick={() => removeArrayRow('challenges', 'items', i)} />}
+                </div>
+                <div>
+                  <Label>Location</Label>
+                  <Input value={row.location} onChange={(v) => updateArrayRow('challenges', 'items', i, { location: v })} placeholder="Building / area" />
+                </div>
+                <div>
+                  <Label>Challenge</Label>
+                  <Area value={row.challenge} onChange={(v) => updateArrayRow('challenges', 'items', i, { challenge: v })} placeholder="Describe the recurring issue..." rows={2} />
+                </div>
+                <div>
+                  <Label>Action Taken</Label>
+                  <Area value={row.action} onChange={(v) => updateArrayRow('challenges', 'items', i, { action: v })} placeholder="Action taken or planned to resolve..." rows={2} />
+                </div>
               </div>
             ))}
             <AddRowBtn onClick={() => addArrayRow('challenges', 'items', { location: '', challenge: '', action: '' })} label="Add challenge" />
           </div>
 
           <SectionHeading description="For actions committed last quarter — report on delivery status.">Prior Quarter Action Follow-Up</SectionHeading>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {form.challenges.priorFollowUp.map((row, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Input value={row.action} onChange={(v) => updateArrayRow('challenges', 'priorFollowUp', i, { action: v })} placeholder="Action item" className="flex-1" />
-                <select
-                  value={row.status}
-                  onChange={(e) => updateArrayRow('challenges', 'priorFollowUp', i, { status: e.target.value })}
-                  className="w-36 shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
-                >
-                  <option>Complete</option><option>In Progress</option><option>Not Started</option>
-                </select>
-                <Input value={row.notes} onChange={(v) => updateArrayRow('challenges', 'priorFollowUp', i, { notes: v })} placeholder="Notes" className="flex-1" />
-                {form.challenges.priorFollowUp.length > 1 && <RemoveBtn onClick={() => removeArrayRow('challenges', 'priorFollowUp', i)} />}
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Follow-up {i + 1}</span>
+                  {form.challenges.priorFollowUp.length > 1 && <RemoveBtn onClick={() => removeArrayRow('challenges', 'priorFollowUp', i)} />}
+                </div>
+                <div>
+                  <Label>Action</Label>
+                  <Input value={row.action} onChange={(v) => updateArrayRow('challenges', 'priorFollowUp', i, { action: v })} placeholder="Action item from last quarter" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Status</Label>
+                    <select
+                      value={row.status}
+                      onChange={(e) => updateArrayRow('challenges', 'priorFollowUp', i, { status: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
+                    >
+                      <option>Complete</option><option>In Progress</option><option>Not Started</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Notes</Label>
+                    <Input value={row.notes} onChange={(v) => updateArrayRow('challenges', 'priorFollowUp', i, { notes: v })} placeholder="Update or context" />
+                  </div>
+                </div>
               </div>
             ))}
             <AddRowBtn onClick={() => addArrayRow('challenges', 'priorFollowUp', { action: '', status: 'In Progress', notes: '' })} label="Add follow-up" />
@@ -851,13 +849,25 @@ export default function QBUBuilder() {
       case 'roadmap': return (
         <div className="space-y-6">
           <SectionHeading description="New tech, equipment, or process improvements. Connect each to an operational benefit.">Innovation & Technology Highlights</SectionHeading>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {form.roadmap.highlights.map((row, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <Input value={row.innovation} onChange={(v) => updateArrayRow('roadmap', 'highlights', i, { innovation: v })} placeholder="Innovation / Technology" className="w-48 shrink-0" />
-                <Input value={row.description} onChange={(v) => updateArrayRow('roadmap', 'highlights', i, { description: v })} placeholder="Description & Results" className="flex-1" />
-                <Input value={row.benefit} onChange={(v) => updateArrayRow('roadmap', 'highlights', i, { benefit: v })} placeholder="Operational Benefit" className="flex-1" />
-                {form.roadmap.highlights.length > 1 && <RemoveBtn onClick={() => removeArrayRow('roadmap', 'highlights', i)} />}
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Highlight {i + 1}</span>
+                  {form.roadmap.highlights.length > 1 && <RemoveBtn onClick={() => removeArrayRow('roadmap', 'highlights', i)} />}
+                </div>
+                <div>
+                  <Label>Innovation / Technology</Label>
+                  <Input value={row.innovation} onChange={(v) => updateArrayRow('roadmap', 'highlights', i, { innovation: v })} placeholder="e.g., Autonomous floor scrubber, AA360 QA module" />
+                </div>
+                <div>
+                  <Label>Description & Results</Label>
+                  <Area value={row.description} onChange={(v) => updateArrayRow('roadmap', 'highlights', i, { description: v })} placeholder="What was deployed and what results were observed..." rows={2} />
+                </div>
+                <div>
+                  <Label>Operational Benefit</Label>
+                  <Area value={row.benefit} onChange={(v) => updateArrayRow('roadmap', 'highlights', i, { benefit: v })} placeholder="How this improves operations, reduces cost, or increases quality..." rows={2} />
+                </div>
               </div>
             ))}
             <AddRowBtn onClick={() => addArrayRow('roadmap', 'highlights', { innovation: '', description: '', benefit: '' })} label="Add highlight" />
