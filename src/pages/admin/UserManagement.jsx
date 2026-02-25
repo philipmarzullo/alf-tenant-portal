@@ -79,32 +79,37 @@ export default function UserManagement() {
       }
 
       try {
-        const { data, error: fnError } = await supabase.functions.invoke('admin-create-user', {
-          body: {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-user`;
+
+        const res = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': anonKey,
+            'Authorization': `Bearer ${currentSession.access_token}`,
+          },
+          body: JSON.stringify({
             email: form.email.trim(),
             password: form.password,
             name: form.name.trim(),
             title: form.title.trim(),
             role: form.role,
             modules,
-          },
+          }),
         });
 
-        if (fnError) {
-          setSaveError(fnError.message || 'Failed to create user.');
-          setSaving(false);
-          return;
-        }
+        const result = await res.json();
 
-        if (data?.error) {
-          setSaveError(data.error);
+        if (!res.ok) {
+          setSaveError(result.error || `Failed to create user (${res.status})`);
           setSaving(false);
           return;
         }
-      } catch {
+      } catch (err) {
         setSaveError(
-          'Could not reach the admin-create-user Edge Function. ' +
-          'You can create users directly in the Supabase Dashboard (Authentication > Users) until the function is deployed.'
+          'Could not reach the admin-create-user Edge Function: ' + err.message
         );
         setSaving(false);
         return;
