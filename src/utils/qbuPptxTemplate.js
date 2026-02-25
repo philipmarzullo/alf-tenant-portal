@@ -72,10 +72,10 @@ function addSectionTitle(slide, title) {
   });
 }
 
-/** Logo in bottom-right corner */
+/** Logo in bottom-right corner — actual ratio is 2.83:1 */
 function addLogoBottomRight(slide, logoColor) {
   if (logoColor) {
-    slide.addImage({ data: logoColor, x: 8.5, y: 4.85, w: 1.0, h: 0.5 });
+    slide.addImage({ data: logoColor, x: 8.5, y: 5.0, w: 1.0, h: 0.35 });
   }
 }
 
@@ -177,6 +177,42 @@ function addCardBullets(slide, items, { x, y, w, h }) {
   );
 }
 
+/** Calculate adaptive card height based on content */
+function calcCardH(itemCount, { minH = 1.2, maxH = 4.2, headerH = 0.5, itemH = 0.35, padH = 0.3 } = {}) {
+  const contentH = headerH + itemCount * itemH + padH;
+  return Math.max(minH, Math.min(maxH, contentH));
+}
+
+/** Estimate bullet text height — longer bullets wrap and need more space */
+function estimateBulletH(items, colW = 4.0) {
+  let total = 0;
+  for (const item of (items || [])) {
+    const chars = (item || '').length;
+    const charsPerLine = Math.floor(colW * 12); // ~12 chars per inch at 10pt
+    const lines = Math.max(1, Math.ceil(chars / charsPerLine));
+    total += lines * 0.22 + 0.06; // line height + spacing
+  }
+  return total;
+}
+
+/** Format a value as currency if it's a number */
+function fmtCurrency(val) {
+  if (!val) return '$0';
+  const str = String(val).replace(/[$,]/g, '');
+  const num = parseFloat(str);
+  if (isNaN(num)) return val;
+  return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Check if a section has meaningful data (not just empty defaults) */
+function hasData(items) {
+  if (!items || !items.length) return false;
+  return items.some((item) => {
+    if (typeof item === 'string') return item.length > 0;
+    return Object.values(item).some((v) => v && String(v).length > 0);
+  });
+}
+
 // ── Agent Narrative Parser ───────────────────────────────
 
 /**
@@ -262,9 +298,9 @@ function addCoverSlide(pptx, form, logoWhite) {
     fill: { color: AA_RED },
   });
 
-  // Logo bottom-left
+  // Logo bottom-left — actual ratio is 2.83:1
   if (logoWhite) {
-    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.3, w: 1.6, h: 0.8 });
+    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.5, w: 1.6, h: 0.56 });
   }
 
   // aaefs.com bottom-right
@@ -286,7 +322,8 @@ function addIntroductionsSlide(pptx, form, logoColor) {
   const clientName = form.cover.clientName || 'CLIENT';
 
   const cardY = 1.15;
-  const cardH = 4.1;
+  const maxItems = Math.max(aaTeam.length, clientTeam.length, 1);
+  const cardH = calcCardH(maxItems, { headerH: 0.55, itemH: 0.32, maxH: 4.1 });
   const x1 = MARGIN;
   const x2 = MARGIN + COL2_W + 0.3;
 
@@ -345,20 +382,23 @@ function addSafetyMomentSlide(pptx, form, logoColor) {
   addSectionTitle(slide, `A.1: Safety Moment \u2014 ${theme}`);
 
   const cardY = 1.15;
-  const cardH = 3.0;
+  const tips = s.keyTips ? s.keyTips.split('\n').filter(Boolean) : [];
+  const reminders = s.quickReminders ? s.quickReminders.split('\n').filter(Boolean) : [];
+  const maxBullets = Math.max(tips.length, reminders.length, 1);
+  const hasWhyItMatters = !!s.whyItMatters;
+  const maxCardBottom = hasWhyItMatters ? 4.05 : 4.85;
+  const cardH = Math.min(calcCardH(maxBullets, { headerH: 0.55, itemH: 0.4 }), maxCardBottom - cardY);
   const x1 = MARGIN;
   const x2 = MARGIN + COL2_W + 0.3;
 
   // Key Safety Tips card (blue left border)
   addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
-  // Red accent on top-left corner
   slide.addShape('rect', { x: x1 + 0.05, y: cardY, w: 0.4, h: 0.04, fill: { color: AA_RED } });
   slide.addText('KEY SAFETY TIPS', {
     x: x1 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
     fontSize: 11, fontFace: FONT, color: DARK, bold: true,
   });
-  if (s.keyTips) {
-    const tips = s.keyTips.split('\n').filter(Boolean);
+  if (tips.length) {
     addCardBullets(slide, tips, { x: x1, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
   }
 
@@ -368,15 +408,15 @@ function addSafetyMomentSlide(pptx, form, logoColor) {
     x: x2 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
     fontSize: 11, fontFace: FONT, color: DARK, bold: true,
   });
-  if (s.quickReminders) {
-    const reminders = s.quickReminders.split('\n').filter(Boolean);
+  if (reminders.length) {
     addCardBullets(slide, reminders, { x: x2, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
   }
 
   // Why It Matters callout box at bottom
-  if (s.whyItMatters) {
+  if (hasWhyItMatters) {
+    const callY = cardY + cardH + 0.2;
     addCalloutBox(slide, {
-      x: MARGIN, y: 4.35, w: CONTENT_W, h: 0.85,
+      x: MARGIN, y: callY, w: CONTENT_W, h: 0.85,
       label: 'Why It Matters:', text: s.whyItMatters,
     });
   }
@@ -416,11 +456,22 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
   const cardY = 1.15 + ((incidents.length + 2) * 0.35) + 0.25;
   const x1 = MARGIN;
   const x2 = MARGIN + COL2_W + 0.3;
-  const cardH = SLIDE_H - cardY - 0.35;
+  const remainingH = SLIDE_H - cardY - 0.45;
 
-  if (saves.length || details.length) {
+  if ((saves.length || details.length) && remainingH > 0.8) {
+    const saveBulletH = estimateBulletH(
+      saves.map((r) => `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`),
+      COL2_W - 0.5
+    );
+    const detailBulletH = estimateBulletH(
+      details.map((r) => `${r.location} | ${r.date}: ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`),
+      COL2_W - 0.5
+    );
+    const cardH = Math.min(Math.max(saveBulletH, detailBulletH) + 0.6, remainingH);
+    const fontSize = cardH < 1.5 ? 8 : 9;
+
     // Good Saves card (green left border)
-    addCard(slide, { x: x1, y: cardY, w: COL2_W, h: Math.max(cardH, 1.5), borderColor: GREEN, borderSide: 'left' });
+    addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH, borderColor: GREEN, borderSide: 'left' });
     slide.addText('GOOD SAVES', {
       x: x1 + 0.2, y: cardY + 0.1, w: COL2_W - 0.4, h: 0.3,
       fontSize: 11, fontFace: FONT, color: DARK, bold: true,
@@ -433,7 +484,7 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     }
 
     // Recordable Details card (amber left border)
-    addCard(slide, { x: x2, y: cardY, w: COL2_W, h: Math.max(cardH, 1.5), borderColor: AMBER, borderSide: 'left' });
+    addCard(slide, { x: x2, y: cardY, w: COL2_W, h: cardH, borderColor: AMBER, borderSide: 'left' });
     slide.addText('RECORDABLE DETAILS', {
       x: x2 + 0.2, y: cardY + 0.1, w: COL2_W - 0.4, h: 0.3,
       fontSize: 11, fontFace: FONT, color: DARK, bold: true,
@@ -444,7 +495,7 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
       );
       slide.addText(items.join('\n\n'), {
         x: x2 + 0.2, y: cardY + 0.45, w: COL2_W - 0.4, h: cardH - 0.6,
-        fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
+        fontSize: fontSize, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
       });
     }
   }
@@ -461,14 +512,20 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
 
   const e = form.executive;
   const cardY = 1.15;
-  const cardH = 3.8;
   const gap = 0.3;
+  const maxCardH = SLIDE_H - cardY - 0.45;
 
   const cols = [
     { title: 'KEY ACHIEVEMENTS', items: getNarrativeLines(narratives, 'B1:ACHIEVEMENTS') || (e.achievements || []).filter(Boolean), color: AA_BLUE },
     { title: 'STRATEGIC CHALLENGES', items: getNarrativeLines(narratives, 'B1:CHALLENGES') || (e.challenges || []).filter(Boolean), color: AMBER },
     { title: 'INNOVATION MILESTONES', items: getNarrativeLines(narratives, 'B1:INNOVATIONS') || (e.innovations || []).filter(Boolean), color: GREEN },
   ];
+
+  // Use the tallest column's content to set card height
+  const maxBulletH = Math.max(...cols.map((c) => estimateBulletH(c.items, COL3_W - 0.5)));
+  const cardH = Math.min(maxBulletH + 0.8, maxCardH);
+  // Shrink font if content is heavy
+  const bulletFontSize = maxBulletH > 3.5 ? 8 : 10;
 
   cols.forEach((col, i) => {
     const x = MARGIN + i * (COL3_W + gap);
@@ -478,7 +535,14 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
       fontSize: 10, fontFace: FONT, color: DARK, bold: true,
     });
     if (col.items.length) {
-      addCardBullets(slide, col.items, { x, y: cardY + 0.6, w: COL3_W, h: cardH - 0.8 });
+      slide.addText(
+        col.items.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
+        {
+          x: x + 0.25, y: cardY + 0.6, w: COL3_W - 0.5, h: cardH - 0.8,
+          fontSize: bulletFontSize, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
+          valign: 'top',
+        }
+      );
     }
   });
 
@@ -495,7 +559,11 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
   const locs = (form.workTickets.locations || []).filter((r) => r.location);
   if (locs.length) {
     const q = form.cover.quarter || '';
-    const priorLabel = q ? q.replace(/\d{4}/, (y) => String(Number(y) - 1)) : 'Prior Year';
+    // Extract quarter and year: "Q3 2025" → prior = "Q3 2024"
+    const yearMatch = q.match(/\d{4}/);
+    const priorLabel = yearMatch
+      ? q.replace(yearMatch[0], String(Number(yearMatch[0]) - 1))
+      : q ? `${q} (Prior Year)` : 'Prior Year';
     const currentLabel = q || 'Current Year';
 
     const headerRow = ['Location', priorLabel, currentLabel, 'Change'];
@@ -544,16 +612,19 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
   addSectionTitle(slide, 'C.2: Audits and Corrective Actions');
 
   const a = form.audits;
-  const names = (a.locationNames || []).filter(Boolean);
+  // Only include columns that have a location name
+  const activeIndices = (a.locationNames || []).map((n, i) => n ? i : -1).filter((i) => i >= 0);
+  const names = activeIndices.map((i) => a.locationNames[i]);
 
   if (names.length) {
+    const sumActive = (arr) => String(activeIndices.reduce((s, i) => s + (Number(arr[i]) || 0), 0));
     const headerRow = ['', ...names, 'Total'];
     const rows = [
       headerRow,
-      ['Prior Qtr Audits', ...a.priorAudits.slice(0, names.length).map(String), String(a.priorAudits.reduce((s, v) => s + (Number(v) || 0), 0))],
-      ['Prior Qtr Actions', ...a.priorActions.slice(0, names.length).map(String), String(a.priorActions.reduce((s, v) => s + (Number(v) || 0), 0))],
-      ['Current Qtr Audits', ...a.currentAudits.slice(0, names.length).map(String), String(a.currentAudits.reduce((s, v) => s + (Number(v) || 0), 0))],
-      ['Current Qtr Actions', ...a.currentActions.slice(0, names.length).map(String), String(a.currentActions.reduce((s, v) => s + (Number(v) || 0), 0))],
+      ['Prior Qtr Audits', ...activeIndices.map((i) => String(a.priorAudits[i] || '')), sumActive(a.priorAudits)],
+      ['Prior Qtr Actions', ...activeIndices.map((i) => String(a.priorActions[i] || '')), sumActive(a.priorActions)],
+      ['Current Qtr Audits', ...activeIndices.map((i) => String(a.currentAudits[i] || '')), sumActive(a.currentAudits)],
+      ['Current Qtr Actions', ...activeIndices.map((i) => String(a.currentActions[i] || '')), sumActive(a.currentActions)],
     ];
     addBrandedTable(slide, rows, { y: 1.15 });
   }
@@ -600,19 +671,12 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
 // ── Slide 8: C.3 Top Action Areas (Charts) ──────────────
 
 function addTopAreasSlide(pptx, form, logoColor) {
+  const areas = (form.audits.topAreas || []).filter((a) => a.count);
+  if (!areas.length) return; // Skip slide entirely when no data
+
   const slide = pptx.addSlide();
   setContentBackground(slide);
   addSectionTitle(slide, 'C.3: Top Action Areas');
-
-  const areas = (form.audits.topAreas || []).filter((a) => a.count);
-  if (!areas.length) {
-    slide.addText('No corrective action data available.', {
-      x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
-      fontSize: 12, fontFace: FONT, color: MED_GREY, italic: true, align: 'center',
-    });
-    addLogoBottomRight(slide, logoColor);
-    return;
-  }
 
   const chartColors = [AA_BLUE, '0077B6', '48CAE4', NEAR_BLACK, AA_RED, MED_GREY];
   const total = areas.reduce((s, a) => s + (Number(a.count) || 0), 0);
@@ -698,7 +762,7 @@ function addCompletedProjectsSlide(pptx, form, logoColor) {
     return;
   }
 
-  // Group projects by category for 3-column card layout
+  // Group projects by category for multi-column card layout
   const categories = {};
   projects.forEach((p) => {
     const cat = p.category || 'General';
@@ -706,19 +770,34 @@ function addCompletedProjectsSlide(pptx, form, logoColor) {
     categories[cat].push(p.description);
   });
 
-  const catKeys = Object.keys(categories).slice(0, 3); // max 3 columns
+  const catKeys = Object.keys(categories).slice(0, 3);
+  const numCols = catKeys.length;
   const cardY = 1.15;
-  const cardH = 3.8;
   const gap = 0.3;
+  const colW = numCols === 1 ? CONTENT_W : numCols === 2 ? COL2_W : COL3_W;
+  const colGap = numCols === 2 ? 0.3 : gap;
+  const maxCardH = SLIDE_H - cardY - 0.45;
+
+  // Calculate height based on longest column content
+  const maxBulletH = Math.max(...catKeys.map((k) => estimateBulletH(categories[k], colW - 0.5)));
+  const cardH = Math.min(maxBulletH + 0.8, maxCardH);
+  const bulletFontSize = maxBulletH > 3.5 ? 8 : 10;
 
   catKeys.forEach((cat, i) => {
-    const x = MARGIN + i * (COL3_W + gap);
-    addCard(slide, { x, y: cardY, w: COL3_W, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
+    const x = MARGIN + i * (colW + colGap);
+    addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
     slide.addText(cat.toUpperCase(), {
-      x: x + 0.15, y: cardY + 0.15, w: COL3_W - 0.3, h: 0.3,
+      x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
       fontSize: 10, fontFace: FONT, color: DARK, bold: true,
     });
-    addCardBullets(slide, categories[cat], { x, y: cardY + 0.6, w: COL3_W, h: cardH - 0.8 });
+    slide.addText(
+      categories[cat].map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
+      {
+        x: x + 0.25, y: cardY + 0.6, w: colW - 0.5, h: cardH - 0.8,
+        fontSize: bulletFontSize, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
+        valign: 'top',
+      }
+    );
   });
 
   // If more than 3 categories, list remaining below
@@ -739,23 +818,7 @@ function addCompletedProjectsSlide(pptx, form, logoColor) {
 async function addPhotoSlides(pptx, form, logoColor) {
   const photos = form.projects?.photos || [];
   const withFiles = photos.filter((p) => p.file instanceof File);
-
-  if (!withFiles.length) {
-    const slide = pptx.addSlide();
-    setContentBackground(slide);
-    addSectionTitle(slide, 'D.2: Completed Projects \u2014 Photos');
-    slide.addText(
-      photos.length
-        ? 'Photos were uploaded in a previous session. Re-upload to include in PPTX.'
-        : 'No project photos uploaded.',
-      {
-        x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
-        fontSize: 12, fontFace: FONT, color: MED_GREY, italic: true, align: 'center',
-      }
-    );
-    addLogoBottomRight(slide, logoColor);
-    return;
-  }
+  if (!withFiles.length) return; // Skip photo slides entirely when no photos
 
   // 2 photos per slide in rounded-corner white card frames
   for (let i = 0; i < withFiles.length; i += 2) {
@@ -803,37 +866,54 @@ function addTestimonialsSlide(pptx, form, logoColor) {
     return;
   }
 
-  // Each testimonial in a card with blue left border + location header
+  // Calculate adaptive heights per testimonial based on content length
   const maxShow = Math.min(testimonials.length, 3);
-  const cardH = Math.min(1.2, (SLIDE_H - 1.5) / maxShow - 0.15);
+  const availableH = SLIDE_H - 1.15 - 0.45;
+  const totalGap = (maxShow - 1) * 0.15;
 
+  // Estimate each testimonial's needed height
+  const quoteHeights = testimonials.slice(0, maxShow).map((t) => {
+    const chars = (t.quote || '').length;
+    const charsPerLine = Math.floor((CONTENT_W - 0.6) * 11);
+    const lines = Math.max(1, Math.ceil(chars / charsPerLine));
+    const locH = t.location ? 0.25 : 0;
+    const attrH = t.attribution ? 0.3 : 0;
+    return locH + lines * 0.18 + attrH + 0.25;
+  });
+  const totalNeeded = quoteHeights.reduce((s, h) => s + h, 0) + totalGap;
+  const scale = totalNeeded > availableH ? availableH / totalNeeded : 1;
+  const quoteFontSize = scale < 0.85 ? 8 : 10;
+
+  let currentY = 1.15;
   testimonials.slice(0, maxShow).forEach((t, i) => {
-    const y = 1.15 + i * (cardH + 0.15);
-    addCard(slide, { x: MARGIN, y, w: CONTENT_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
+    const cardH = Math.max(0.8, quoteHeights[i] * scale);
+    addCard(slide, { x: MARGIN, y: currentY, w: CONTENT_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
 
-    // Location label in blue
     const loc = t.location || '';
+    let textY = currentY + 0.08;
     if (loc) {
       slide.addText(loc.toUpperCase(), {
-        x: MARGIN + 0.2, y: y + 0.08, w: CONTENT_W - 0.4, h: 0.2,
+        x: MARGIN + 0.2, y: textY, w: CONTENT_W - 0.4, h: 0.2,
         fontSize: 9, fontFace: FONT, color: AA_BLUE, bold: true,
       });
+      textY += 0.22;
     }
 
-    // Quote text (italic)
-    slide.addText(`"${t.quote}"`, {
-      x: MARGIN + 0.2, y: y + (loc ? 0.3 : 0.1), w: CONTENT_W - 0.4, h: cardH - (loc ? 0.6 : 0.4),
-      fontSize: 10, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
+    const quoteH = cardH - (textY - currentY) - (t.attribution ? 0.3 : 0.1);
+    slide.addText(`\u201C${t.quote}\u201D`, {
+      x: MARGIN + 0.2, y: textY, w: CONTENT_W - 0.4, h: Math.max(0.3, quoteH),
+      fontSize: quoteFontSize, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
       lineSpacingMultiple: 1.2,
     });
 
-    // Attribution
     if (t.attribution) {
       slide.addText(`\u2014 ${t.attribution}`, {
-        x: MARGIN + 0.2, y: y + cardH - 0.3, w: CONTENT_W - 0.4, h: 0.25,
+        x: MARGIN + 0.2, y: currentY + cardH - 0.28, w: CONTENT_W - 0.4, h: 0.25,
         fontSize: 9, fontFace: FONT, color: DARK, bold: true,
       });
     }
+
+    currentY += cardH + 0.15;
   });
 
   addLogoBottomRight(slide, logoColor);
@@ -850,7 +930,9 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
   const x1 = MARGIN;
   const x2 = MARGIN + COL2_W + 0.3;
   const cardY = 1.15;
-  const cardH = 4.0;
+  const maxCardH = SLIDE_H - cardY - 0.45;
+  const bulletCount = Math.max(items.length, 1);
+  const cardH = Math.min(calcCardH(bulletCount, { headerH: 0.55, itemH: 0.5, maxH: maxCardH }), maxCardH);
 
   // Parse agent narrative for challenges if available
   // Format: "location | challenge text | action text" per line
@@ -951,23 +1033,23 @@ function addFinancialSlide(pptx, form, logoColor) {
     fontSize: 11, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
   });
 
-  // Hero amount
-  slide.addText(f.totalOutstanding || '$0', {
+  // Hero amount — ensure currency formatted
+  slide.addText(fmtCurrency(f.totalOutstanding), {
     x: x1 + 0.2, y: cardY + 0.6, w: COL2_W - 0.4, h: 0.7,
-    fontSize: 36, fontFace: FONT, color: AA_BLUE, bold: true, align: 'center',
+    fontSize: 32, fontFace: FONT, color: AA_BLUE, bold: true, align: 'center',
   });
   slide.addText(`Total Outstanding (as of ${f.asOfDate || 'current'})`, {
     x: x1 + 0.2, y: cardY + 1.3, w: COL2_W - 0.4, h: 0.25,
     fontSize: 9, fontFace: FONT, color: MED_GREY, align: 'center',
   });
 
-  // Aging breakdown below hero amount
+  // Aging breakdown below hero amount — ensure currency formatted
   const bucketData = [
     ['Aging', 'Amount'],
-    ['1-30 days', f.bucket30 || '$0'],
-    ['31-60 days', f.bucket60 || '$0'],
-    ['61-90 days', f.bucket90 || '$0'],
-    ['91+ days', f.bucket91 || '$0'],
+    ['1-30 days', fmtCurrency(f.bucket30)],
+    ['31-60 days', fmtCurrency(f.bucket60)],
+    ['61-90 days', fmtCurrency(f.bucket90)],
+    ['91+ days', fmtCurrency(f.bucket91)],
   ];
 
   // Color-code amounts
@@ -1019,8 +1101,8 @@ function addInnovationSlide(pptx, form, logoColor) {
   setContentBackground(slide);
   addSectionTitle(slide, 'G.1: Innovation & Technology Integration');
 
-  const highlights = (form.roadmap.highlights || []).filter((h) => h.innovation);
-  if (!highlights.length) {
+  const rawHighlights = (form.roadmap.highlights || []).filter((h) => h.innovation);
+  if (!rawHighlights.length) {
     slide.addText('No innovation highlights reported this quarter.', {
       x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
       fontSize: 12, fontFace: FONT, color: MED_GREY, italic: true, align: 'center',
@@ -1029,13 +1111,24 @@ function addInnovationSlide(pptx, form, logoColor) {
     return;
   }
 
-  // 3-column card layout (up to 3 innovations)
+  // Merge highlights that share the same innovation name
+  const merged = {};
+  rawHighlights.forEach((h) => {
+    const key = (h.innovation || '').toLowerCase().trim();
+    if (!merged[key]) merged[key] = { innovation: h.innovation, bullets: [] };
+    if (h.description) merged[key].bullets.push(h.description);
+    if (h.benefit) merged[key].bullets.push(`Benefit: ${h.benefit}`);
+  });
+  const highlights = Object.values(merged);
+
   const cardY = 1.15;
-  const cardH = 3.8;
   const gap = 0.3;
   const show = Math.min(highlights.length, 3);
   const colW = show === 1 ? CONTENT_W : show === 2 ? COL2_W : COL3_W;
   const colGap = show === 2 ? 0.3 : gap;
+  const maxCardH = SLIDE_H - cardY - 0.45;
+  const maxBulletH = Math.max(...highlights.slice(0, show).map((h) => estimateBulletH(h.bullets, colW - 0.5)));
+  const cardH = Math.min(maxBulletH + 0.8, maxCardH);
 
   highlights.slice(0, show).forEach((h, i) => {
     const x = MARGIN + i * (colW + colGap);
@@ -1044,8 +1137,9 @@ function addInnovationSlide(pptx, form, logoColor) {
       x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
       fontSize: 10, fontFace: FONT, color: DARK, bold: true,
     });
-    const desc = [h.description, h.benefit ? `Benefit: ${h.benefit}` : ''].filter(Boolean);
-    addCardBullets(slide, desc, { x, y: cardY + 0.6, w: colW, h: cardH - 0.8 });
+    if (h.bullets.length) {
+      addCardBullets(slide, h.bullets, { x, y: cardY + 0.6, w: colW, h: cardH - 0.8 });
+    }
   });
 
   addLogoBottomRight(slide, logoColor);
@@ -1068,7 +1162,11 @@ function addRoadmapSlide(pptx, form, logoColor) {
     const y = 1.2 + i * 1.35;
     if (y > 4.5) return;
 
-    const monthLabel = (item.month || '').toUpperCase().substring(0, 3);
+    // Show month label intelligently — full short text, not just 3 chars
+    const rawMonth = (item.month || '').trim();
+    const monthLabel = rawMonth.length <= 5
+      ? rawMonth.toUpperCase()
+      : rawMonth.toUpperCase().replace(/QUARTER\s*/i, 'Q').replace(/MONTH\s*/i, 'M').substring(0, 5);
 
     // Month block (blue rounded rect)
     slide.addShape('roundRect', {
@@ -1100,13 +1198,15 @@ function addRoadmapSlide(pptx, form, logoColor) {
     });
   });
 
-  // Goal statement at bottom
+  // Goal statement at bottom — deduplicate if lines are identical
   if (r.goalStatement) {
+    const goalLines = r.goalStatement.split('\n').filter(Boolean);
+    const uniqueGoal = [...new Set(goalLines)].join('\n');
     const goalY = Math.min(1.2 + schedule.length * 1.35 + 0.15, 4.85);
     slide.addText(
       [
         { text: `${q || 'Quarter'} Goal: `, options: { bold: true, color: AA_BLUE, fontSize: 10 } },
-        { text: r.goalStatement, options: { bold: false, color: DARK, fontSize: 10 } },
+        { text: uniqueGoal, options: { bold: false, color: DARK, fontSize: 10 } },
       ],
       {
         x: MARGIN, y: goalY, w: CONTENT_W, h: 0.5,
@@ -1155,9 +1255,9 @@ function addThankYouSlide(pptx, form, logoWhite) {
     }
   );
 
-  // Logo bottom-left
+  // Logo bottom-left — actual ratio is 2.83:1
   if (logoWhite) {
-    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.3, w: 1.6, h: 0.8 });
+    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.5, w: 1.6, h: 0.56 });
   }
 
   // Red diamond accent

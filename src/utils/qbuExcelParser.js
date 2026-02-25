@@ -2,9 +2,35 @@ import * as XLSX from 'xlsx';
 
 // ── Helpers ──────────────────────────────────────────────
 
+/** Read a cell as a string */
 function cell(rows, r, c) {
   const val = rows?.[r - 1]?.[c] ?? '';
   return typeof val === 'number' ? String(val) : (val || '').toString().trim();
+}
+
+/** Read a cell that should be a date — convert Excel serial numbers */
+function dateCell(rows, r, c) {
+  const raw = rows?.[r - 1]?.[c] ?? '';
+  if (typeof raw === 'number' && raw > 25000 && raw < 80000) {
+    const date = new Date((raw - 25569) * 86400000);
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+  return (raw || '').toString().trim();
+}
+
+/** Read a cell that should be currency — format as $X,XXX.XX */
+function currencyCell(rows, r, c) {
+  const raw = rows?.[r - 1]?.[c] ?? '';
+  if (typeof raw === 'number') {
+    return '$' + raw.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  const str = (raw || '').toString().trim();
+  // If already has $, return as-is; if it's a plain number string, format it
+  if (str && !str.startsWith('$')) {
+    const num = parseFloat(str.replace(/,/g, ''));
+    if (!isNaN(num)) return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return str;
 }
 
 function cellRange(rows, rStart, rEnd, c) {
@@ -45,19 +71,51 @@ function concat(rows, rStart, rEnd, c) {
   return parts.join('\n');
 }
 
+// ── Placeholder / Header Row Filtering ───────────────────
+
+const PLACEHOLDER_WORDS = new Set([
+  'name', 'title', 'location', 'quote', 'attribution', 'attribution (name & title)',
+  'name & title', 'hazard', 'action', 'notified', 'challenge', 'notes',
+  'description', 'innovation', 'benefit', 'initiative', 'details', 'month',
+  'category', 'client team attendees', 'a&a team attendees', 'a&a team',
+  'client team', 'date', 'cause', 'treatment', 'return to work date',
+  'corrective action', 'hazard prevented', 'who notified', 'status',
+]);
+
+/** Check if a value looks like a header/placeholder label rather than real data */
+function isPlaceholder(val) {
+  if (!val) return false;
+  return PLACEHOLDER_WORDS.has(val.toLowerCase().trim());
+}
+
+/** Filter team member rows — remove placeholder entries */
+function filterTeam(rows) {
+  return rows.filter((r) => r.name && !isPlaceholder(r.name) && !isPlaceholder(r.title));
+}
+
+/** Generic filter — remove rows where ALL non-empty values are placeholders */
+function filterPlaceholders(rows, keys) {
+  return rows.filter((row) => {
+    const nonEmpty = keys.filter((k) => row[k]);
+    if (!nonEmpty.length) return false;
+    // Keep if at least one value is NOT a placeholder
+    return nonEmpty.some((k) => !isPlaceholder(row[k]));
+  });
+}
+
 // ── Section Parsers ──────────────────────────────────────
 
 function parseCover(wb, warnings) {
   const rows = findSheet(wb, 'Cover & Intros');
   if (!rows) { warnings.push('Sheet "Cover & Intros" not found — skipping cover section'); return {}; }
 
-  const aaTeam = rowObjects(rows, 11, 19, [0, 1], ['name', 'title']);
-  const clientTeam = rowObjects(rows, 21, 27, [0, 1], ['name', 'title']);
+  const aaTeam = filterTeam(rowObjects(rows, 11, 19, [0, 1], ['name', 'title']));
+  const clientTeam = filterTeam(rowObjects(rows, 21, 27, [0, 1], ['name', 'title']));
 
   return {
     clientName: cell(rows, 3, 1),
     quarter: cell(rows, 4, 1),
-    date: cell(rows, 5, 1),
+    date: dateCell(rows, 5, 1),
     jobName: cell(rows, 6, 1),
     jobNumber: cell(rows, 7, 1),
     regionVP: cell(rows, 8, 1),
@@ -70,9 +128,36 @@ function parseSafety(wb, warnings) {
   const rows = findSheet(wb, 'Safety');
   if (!rows) { warnings.push('Sheet "Safety" not found — skipping safety section'); return {}; }
 
-  const incidents = rowObjects(rows, 11, 15, [0, 1, 2, 3, 4], ['location', 'q1', 'q2', 'q3', 'q4']);
-  const goodSaves = rowObjects(rows, 20, 26, [0, 1, 2, 3], ['location', 'hazard', 'action', 'notified']);
-  const incidentDetails = rowObjects(rows, 29, 32, [0, 1, 2, 3, 4], ['location', 'date', 'cause', 'treatment', 'returnDate']);
+  const incidents = filterPlaceholders(
+    rowObjects(rows, 11, 15, [0, 1, 2, 3, 4], ['location', 'q1', 'q2', 'q3', 'q4']),
+    ['location']
+  );
+  const goodSaves = filterPlaceholders(
+    rowObjects(rows, 20, 26, [0, 1, 2, 3], ['location', 'hazard', 'action', 'notified']),
+    ['location', 'hazard', 'action', 'notified']
+  );
+  const incidentDetails = filterPlaceholders(
+    rowObjects(rows, 29, 32, [0, 1, 2, 3, 4], ['location', 'date', 'cause', 'treatment', 'returnDate']),
+    ['location', 'date', 'cause', 'treatment', 'returnDate']
+  );
+
+  // Convert date fields in incident details
+  incidentDetails.forEach((row) => {
+    const raw = rows?.[/* find the original row */0]; // can't easily back-reference
+    // Best-effort: if date looks like a serial number, convert it
+    const num = parseFloat(row.date);
+    if (!isNaN(num) && num > 25000 && num < 80000) {
+      const d = new Date((num - 25569) * 86400000);
+      row.date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    if (row.returnDate) {
+      const rNum = parseFloat(row.returnDate);
+      if (!isNaN(rNum) && rNum > 25000 && rNum < 80000) {
+        const d = new Date((rNum - 25569) * 86400000);
+        row.returnDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+    }
+  });
 
   return {
     theme: cell(rows, 4, 1),
@@ -89,7 +174,10 @@ function parseWorkTickets(wb, warnings) {
   const rows = findSheet(wb, 'Work Tickets');
   if (!rows) { warnings.push('Sheet "Work Tickets" not found — skipping work tickets section'); return {}; }
 
-  const locations = rowObjects(rows, 5, 8, [0, 1, 2], ['location', 'priorYear', 'currentYear']);
+  const locations = filterPlaceholders(
+    rowObjects(rows, 5, 8, [0, 1, 2], ['location', 'priorYear', 'currentYear']),
+    ['location']
+  );
 
   return {
     locations: locations.length ? locations : [{ location: '', priorYear: '', currentYear: '' }],
@@ -140,7 +228,7 @@ function parseProjects(wb, warnings) {
   if (!rows) { warnings.push('Sheet "Projects & Satisfaction" not found — skipping projects section'); return {}; }
 
   const completed = rowObjects(rows, 5, 13, [0, 1], ['category', 'description'])
-    .filter((r) => r.description);
+    .filter((r) => r.description && !isPlaceholder(r.description) && !isPlaceholder(r.category));
 
   // Rows 17-25 are photo references — warn user to upload separately
   let hasPhotoRefs = false;
@@ -149,7 +237,10 @@ function parseProjects(wb, warnings) {
   }
   if (hasPhotoRefs) warnings.push('Excel contains photo references (rows 17-25) — upload actual photos in the Photos section');
 
-  const testimonials = rowObjects(rows, 28, 32, [0, 1, 2], ['location', 'quote', 'attribution']);
+  const testimonials = filterPlaceholders(
+    rowObjects(rows, 28, 32, [0, 1, 2], ['location', 'quote', 'attribution']),
+    ['location', 'quote', 'attribution']
+  );
 
   return {
     completed: completed.length ? completed : [{ category: 'Renovation/Deep Clean', description: '' }],
@@ -162,8 +253,14 @@ function parseChallenges(wb, warnings) {
   const rows = findSheet(wb, 'Challenges & Actions');
   if (!rows) { warnings.push('Sheet "Challenges & Actions" not found — skipping challenges section'); return {}; }
 
-  const items = rowObjects(rows, 5, 11, [0, 1, 2], ['location', 'challenge', 'action']);
-  const priorFollowUp = rowObjects(rows, 15, 18, [0, 1, 2], ['action', 'status', 'notes']);
+  const items = filterPlaceholders(
+    rowObjects(rows, 5, 11, [0, 1, 2], ['location', 'challenge', 'action']),
+    ['location', 'challenge', 'action']
+  );
+  const priorFollowUp = filterPlaceholders(
+    rowObjects(rows, 15, 18, [0, 1, 2], ['action', 'status', 'notes']),
+    ['action', 'status', 'notes']
+  );
 
   return {
     items: items.length ? items : [{ location: '', challenge: '', action: '' }],
@@ -180,12 +277,12 @@ function parseFinancial(wb, warnings) {
   const strategyNotes = cellRange(rows, 15, 18, 1);
 
   return {
-    asOfDate: cell(rows, 3, 1),
-    totalOutstanding: cell(rows, 4, 1),
-    bucket30: cell(rows, 8, 1),
-    bucket60: cell(rows, 9, 1),
-    bucket90: cell(rows, 10, 1),
-    bucket91: cell(rows, 11, 1),
+    asOfDate: dateCell(rows, 3, 1),
+    totalOutstanding: currencyCell(rows, 4, 1),
+    bucket30: currencyCell(rows, 8, 1),
+    bucket60: currencyCell(rows, 9, 1),
+    bucket90: currencyCell(rows, 10, 1),
+    bucket91: currencyCell(rows, 11, 1),
     strategyNotes: strategyNotes.length ? strategyNotes : ['', ''],
   };
 }
@@ -194,8 +291,14 @@ function parseRoadmap(wb, warnings) {
   const rows = findSheet(wb, 'Innovation & Roadmap');
   if (!rows) { warnings.push('Sheet "Innovation & Roadmap" not found — skipping roadmap section'); return {}; }
 
-  const highlights = rowObjects(rows, 5, 11, [0, 1, 2], ['innovation', 'description', 'benefit']);
-  const schedule = rowObjects(rows, 15, 17, [0, 1, 2], ['month', 'initiative', 'details']);
+  const highlights = filterPlaceholders(
+    rowObjects(rows, 5, 11, [0, 1, 2], ['innovation', 'description', 'benefit']),
+    ['innovation', 'description', 'benefit']
+  );
+  const schedule = filterPlaceholders(
+    rowObjects(rows, 15, 17, [0, 1, 2], ['month', 'initiative', 'details']),
+    ['month', 'initiative', 'details']
+  );
 
   return {
     highlights: highlights.length ? highlights : [{ innovation: '', description: '', benefit: '' }],
