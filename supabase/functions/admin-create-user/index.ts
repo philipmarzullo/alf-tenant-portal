@@ -24,14 +24,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create a client with the caller's JWT to verify identity
-    const callerClient = createClient(supabaseUrl, serviceRoleKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user: caller }, error: authError } = await callerClient.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    // Verify the caller's JWT
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(token);
 
     if (authError || !caller) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
@@ -41,7 +37,6 @@ Deno.serve(async (req) => {
     }
 
     // Check caller is admin
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: callerProfile } = await adminClient
       .from('profiles')
       .select('role')
