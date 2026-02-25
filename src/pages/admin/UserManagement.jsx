@@ -79,29 +79,25 @@ export default function UserManagement() {
       }
 
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-user`;
-
-        const res = await fetch(functionUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentSession.access_token}`,
-          },
-          body: JSON.stringify({
+        const { data, error: fnError } = await supabase.functions.invoke('admin-create-user', {
+          body: {
             email: form.email.trim(),
             password: form.password,
             name: form.name.trim(),
             title: form.title.trim(),
             role: form.role,
             modules,
-          }),
+          },
         });
 
-        const result = await res.json();
+        if (fnError) {
+          setSaveError(fnError.message || 'Failed to create user.');
+          setSaving(false);
+          return;
+        }
 
-        if (!res.ok) {
-          setSaveError(result.error || 'Failed to create user. Is the Edge Function deployed?');
+        if (data?.error) {
+          setSaveError(data.error);
           setSaving(false);
           return;
         }
