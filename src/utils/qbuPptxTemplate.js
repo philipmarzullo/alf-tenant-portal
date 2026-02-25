@@ -28,6 +28,9 @@ const CONTENT_W = SLIDE_W - MARGIN * 2;
 const COL2_W = (CONTENT_W - 0.3) / 2;
 const COL3_W = (CONTENT_W - 0.6) / 3;
 
+// Safe content bottom — logo sits at y=5.15, content must end above this
+const LOGO_SAFE_Y = 5.0;
+
 // ── Helpers ──────────────────────────────────────────────
 
 async function fetchLogoBase64(path) {
@@ -507,14 +510,12 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
 // ── Slide 5: B.1 Executive Summary ──────────────────────
 
 function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
-  const slide = pptx.addSlide();
-  setContentBackground(slide);
-  addSectionTitle(slide, 'Executive Summary');
-
   const e = form.executive;
   const cardY = 1.15;
   const gap = 0.3;
-  const maxCardH = SLIDE_H - cardY - 0.25;
+  const maxCardH = LOGO_SAFE_Y - cardY;
+  const headerPad = 0.8; // space for card header + padding above bullets
+  const availBulletH = maxCardH - headerPad;
 
   const cols = [
     { title: 'KEY ACHIEVEMENTS', items: getNarrativeLines(narratives, 'B1:ACHIEVEMENTS') || (e.achievements || []).filter(Boolean), color: AA_BLUE },
@@ -522,32 +523,75 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
     { title: 'INNOVATION MILESTONES', items: getNarrativeLines(narratives, 'B1:INNOVATIONS') || (e.innovations || []).filter(Boolean), color: GREEN },
   ];
 
-  // Use the tallest column's content to set card height
+  // Estimate tallest column bullet height at 10pt
   const maxBulletH = Math.max(...cols.map((c) => estimateBulletH(c.items, COL3_W - 0.5)));
-  const cardH = Math.min(maxBulletH + 0.8, maxCardH);
-  // Shrink font if content is heavy — floor at 7pt for dense content
-  const bulletFontSize = maxBulletH > 3.5 ? 7 : 10;
+  const fitsOnOne = maxBulletH <= availBulletH;
 
-  cols.forEach((col, i) => {
-    const x = MARGIN + i * (COL3_W + gap);
-    addCard(slide, { x, y: cardY, w: COL3_W, h: cardH, borderColor: col.color, borderSide: 'top' });
-    slide.addText(col.title, {
-      x: x + 0.15, y: cardY + 0.15, w: COL3_W - 0.3, h: 0.3,
-      fontSize: 10, fontFace: FONT, color: DARK, bold: true,
-    });
-    if (col.items.length) {
-      slide.addText(
-        col.items.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
-        {
-          x: x + 0.25, y: cardY + 0.6, w: COL3_W - 0.5, h: cardH - 0.8,
-          fontSize: bulletFontSize, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
-          valign: 'top',
-        }
-      );
+  // Determine how many items per column fit on one slide at 10pt
+  // Use per-item height estimates to find the split point
+  function itemsThatFit(items) {
+    let h = 0;
+    for (let i = 0; i < items.length; i++) {
+      const itemH = estimateBulletH([items[i]], COL3_W - 0.5);
+      if (h + itemH > availBulletH) return i;
+      h += itemH;
     }
-  });
+    return items.length;
+  }
 
-  addLogoBottomRight(slide, logoColor);
+  // Mild tightening: use 9pt only if just barely overflowing (within 15%)
+  const bulletFontSize = !fitsOnOne && maxBulletH <= availBulletH * 1.15 ? 9 : 10;
+
+  /** Render one Executive Summary slide with the given column items */
+  function renderExecSlide(slideTitle, colItems) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, slideTitle);
+
+    const slideBulletH = Math.max(...colItems.map((c) => estimateBulletH(c.items, COL3_W - 0.5)));
+    const cardH = Math.min(slideBulletH + headerPad, maxCardH);
+
+    colItems.forEach((col, i) => {
+      const x = MARGIN + i * (COL3_W + gap);
+      addCard(slide, { x, y: cardY, w: COL3_W, h: cardH, borderColor: col.color, borderSide: 'top' });
+      slide.addText(col.title, {
+        x: x + 0.15, y: cardY + 0.15, w: COL3_W - 0.3, h: 0.3,
+        fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+      });
+      if (col.items.length) {
+        slide.addText(
+          col.items.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
+          {
+            x: x + 0.25, y: cardY + 0.6, w: COL3_W - 0.5, h: cardH - headerPad,
+            fontSize: bulletFontSize, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
+            valign: 'top',
+          }
+        );
+      }
+    });
+
+    addLogoBottomRight(slide, logoColor);
+  }
+
+  if (fitsOnOne || bulletFontSize === 9) {
+    // Everything fits on one slide (at 10pt or mild 9pt tightening)
+    renderExecSlide('Executive Summary', cols);
+  } else {
+    // Split: first slide shows items that fit, second slide shows the rest
+    const firstSliceCols = cols.map((col) => {
+      const count = itemsThatFit(col.items);
+      return { ...col, items: col.items.slice(0, count) };
+    });
+    const remainderCols = cols.map((col, ci) => {
+      const count = itemsThatFit(col.items);
+      return { ...col, items: col.items.slice(count) };
+    }).filter((col) => col.items.length > 0);
+
+    renderExecSlide('Executive Summary', firstSliceCols);
+    if (remainderCols.length) {
+      renderExecSlide('Executive Summary (cont.)', remainderCols);
+    }
+  }
 }
 
 // ── Slide 6: C.1 Operational Performance — Work Tickets ─
@@ -787,45 +831,64 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
     });
   }
 
-  // Render in batches of 3 categories per slide
+  // Dynamic batch sizing — try 3, then 2, then 1 category per slide
   const allCatKeys = Object.keys(categories);
-  for (let batch = 0; batch < allCatKeys.length; batch += 3) {
+  const cardY = 1.15;
+  const gap = 0.3;
+  const maxCardH = LOGO_SAFE_Y - cardY;
+  const headerPad = 0.8;
+  let slideIdx = 0;
+  let catIdx = 0;
+
+  while (catIdx < allCatKeys.length) {
+    // Try fitting 3, then 2, then 1 categories on one slide
+    let batchSize = Math.min(3, allCatKeys.length - catIdx);
+    let chosenColW, chosenGap, chosenKeys, fits;
+
+    while (batchSize >= 1) {
+      chosenKeys = allCatKeys.slice(catIdx, catIdx + batchSize);
+      chosenColW = batchSize === 1 ? CONTENT_W : batchSize === 2 ? COL2_W : COL3_W;
+      chosenGap = batchSize === 2 ? 0.3 : gap;
+      const tallestBulletH = Math.max(...chosenKeys.map((k) => estimateBulletH(categories[k], chosenColW - 0.5)));
+      fits = tallestBulletH + headerPad <= maxCardH;
+      if (fits) break;
+      batchSize--;
+    }
+    // Floor at 1 category per slide even if it overflows slightly
+    if (batchSize < 1) batchSize = 1;
+    chosenKeys = allCatKeys.slice(catIdx, catIdx + batchSize);
+    chosenColW = batchSize === 1 ? CONTENT_W : batchSize === 2 ? COL2_W : COL3_W;
+    chosenGap = batchSize === 2 ? 0.3 : gap;
+
     const slide = pptx.addSlide();
     setContentBackground(slide);
-    addSectionTitle(slide, batch === 0
+    addSectionTitle(slide, slideIdx === 0
       ? 'Completed Projects Showcase'
       : 'Completed Projects Showcase (cont.)');
 
-    const catKeys = allCatKeys.slice(batch, batch + 3);
-    const numCols = catKeys.length;
-    const cardY = 1.15;
-    const gap = 0.3;
-    const colW = numCols === 1 ? CONTENT_W : numCols === 2 ? COL2_W : COL3_W;
-    const colGap = numCols === 2 ? 0.3 : gap;
-    const maxCardH = SLIDE_H - cardY - 0.45;
+    const maxBulletH = Math.max(...chosenKeys.map((k) => estimateBulletH(categories[k], chosenColW - 0.5)));
+    const cardH = Math.min(maxBulletH + headerPad, maxCardH);
 
-    const maxBulletH = Math.max(...catKeys.map((k) => estimateBulletH(categories[k], colW - 0.5)));
-    const cardH = Math.min(maxBulletH + 0.8, maxCardH);
-    const bulletFontSize = maxBulletH > 3.5 ? 8 : 10;
-
-    catKeys.forEach((cat, i) => {
-      const x = MARGIN + i * (colW + colGap);
-      addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
+    chosenKeys.forEach((cat, i) => {
+      const x = MARGIN + i * (chosenColW + chosenGap);
+      addCard(slide, { x, y: cardY, w: chosenColW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
       slide.addText(cat.toUpperCase(), {
-        x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
+        x: x + 0.15, y: cardY + 0.15, w: chosenColW - 0.3, h: 0.3,
         fontSize: 10, fontFace: FONT, color: DARK, bold: true,
       });
       slide.addText(
         categories[cat].map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
         {
-          x: x + 0.25, y: cardY + 0.6, w: colW - 0.5, h: cardH - 0.8,
-          fontSize: bulletFontSize, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
+          x: x + 0.25, y: cardY + 0.6, w: chosenColW - 0.5, h: cardH - headerPad,
+          fontSize: 10, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
           valign: 'top',
         }
       );
     });
 
     addLogoBottomRight(slide, logoColor);
+    catIdx += batchSize;
+    slideIdx++;
   }
 }
 
@@ -1069,8 +1132,21 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
       : [];
   }
 
-  // Render in batches of 4 per slide
-  const perSlide = 4;
+  // Dynamic items per slide — estimate heights to determine how many fit
+  const cardY = 1.15;
+  const maxCardH = LOGO_SAFE_Y - cardY;
+  const headerPad = 0.8; // card header + padding above bullets
+  const availBulletH = maxCardH - headerPad;
+
+  // Estimate average item height using both challenge and action text
+  let totalItemH = 0;
+  for (let i = 0; i < allChallengeTexts.length; i++) {
+    const chH = estimateBulletH([allChallengeTexts[i]], COL2_W - 0.5);
+    const acH = estimateBulletH([allActionTexts[i]], COL2_W - 0.5);
+    totalItemH += Math.max(chH, acH);
+  }
+  const avgItemH = allChallengeTexts.length > 0 ? totalItemH / allChallengeTexts.length : 0.5;
+  const perSlide = Math.max(2, Math.min(5, Math.floor(availBulletH / avgItemH)));
   const totalBatches = Math.max(1, Math.ceil(allChallengeTexts.length / perSlide));
 
   for (let batch = 0; batch < totalBatches; batch++) {
@@ -1086,8 +1162,6 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
 
     const x1 = MARGIN;
     const x2 = MARGIN + COL2_W + 0.3;
-    const cardY = 1.15;
-    const maxCardH = SLIDE_H - cardY - 0.45;
     const bulletCount = Math.max(challengeTexts.length, 1);
     const cardH = Math.min(calcCardH(bulletCount, { headerH: 0.55, itemH: 0.5, maxH: maxCardH }), maxCardH);
 
@@ -1106,7 +1180,7 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
       fontSize: 11, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
     });
     if (challengeTexts.length) {
-      addCardBullets(slide, challengeTexts, { x: x1, y: cardY + 0.6, w: COL2_W, h: cardH - 0.8 });
+      addCardBullets(slide, challengeTexts, { x: x1, y: cardY + 0.6, w: COL2_W, h: cardH - headerPad });
     }
 
     // Actions Taken card (green header)
@@ -1124,7 +1198,7 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
       fontSize: 11, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
     });
     if (actionTexts.length) {
-      addCardBullets(slide, actionTexts, { x: x2, y: cardY + 0.6, w: COL2_W, h: cardH - 0.8 });
+      addCardBullets(slide, actionTexts, { x: x2, y: cardY + 0.6, w: COL2_W, h: cardH - headerPad });
     }
 
     addLogoBottomRight(slide, logoColor);
@@ -1327,7 +1401,7 @@ function addInnovationSlide(pptx, form, logoColor, narratives) {
     const show = batchItems.length;
     const colW = show === 1 ? CONTENT_W : show === 2 ? COL2_W : COL3_W;
     const colGap = show === 2 ? 0.3 : gap;
-    const maxCardH = SLIDE_H - cardY - 0.45;
+    const maxCardH = LOGO_SAFE_Y - cardY;
     const maxBulletH = Math.max(...batchItems.map((h) => estimateBulletH(h.bullets, colW - 0.5)));
     const cardH = Math.min(maxBulletH + 0.8, maxCardH);
 
