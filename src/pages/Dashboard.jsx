@@ -5,6 +5,7 @@ import MetricCard from '../components/shared/MetricCard';
 import TaskCard from '../components/shared/TaskCard';
 import AgentChatPanel from '../components/shared/AgentChatPanel';
 import { DEPT_COLORS } from '../data/constants';
+import { useUser } from '../contexts/UserContext';
 
 // Data sources
 import { contracts, getSalesMetrics, daysUntilExpiry } from '../data/mock/salesMocks';
@@ -279,16 +280,16 @@ function computeDashboard() {
 }
 
 const ACTIVITY = [
-  { id: 1, text: 'Operations Agent generated VP performance summary for Eric Wheeler', time: '10m ago' },
-  { id: 2, text: 'Sales Agent generated renewal brief for Related Companies', time: '30m ago' },
-  { id: 3, text: 'Admin Agent ran cross-department analysis', time: '1h ago' },
-  { id: 4, text: 'HR Agent drafted benefits reminder for 12 employees', time: '2h ago' },
-  { id: 5, text: 'Sales Agent flagged 4 contracts expiring within 90 days', time: '3h ago' },
-  { id: 6, text: 'Operations Agent flagged 2 VPs below safety inspection target', time: '4h ago' },
-  { id: 7, text: 'HR Agent flagged 32BJ pay increase — 847 employees affected', time: '4h ago' },
-  { id: 8, text: 'Finance Agent summarized Greenfield University account', time: '6h ago' },
-  { id: 9, text: 'Purchasing Agent ran reorder analysis for Floor Finish', time: 'Yesterday' },
-  { id: 10, text: 'QBU Builder generated Q4 2025 deck for Fordham University', time: 'Yesterday' },
+  { id: 1, text: 'Operations Agent generated VP performance summary for Eric Wheeler', time: '10m ago', module: 'ops' },
+  { id: 2, text: 'Sales Agent generated renewal brief for Related Companies', time: '30m ago', module: 'sales' },
+  { id: 3, text: 'Admin Agent ran cross-department analysis', time: '1h ago', module: 'admin' },
+  { id: 4, text: 'HR Agent drafted benefits reminder for 12 employees', time: '2h ago', module: 'hr' },
+  { id: 5, text: 'Sales Agent flagged 4 contracts expiring within 90 days', time: '3h ago', module: 'sales' },
+  { id: 6, text: 'Operations Agent flagged 2 VPs below safety inspection target', time: '4h ago', module: 'ops' },
+  { id: 7, text: 'HR Agent flagged 32BJ pay increase — 847 employees affected', time: '4h ago', module: 'hr' },
+  { id: 8, text: 'Finance Agent summarized Greenfield University account', time: '6h ago', module: 'finance' },
+  { id: 9, text: 'Purchasing Agent ran reorder analysis for Floor Finish', time: 'Yesterday', module: 'purchasing' },
+  { id: 10, text: 'QBU Builder generated Q4 2025 deck for Fordham University', time: 'Yesterday', module: 'qbu' },
 ];
 
 const MODULE_LABELS = {
@@ -310,108 +311,140 @@ const MODULE_PATHS = {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
+  const { hasModule, isAdmin } = useUser();
   const data = computeDashboard();
 
-  const metrics = [
-    { label: 'Total Annual APC', value: fmtDollar(data.salesMetrics.totalApcAnnual), icon: DollarSign },
-    { label: 'Total Job Count', value: String(data.opsMetrics.totalJobs), icon: HardHat },
-    { label: 'Outstanding AR', value: fmtDollar(data.arTotal), icon: Clock },
-    { label: 'Contracts Expiring (90d)', value: String(data.salesMetrics.expiringSoonCount), icon: FileText, color: data.salesMetrics.expiringSoonCount > 0 ? '#DC2626' : undefined },
-    { label: 'Needs Attention', value: String(data.needsAttentionCount), icon: AlertTriangle, color: data.needsAttentionCount > 0 ? '#DC2626' : undefined },
+  // Filter everything by module access
+  const allMetrics = [
+    { label: 'Total Annual APC', value: fmtDollar(data.salesMetrics.totalApcAnnual), icon: DollarSign, module: 'sales' },
+    { label: 'Total Job Count', value: String(data.opsMetrics.totalJobs), icon: HardHat, module: 'ops' },
+    { label: 'Outstanding AR', value: fmtDollar(data.arTotal), icon: Clock, module: 'finance' },
+    { label: 'Contracts Expiring (90d)', value: String(data.salesMetrics.expiringSoonCount), icon: FileText, color: data.salesMetrics.expiringSoonCount > 0 ? '#DC2626' : undefined, module: 'sales' },
   ];
+  const metrics = allMetrics.filter((m) => hasModule(m.module));
+
+  const visibleWorkspaces = Object.entries(data.workspaceKPIs).filter(([key]) => hasModule(key));
+  const visibleAttention = data.attentionItems.filter((item) => hasModule(item.dept));
+  const visibleActivity = ACTIVITY.filter((item) => hasModule(item.module));
+
+  // Add Needs Attention card (count based on filtered items)
+  if (visibleAttention.length > 0) {
+    metrics.push({
+      label: 'Needs Attention',
+      value: String(visibleAttention.length),
+      icon: AlertTriangle,
+      color: '#DC2626',
+    });
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-light text-dark-text">Dashboard</h1>
-        <button
-          onClick={() => setChatOpen(true)}
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
-        >
-          <Bot size={16} />
-          Ask Admin Agent
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setChatOpen(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+          >
+            <Bot size={16} />
+            Ask Admin Agent
+          </button>
+        )}
       </div>
 
       {/* Hero Metric Cards */}
-      <div className="grid grid-cols-5 gap-4 mb-8">
-        {metrics.map((m) => (
-          <MetricCard key={m.label} {...m} />
-        ))}
-      </div>
+      {metrics.length > 0 && (
+        <div className={`grid gap-4 mb-8`} style={{ gridTemplateColumns: `repeat(${Math.min(metrics.length, 5)}, minmax(0, 1fr))` }}>
+          {metrics.map((m) => (
+            <MetricCard key={m.label} {...m} />
+          ))}
+        </div>
+      )}
 
       {/* Workspace KPI Grid */}
-      <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
-        Workspace Overview
-      </h2>
-      <div className="grid grid-cols-5 gap-4 mb-8">
-        {Object.entries(data.workspaceKPIs).map(([key, mod]) => (
-          <button
-            key={key}
-            onClick={() => navigate(MODULE_PATHS[key])}
-            className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-sm transition-all"
-            style={{ borderLeftWidth: 4, borderLeftColor: DEPT_COLORS[key] }}
-          >
-            <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: DEPT_COLORS[key] }}>
-              {MODULE_LABELS[key]}
-            </div>
-            {mod.stats.map((stat, i) => (
-              <div key={i} className="text-sm text-dark-text leading-relaxed">
-                {stat}
-              </div>
+      {visibleWorkspaces.length > 0 && (
+        <>
+          <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
+            Workspace Overview
+          </h2>
+          <div className={`grid gap-4 mb-8`} style={{ gridTemplateColumns: `repeat(${Math.min(visibleWorkspaces.length, 5)}, minmax(0, 1fr))` }}>
+            {visibleWorkspaces.map(([key, mod]) => (
+              <button
+                key={key}
+                onClick={() => navigate(MODULE_PATHS[key])}
+                className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-sm transition-all"
+                style={{ borderLeftWidth: 4, borderLeftColor: DEPT_COLORS[key] }}
+              >
+                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: DEPT_COLORS[key] }}>
+                  {MODULE_LABELS[key]}
+                </div>
+                {mod.stats.map((stat, i) => (
+                  <div key={i} className="text-sm text-dark-text leading-relaxed">
+                    {stat}
+                  </div>
+                ))}
+              </button>
             ))}
-          </button>
-        ))}
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Bottom section — Activity + Attention */}
-      <div className="grid grid-cols-5 gap-6">
-        {/* Left column — Recent Agent Activity */}
-        <div className="col-span-3">
-          <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
-            Recent Agent Activity
-          </h2>
-          <div className="bg-white rounded-lg border border-gray-200">
-            {ACTIVITY.map((item, i) => (
-              <div key={item.id} className={`flex items-start gap-3 px-4 py-3 ${i < ACTIVITY.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                <div className="p-1.5 bg-aa-blue/10 rounded shrink-0 mt-0.5">
-                  <Bot size={14} className="text-aa-blue" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-dark-text leading-snug">{item.text}</div>
-                  <div className="text-xs text-secondary-text mt-1">{item.time}</div>
-                </div>
+      {(visibleActivity.length > 0 || visibleAttention.length > 0) && (
+        <div className="grid grid-cols-5 gap-6">
+          {/* Left column — Recent Agent Activity */}
+          {visibleActivity.length > 0 && (
+            <div className={visibleAttention.length > 0 ? 'col-span-3' : 'col-span-5'}>
+              <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
+                Recent Agent Activity
+              </h2>
+              <div className="bg-white rounded-lg border border-gray-200">
+                {visibleActivity.map((item, i) => (
+                  <div key={item.id} className={`flex items-start gap-3 px-4 py-3 ${i < visibleActivity.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <div className="p-1.5 bg-aa-blue/10 rounded shrink-0 mt-0.5">
+                      <Bot size={14} className="text-aa-blue" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-dark-text leading-snug">{item.text}</div>
+                      <div className="text-xs text-secondary-text mt-1">{item.time}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          )}
 
-        {/* Right column — Needs Attention (compact) */}
-        <div className="col-span-2">
-          <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
-            Needs Attention
-          </h2>
-          <div className="flex flex-col gap-2">
-            {data.attentionItems.slice(0, 6).map((task) => (
-              <TaskCard key={task.id} task={task} onAction={() => {}} />
-            ))}
-          </div>
-          {data.attentionItems.length > 6 && (
-            <div className="mt-2 text-xs text-secondary-text text-center">
-              +{data.attentionItems.length - 6} more items
+          {/* Right column — Needs Attention (compact) */}
+          {visibleAttention.length > 0 && (
+            <div className={visibleActivity.length > 0 ? 'col-span-2' : 'col-span-5'}>
+              <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
+                Needs Attention
+              </h2>
+              <div className="flex flex-col gap-2">
+                {visibleAttention.slice(0, 6).map((task) => (
+                  <TaskCard key={task.id} task={task} onAction={() => {}} />
+                ))}
+              </div>
+              {visibleAttention.length > 6 && (
+                <div className="mt-2 text-xs text-secondary-text text-center">
+                  +{visibleAttention.length - 6} more items
+                </div>
+              )}
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Admin Agent Chat Panel */}
-      <AgentChatPanel
-        open={chatOpen}
-        onClose={() => setChatOpen(false)}
-        agentKey="admin"
-        agentName="Admin Agent"
-        context="Cross-department executive insights — HR, Finance, Purchasing, Sales, and Operations"
-      />
+      {isAdmin && (
+        <AgentChatPanel
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+          agentKey="admin"
+          agentName="Admin Agent"
+          context="Cross-department executive insights — HR, Finance, Purchasing, Sales, and Operations"
+        />
+      )}
     </div>
   );
 }
