@@ -31,7 +31,8 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       ...group,
       items: group.items.filter((item) => {
         if (!item.moduleKey) return true;
-        if (item.moduleKey === 'platform') return isPlatformOwner;
+        if (isPlatformOwner) return item.moduleKey === 'platform';
+        if (item.moduleKey === 'platform') return false;
         if (item.moduleKey === 'superAdmin') return isSuperAdmin;
         if (item.moduleKey === 'admin') return isAdmin;
         if (isAdmin) return true;

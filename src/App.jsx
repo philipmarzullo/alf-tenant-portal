@@ -33,6 +33,7 @@ import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import {
+  PlatformDashboardPage,
   PlatformTenantsPage,
   PlatformTenantDetailPage,
   PlatformNewTenantPage,
@@ -102,6 +103,11 @@ function DeactivatedScreen() {
   );
 }
 
+function DashboardRouter() {
+  const { isPlatformOwner } = useUser();
+  return isPlatformOwner ? <PlatformDashboardPage /> : <Dashboard />;
+}
+
 function AuthGate({ children }) {
   const { loading: authLoading, isConfigured, session } = useAuth();
   const { realUser, profileLoading } = useUser();
@@ -157,7 +163,7 @@ export default function App() {
                 <TopBar isMobile={isMobile} onMenuToggle={() => setMobileMenuOpen(true)} />
                 <PageWrapper>
                   <Routes>
-                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/" element={<DashboardRouter />} />
 
                     <Route
                       path="/hr"
