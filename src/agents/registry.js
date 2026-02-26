@@ -6,6 +6,7 @@ import { salesDeckAgent } from './configs/salesDeck';
 import { salesAgent } from './configs/sales';
 import { opsAgent } from './configs/ops';
 import { adminAgent } from './configs/admin';
+import { mergeOverride } from './overrides';
 
 const agents = {
   hr: hrAgent,
@@ -18,7 +19,15 @@ const agents = {
   salesDeck: salesDeckAgent,
 };
 
+/** Returns the agent config with any localStorage overrides merged in. */
 export function getAgent(agentKey) {
+  const source = agents[agentKey];
+  if (!source) return null;
+  return mergeOverride(source, agentKey);
+}
+
+/** Returns the original source-code config, ignoring overrides. */
+export function getSourceAgentConfig(agentKey) {
   return agents[agentKey] || null;
 }
 
@@ -29,6 +38,14 @@ export function getAgentAction(agentKey, actionKey) {
 }
 
 export function getAllAgents() {
+  return Object.entries(agents).map(([key, config]) => ({
+    key,
+    ...mergeOverride(config, key),
+  }));
+}
+
+/** Returns all agents with source-code defaults (no overrides). */
+export function getAllSourceAgents() {
   return Object.entries(agents).map(([key, config]) => ({
     key,
     ...config,
