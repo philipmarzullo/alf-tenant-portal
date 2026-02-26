@@ -11,7 +11,7 @@ import { supabase, getFreshToken } from '../../lib/supabase';
 const EMPTY_FORM = { name: '', email: '', title: '', role: 'user', modules: [], active: true, password: '' };
 
 export default function UserManagement() {
-  const { currentUser, allUsers, refreshUsers, isPlatformOwner } = useUser();
+  const { currentUser, allUsers, refreshUsers } = useUser();
   const { session, resetPassword } = useAuth();
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -143,10 +143,11 @@ export default function UserManagement() {
 
   const isSelf = editingUser?.id === currentUser?.id;
 
-  // Tenant admins shouldn't see or edit platform_owner users
-  const visibleUsers = isPlatformOwner
-    ? allUsers
-    : allUsers.filter((u) => u.role !== 'platform_owner');
+  // Filter to this tenant's users (exclude platform_owner accounts)
+  const tenantId = import.meta.env.VITE_TENANT_ID;
+  const visibleUsers = allUsers.filter((u) =>
+    u.role !== 'platform_owner' && (!tenantId || u.tenant_id === tenantId)
+  );
 
   const activeCount = visibleUsers.filter((u) => u.active).length;
   const adminCount = visibleUsers.filter((u) => (u.role === 'admin' || u.role === 'super-admin') && u.active).length;

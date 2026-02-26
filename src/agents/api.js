@@ -1,47 +1,14 @@
 import { getAgent, getAgentAction } from './registry';
-import { supabase, getFreshToken } from '../lib/supabase';
+import { getFreshToken } from '../lib/supabase';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 /**
- * Resolve the active tenant_id for API calls.
- * - Tenant users: their profile's tenant_id
- * - Platform admins (no tenant_id): first active tenant
- * Cached for the session to avoid repeated queries.
+ * Resolve the tenant_id for API calls from the VITE_TENANT_ID env var.
+ * Each tenant deploy has its own TENANT_ID set at build/deploy time.
  */
-let _cachedTenantId = undefined;
-async function getActiveTenantId() {
-  if (_cachedTenantId !== undefined) return _cachedTenantId;
-  if (!supabase) return null;
-
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return null;
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('tenant_id')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profile?.tenant_id) {
-      _cachedTenantId = profile.tenant_id;
-      return _cachedTenantId;
-    }
-
-    // Platform admin with no tenant — use first active tenant
-    const { data: tenants } = await supabase
-      .from('alf_tenants')
-      .select('id')
-      .eq('status', 'active')
-      .order('created_at')
-      .limit(1);
-
-    _cachedTenantId = tenants?.[0]?.id || null;
-    return _cachedTenantId;
-  } catch {
-    return null;
-  }
+function getTenantId() {
+  return import.meta.env.VITE_TENANT_ID || null;
 }
 
 /**
@@ -68,7 +35,7 @@ export async function callAgent(agentKey, actionKey, data) {
     return getMockResponse(agentKey, actionKey, data);
   }
 
-  const tenantId = await getActiveTenantId();
+  const tenantId = getTenantId();
 
   const response = await fetch(`${BACKEND_URL}/api/claude`, {
     method: 'POST',
@@ -108,7 +75,7 @@ export async function chatWithAgent(agentKey, messages) {
     return 'Live AI responses require an active session and backend connection. For now, this is a demo of the chat interface — the agent would respond with context-aware answers based on loaded SOPs and company knowledge.';
   }
 
-  const tenantId = await getActiveTenantId();
+  const tenantId = getTenantId();
 
   const response = await fetch(`${BACKEND_URL}/api/claude`, {
     method: 'POST',

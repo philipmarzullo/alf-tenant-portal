@@ -32,17 +32,6 @@ import UserManagement from './pages/admin/UserManagement';
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
-import {
-  PlatformDashboardPage,
-  PlatformTenantsPage,
-  PlatformTenantDetailPage,
-  PlatformNewTenantPage,
-  PlatformUsagePage,
-  PlatformConfigPage,
-  PlatformAgentsPage,
-  PlatformTemplatesPage,
-  PlatformBrandPage,
-} from './pages/platform';
 
 function LoadingScreen() {
   return (
@@ -57,7 +46,7 @@ function SetupScreen() {
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <img src="/alf-logo.jpg" alt="Alf" className="h-10 rounded" />
+          <img src="/logo-white.png" alt="A&A" className="h-10" />
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-xl font-semibold text-dark-text mb-2">Setup Required</h1>
@@ -79,16 +68,11 @@ VITE_SUPABASE_ANON_KEY=your-anon-key`}
 
 function DeactivatedScreen() {
   const { signOut } = useAuth();
-  const { isPlatformOwner } = useUser();
   return (
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <img
-            src={isPlatformOwner ? '/alf-logo.jpg' : '/logo-white.png'}
-            alt={isPlatformOwner ? 'Alf' : 'Logo'}
-            className={`h-10${isPlatformOwner ? ' rounded' : ''}`}
-          />
+          <img src="/logo-white.png" alt="A&A" className="h-10" />
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8 text-center">
           <h1 className="text-xl font-semibold text-dark-text mb-2">Account Deactivated</h1>
@@ -97,11 +81,7 @@ function DeactivatedScreen() {
           </p>
           <button
             onClick={signOut}
-            className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors ${
-              isPlatformOwner
-                ? 'bg-amber-600 hover:bg-amber-700'
-                : 'bg-aa-blue hover:bg-aa-blue/90'
-            }`}
+            className="px-4 py-2 bg-aa-blue text-white text-sm font-medium rounded-lg hover:bg-aa-blue/90 transition-colors"
           >
             Sign Out
           </button>
@@ -109,11 +89,6 @@ function DeactivatedScreen() {
       </div>
     </div>
   );
-}
-
-function DashboardRouter() {
-  const { isPlatformOwner } = useUser();
-  return isPlatformOwner ? <PlatformDashboardPage /> : <Dashboard />;
 }
 
 function AuthGate({ children }) {
@@ -129,9 +104,8 @@ function AuthGate({ children }) {
   return children;
 }
 
-function ProtectedRoute({ moduleKey, adminOnly, superAdminOnly, platformOnly, children }) {
-  const { hasModule, isAdmin, isSuperAdmin, isPlatformOwner } = useUser();
-  if (platformOnly && !isPlatformOwner) return <Navigate to="/" replace />;
+function ProtectedRoute({ moduleKey, adminOnly, superAdminOnly, children }) {
+  const { hasModule, isAdmin, isSuperAdmin } = useUser();
   if (superAdminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
   if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/" replace />;
@@ -171,7 +145,7 @@ export default function App() {
                 <TopBar isMobile={isMobile} onMenuToggle={() => setMobileMenuOpen(true)} />
                 <PageWrapper>
                   <Routes>
-                    <Route path="/" element={<DashboardRouter />} />
+                    <Route path="/" element={<Dashboard />} />
 
                     <Route
                       path="/hr"
@@ -274,16 +248,6 @@ export default function App() {
                         </ProtectedRoute>
                       }
                     />
-
-                    {/* Platform routes — platform_owner only */}
-                    <Route path="/platform/tenants" element={<ProtectedRoute platformOnly><PlatformTenantsPage /></ProtectedRoute>} />
-                    <Route path="/platform/tenants/new" element={<ProtectedRoute platformOnly><PlatformNewTenantPage /></ProtectedRoute>} />
-                    <Route path="/platform/tenants/:id" element={<ProtectedRoute platformOnly><PlatformTenantDetailPage /></ProtectedRoute>} />
-                    <Route path="/platform/usage" element={<ProtectedRoute platformOnly><PlatformUsagePage /></ProtectedRoute>} />
-                    <Route path="/platform/agents" element={<ProtectedRoute platformOnly><PlatformAgentsPage /></ProtectedRoute>} />
-                    <Route path="/platform/config" element={<ProtectedRoute platformOnly><PlatformConfigPage /></ProtectedRoute>} />
-                    <Route path="/platform/templates" element={<ProtectedRoute platformOnly><PlatformTemplatesPage /></ProtectedRoute>} />
-                    <Route path="/platform/brand" element={<ProtectedRoute platformOnly><PlatformBrandPage /></ProtectedRoute>} />
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
