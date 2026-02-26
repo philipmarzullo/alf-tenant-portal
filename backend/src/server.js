@@ -52,7 +52,7 @@ app.use((err, req, res, _next) => {
 
 // --- Start ---
 app.listen(PORT, () => {
-  console.log(`[aa-portal-backend] Running on :${PORT}`);
+  console.log(`[alf-platform-backend] Running on :${PORT}`);
   console.log(`  Anthropic key (env fallback): ${process.env.ANTHROPIC_API_KEY ? 'configured' : 'not set'}`);
   console.log(`  Credential encryption: ${process.env.CREDENTIAL_ENCRYPTION_KEY ? 'configured' : 'MISSING'}`);
   console.log(`  Supabase: ${process.env.SUPABASE_URL ? 'configured' : 'MISSING'}`);

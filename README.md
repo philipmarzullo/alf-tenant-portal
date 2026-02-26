@@ -1,16 +1,100 @@
-# React + Vite
+# Alf Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Alf is a managed SaaS platform for facility services operations. It provides tenant organizations with workspace modules, AI agents, and operational tools — all centrally managed by the Alf platform team.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend:** React 19 + Vite + Tailwind CSS v4
+- **Backend:** Express (Node.js)
+- **Database & Auth:** Supabase (PostgreSQL + Auth + Row-Level Security)
+- **Deployment:** Render
 
-## React Compiler
+## Architecture
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Alf follows a **platform → tenant** model:
 
-## Expanding the ESLint configuration
+- **Alf (platform)** controls all configuration: API keys, agent definitions, module assignments, and tenant provisioning
+- **Tenants** (e.g., A&A Elevated Facility Solutions) are customer organizations that access their own branded workspace
+- Tenant users never see Alf branding — the platform layer is invisible to them
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Governance Model
+
+- Alf controls all API keys and credentials per tenant
+- Alf designs, builds, maintains, and trains all AI agents per tenant
+- Alf decides which modules each tenant gets — managed service, not self-serve
+- Tenants interact with their workspace; Alf manages everything behind the scenes
+
+## Local Development
+
+### Prerequisites
+
+- Node.js 18+
+- A Supabase project with auth and database configured
+
+### Setup
+
+```bash
+# Install frontend dependencies
+npm install
+
+# Install backend dependencies
+cd backend && npm install && cd ..
+
+# Create environment files
+cp .env.example .env.local          # Frontend (Vite)
+cp backend/.env.example backend/.env # Backend
+```
+
+Required environment variables:
+
+**Frontend (`.env.local`)**
+```
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+**Backend (`backend/.env`)**
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-key
+ANTHROPIC_API_KEY=your-anthropic-key
+CREDENTIAL_ENCRYPTION_KEY=your-encryption-key
+FRONTEND_URL=http://localhost:5173
+```
+
+### Running
+
+```bash
+# Terminal 1 — Frontend
+npm run dev
+
+# Terminal 2 — Backend
+cd backend && npm run dev
+```
+
+## Project Structure
+
+```
+├── src/
+│   ├── pages/
+│   │   ├── platform/     # Platform-owner pages (Alf admin)
+│   │   ├── auth/         # Login, forgot/reset password
+│   │   ├── admin/        # Tenant admin pages
+│   │   ├── hr/           # HR workspace
+│   │   ├── sales/        # Sales workspace
+│   │   ├── finance/      # Finance workspace
+│   │   ├── ops/          # Operations workspace
+│   │   ├── purchasing/   # Purchasing workspace
+│   │   └── tools/        # QBU Builder, Sales Deck Builder
+│   ├── components/
+│   │   ├── layout/       # Sidebar, TopBar, PageWrapper
+│   │   └── shared/       # Reusable components
+│   ├── contexts/         # Auth, User, Tenant contexts
+│   └── agents/           # Agent configs and chat components
+├── backend/
+│   └── src/
+│       ├── server.js     # Express server entry
+│       ├── routes/       # API routes (claude, credentials)
+│       └── middleware/    # Auth middleware
+└── public/               # Static assets (logos, templates)
+```

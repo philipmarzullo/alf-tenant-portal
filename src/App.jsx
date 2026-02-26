@@ -47,8 +47,7 @@ import {
 function LoadingScreen() {
   return (
     <div className="min-h-screen bg-dark-nav flex flex-col items-center justify-center">
-      <img src="/logo-white.png" alt="A&A" className="h-10 mb-6" />
-      <Loader2 size={24} className="text-aa-blue animate-spin" />
+      <Loader2 size={24} className="text-gray-400 animate-spin" />
     </div>
   );
 }
@@ -58,7 +57,7 @@ function SetupScreen() {
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <img src="/logo-white.png" alt="A&A" className="h-10" />
+          <img src="/alf-logo.jpg" alt="Alf" className="h-10 rounded" />
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-xl font-semibold text-dark-text mb-2">Setup Required</h1>
@@ -80,11 +79,16 @@ VITE_SUPABASE_ANON_KEY=your-anon-key`}
 
 function DeactivatedScreen() {
   const { signOut } = useAuth();
+  const { isPlatformOwner } = useUser();
   return (
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <img src="/logo-white.png" alt="A&A" className="h-10" />
+          <img
+            src={isPlatformOwner ? '/alf-logo.jpg' : '/logo-white.png'}
+            alt={isPlatformOwner ? 'Alf' : 'Logo'}
+            className={`h-10${isPlatformOwner ? ' rounded' : ''}`}
+          />
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8 text-center">
           <h1 className="text-xl font-semibold text-dark-text mb-2">Account Deactivated</h1>
@@ -93,7 +97,11 @@ function DeactivatedScreen() {
           </p>
           <button
             onClick={signOut}
-            className="px-4 py-2 bg-aa-blue text-white text-sm font-medium rounded-lg hover:bg-aa-blue/90 transition-colors"
+            className={`px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors ${
+              isPlatformOwner
+                ? 'bg-amber-600 hover:bg-amber-700'
+                : 'bg-aa-blue hover:bg-aa-blue/90'
+            }`}
           >
             Sign Out
           </button>
