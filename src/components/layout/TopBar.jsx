@@ -1,7 +1,30 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Eye, X } from 'lucide-react';
+import { Search, Bell, Eye, X, Bot, AlertTriangle, FileText, CheckCircle } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
+
+const NOTIF_ICONS = {
+  agent: Bot,
+  alert: AlertTriangle,
+  update: FileText,
+  success: CheckCircle,
+};
+
+const NOTIF_COLORS = {
+  agent: 'text-aa-blue bg-aa-blue/10',
+  alert: 'text-amber-600 bg-amber-50',
+  update: 'text-secondary-text bg-gray-100',
+  success: 'text-green-600 bg-green-50',
+};
+
+const NOTIFICATIONS = [
+  { id: 1, type: 'agent', text: 'QBU Builder generated Q4 deck for Fordham University', time: '10m ago', unread: true },
+  { id: 2, type: 'alert', text: 'Contract expiring in 18d — NYC Housing Authority', time: '25m ago', unread: true },
+  { id: 3, type: 'agent', text: 'Sales Agent flagged 4 contracts expiring within 90 days', time: '1h ago', unread: true },
+  { id: 4, type: 'alert', text: 'Medical/FMLA certification overdue — James Rodriguez', time: '2h ago', unread: false },
+  { id: 5, type: 'success', text: 'Benefits enrollment completed for Aisha Patel', time: '3h ago', unread: false },
+  { id: 6, type: 'agent', text: 'Operations Agent flagged 2 VPs below safety target', time: '4h ago', unread: false },
+];
 
 const BREADCRUMB_MAP = {
   '/': ['Dashboard'],
@@ -30,20 +53,25 @@ export default function TopBar() {
   const crumbs = BREADCRUMB_MAP[location.pathname] || ['Dashboard'];
   const { realIsSuperAdmin, realUser, activeUsers, viewingAs, setViewingAs, clearViewingAs } = useUser();
 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [viewAsOpen, setViewAsOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const viewAsRef = useRef(null);
+  const notifRef = useRef(null);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
-    if (!dropdownOpen) return;
+    if (!viewAsOpen && !notifOpen) return;
     function handleClick(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false);
+      if (viewAsOpen && viewAsRef.current && !viewAsRef.current.contains(e.target)) {
+        setViewAsOpen(false);
+      }
+      if (notifOpen && notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [dropdownOpen]);
+  }, [viewAsOpen, notifOpen]);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -82,16 +110,59 @@ export default function TopBar() {
               className="pl-9 pr-4 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-md w-48 focus:outline-none focus:border-aa-blue"
             />
           </div>
-          <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
-            <Bell size={18} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-aa-red rounded-full" />
-          </button>
+          {/* Notifications dropdown */}
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <Bell size={18} />
+              {NOTIFICATIONS.some((n) => n.unread) && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-aa-red rounded-full" />
+              )}
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-dark-text">Notifications</span>
+                  <span className="text-[10px] text-secondary-text">
+                    {NOTIFICATIONS.filter((n) => n.unread).length} new
+                  </span>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {NOTIFICATIONS.map((n) => {
+                    const Icon = NOTIF_ICONS[n.type];
+                    return (
+                      <div
+                        key={n.id}
+                        className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 last:border-0 ${
+                          n.unread ? 'bg-blue-50/30' : ''
+                        }`}
+                      >
+                        <div className={`p-1.5 rounded shrink-0 mt-0.5 ${NOTIF_COLORS[n.type]}`}>
+                          <Icon size={12} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-dark-text leading-snug">{n.text}</div>
+                          <div className="text-[11px] text-secondary-text mt-1">{n.time}</div>
+                        </div>
+                        {n.unread && (
+                          <span className="w-1.5 h-1.5 bg-aa-blue rounded-full shrink-0 mt-2" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* View-as-user dropdown — super-admin only */}
           {realIsSuperAdmin && (
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative" ref={viewAsRef}>
               <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
+                onClick={() => setViewAsOpen(!viewAsOpen)}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors ${
                   viewingAs
                     ? 'bg-amber-50 border-amber-300 text-amber-700'
@@ -102,11 +173,11 @@ export default function TopBar() {
                 <span>{viewingAs ? viewingAs.name : 'View as...'}</span>
               </button>
 
-              {dropdownOpen && (
+              {viewAsOpen && (
                 <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
                   {viewingAs && (
                     <button
-                      onClick={() => { clearViewingAs(); setDropdownOpen(false); }}
+                      onClick={() => { clearViewingAs(); setViewAsOpen(false); }}
                       className="w-full px-3 py-2 text-left text-xs font-medium text-amber-700 hover:bg-amber-50 border-b border-gray-100 flex items-center gap-2"
                     >
                       <X size={12} />
@@ -116,7 +187,7 @@ export default function TopBar() {
                   {impersonateList.map((user) => (
                     <button
                       key={user.id}
-                      onClick={() => { setViewingAs(user); setDropdownOpen(false); }}
+                      onClick={() => { setViewingAs(user); setViewAsOpen(false); }}
                       className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
                         viewingAs?.id === user.id ? 'bg-blue-50 text-aa-blue' : 'text-dark-text'
                       }`}
