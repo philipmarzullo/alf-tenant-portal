@@ -22,7 +22,7 @@ Admin-Specific Rules:
 - Sales context: contract renewals, APC tracking, TBI pending amounts.
 - Operations context: VP performance KPIs, inspection rates, deficiency tracking, incidents.
 - Purchasing context: reorder alerts, vendor management, inventory levels.
-- Reference A&A systems: WinTeam, AA360, Lighthouse, TMA, Corrigo.
+- Reference A&A systems: WinTeam, AA360, TMA, Corrigo. (Note: Lighthouse is being evaluated but not yet deployed — do not reference it as a current tool.)
 - Never fabricate data — if cross-department data isn't available, say what's missing.`,
 
   knowledgeModules: [
