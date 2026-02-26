@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import auth from './middleware/auth.js';
 import claudeRouter from './routes/claude.js';
+import credentialsRouter from './routes/credentials.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,12 +30,14 @@ app.get('/health', (req, res) => {
     status: 'ok',
     version: '1.0.0',
     anthropic_configured: !!process.env.ANTHROPIC_API_KEY,
+    credential_encryption: !!process.env.CREDENTIAL_ENCRYPTION_KEY,
     supabase_configured: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY),
   });
 });
 
 // --- Authenticated routes ---
 app.use('/api/claude', auth, claudeRouter);
+app.use('/api/credentials', auth, credentialsRouter);
 
 // --- 404 ---
 app.use((req, res) => {
@@ -50,7 +53,8 @@ app.use((err, req, res, _next) => {
 // --- Start ---
 app.listen(PORT, () => {
   console.log(`[aa-portal-backend] Running on :${PORT}`);
-  console.log(`  Anthropic key: ${process.env.ANTHROPIC_API_KEY ? 'configured' : 'MISSING'}`);
+  console.log(`  Anthropic key (env fallback): ${process.env.ANTHROPIC_API_KEY ? 'configured' : 'not set'}`);
+  console.log(`  Credential encryption: ${process.env.CREDENTIAL_ENCRYPTION_KEY ? 'configured' : 'MISSING'}`);
   console.log(`  Supabase: ${process.env.SUPABASE_URL ? 'configured' : 'MISSING'}`);
   console.log(`  CORS origins: ${allowedOrigins.join(', ')}`);
 });

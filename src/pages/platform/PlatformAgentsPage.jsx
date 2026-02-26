@@ -46,10 +46,17 @@ export default function PlatformAgentsPage() {
     const rows = sourceAgents.map((agent) => ({
       agent_key: agent.key,
       name: agent.name || agent.key,
-      description: agent.description || '',
-      model: agent.model || null,
-      system_prompt: agent.systemPrompt || null,
-      is_active: true,
+      department: agent.department || 'general',
+      model: agent.model || 'claude-sonnet-4-5-20250929',
+      system_prompt: agent.systemPrompt || '',
+      status: 'active',
+      actions: agent.actions
+        ? Object.entries(agent.actions).map(([k, v]) => ({
+            key: k,
+            label: v.label || k,
+            description: v.description || '',
+          }))
+        : [],
     }));
 
     const { data, error: upsertErr } = await supabase

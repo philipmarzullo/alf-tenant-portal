@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import rateLimit from '../middleware/rateLimit.js';
+import { getTenantApiKey } from './credentials.js';
 
 const router = Router();
 
@@ -22,10 +23,39 @@ router.post('/', rateLimit, async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields: model, messages' });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Resolve effective tenant: profile tenant_id, or body override for platform admins
+  const PLATFORM_ROLES = ['super-admin', 'platform_owner'];
+  let effectiveTenantId = req.tenantId;
+
+  if (!effectiveTenantId && req.body.tenant_id && PLATFORM_ROLES.includes(req.user?.role)) {
+    effectiveTenantId = req.body.tenant_id;
+  }
+
+  // Tenant-aware key lookup: tenant requests use stored keys, platform admin falls back to env
+  let apiKey;
+  let keySource;
+
+  if (effectiveTenantId) {
+    try {
+      apiKey = await getTenantApiKey(req.supabase, effectiveTenantId, 'anthropic');
+      keySource = 'tenant';
+    } catch (err) {
+      console.error('[claude] Tenant key lookup failed:', err.message);
+    }
+  }
+
+  // No tenant context at all → env fallback
+  if (!apiKey && !effectiveTenantId) {
+    apiKey = process.env.ANTHROPIC_API_KEY;
+    keySource = 'env';
+  }
+
   if (!apiKey) {
-    console.error('[claude] ANTHROPIC_API_KEY not configured');
-    return res.status(503).json({ error: 'AI service not configured' });
+    const msg = effectiveTenantId
+      ? 'No API key configured for this tenant. Ask your platform admin to add one under Tenants > API Keys.'
+      : 'AI service not configured (no ANTHROPIC_API_KEY in env)';
+    console.error(`[claude] No API key — tenant: ${effectiveTenantId || 'platform'}`);
+    return res.status(403).json({ error: msg });
   }
 
   try {
@@ -57,11 +87,12 @@ router.post('/', rateLimit, async (req, res) => {
     // Log usage asynchronously — don't block the response
     const inputTokens = data.usage?.input_tokens || 0;
     const outputTokens = data.usage?.output_tokens || 0;
+    console.log(`[claude] OK — ${model} | key: ${keySource} | tokens: ${inputTokens}+${outputTokens}`);
 
     req.supabase
       .from('alf_usage_logs')
       .insert({
-        tenant_id: req.tenantId || null,
+        tenant_id: effectiveTenantId || null,
         user_id: req.user.id,
         action: 'agent_call',
         agent_key: agent_key || null,
