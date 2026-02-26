@@ -17,7 +17,7 @@ export default function HRLayout() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
         <h1 className="text-2xl font-light text-dark-text">HR Workspace</h1>
         <button
           onClick={() => setChatOpen(true)}
@@ -29,7 +29,7 @@ export default function HRLayout() {
       </div>
 
       {/* Tab nav */}
-      <div className="flex items-center gap-1 border-b border-gray-200 mb-6">
+      <div className="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
         {TABS.map((tab) => (
           <NavLink
             key={tab.path}

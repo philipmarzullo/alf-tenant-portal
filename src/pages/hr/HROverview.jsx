@@ -33,7 +33,7 @@ const columns = [
 export default function HROverview() {
   return (
     <div>
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {METRICS.map((m) => (
           <MetricCard key={m.label} {...m} />
         ))}

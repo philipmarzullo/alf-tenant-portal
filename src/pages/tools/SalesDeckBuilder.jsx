@@ -190,9 +190,9 @@ export default function SalesDeckBuilder() {
         Build prospect-specific sales presentation content. Fill in as much detail as possible — the more context, the more tailored the output.
       </p>
 
-      <div className="grid grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         {/* Left: Intake Form */}
-        <div className="col-span-3 space-y-3">
+        <div className="md:col-span-3 space-y-3">
           {/* Section 1: Prospect Info */}
           <CollapsibleSection title="Prospect Information" subtitle="Company, site, and industry details" defaultOpen>
             <div className="space-y-4">
@@ -439,7 +439,7 @@ export default function SalesDeckBuilder() {
         </div>
 
         {/* Right: Output + Recent */}
-        <div className="col-span-2 space-y-6">
+        <div className="md:col-span-2 space-y-6">
           {result ? (
             <div className="bg-white rounded-lg border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-3">
@@ -468,8 +468,8 @@ export default function SalesDeckBuilder() {
           {/* Recent decks */}
           <div>
             <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent Decks</h2>
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+              <table className="w-full text-sm min-w-[400px]">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50/50">
                     <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Prospect</th>

@@ -13,7 +13,7 @@ export default function SlidePanel({ open, onClose, title, children }) {
 
       {/* Panel */}
       <div
-        className={`fixed top-0 right-0 h-screen w-[480px] bg-white shadow-xl z-50 transform transition-transform duration-200 ${
+        className={`fixed top-0 right-0 h-screen w-full md:w-[480px] bg-white shadow-xl z-50 transform transition-transform duration-200 ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

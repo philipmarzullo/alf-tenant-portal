@@ -28,7 +28,7 @@ export default function PurchasingOverview() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">Purchasing Workspace</h1>
         <button
           onClick={() => setChatOpen(true)}
@@ -39,7 +39,7 @@ export default function PurchasingOverview() {
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {METRICS.map((m) => (
           <MetricCard key={m.label} {...m} />
         ))}
@@ -50,8 +50,8 @@ export default function PurchasingOverview() {
         <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
           Reorder Alerts
         </h2>
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50/50">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Item</th>
@@ -105,7 +105,7 @@ export default function PurchasingOverview() {
       <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
         Planned Modules
       </h2>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {MODULES.map((m) => (
           <ComingSoonModule key={m.title} {...m} />
         ))}

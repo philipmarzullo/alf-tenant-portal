@@ -339,7 +339,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">Dashboard</h1>
         {isAdmin && (
           <button
@@ -354,7 +354,7 @@ export default function Dashboard() {
 
       {/* Hero Metric Cards */}
       {metrics.length > 0 && (
-        <div className={`grid gap-4 mb-8`} style={{ gridTemplateColumns: `repeat(${Math.min(metrics.length, 5)}, minmax(0, 1fr))` }}>
+        <div className="grid gap-4 mb-8 responsive-metric-grid" style={{ gridTemplateColumns: `repeat(${Math.min(metrics.length, 5)}, minmax(0, 1fr))` }}>
           {metrics.map((m) => (
             <MetricCard key={m.label} {...m} />
           ))}
@@ -367,7 +367,7 @@ export default function Dashboard() {
           <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
             Workspace Overview
           </h2>
-          <div className={`grid gap-4 mb-8`} style={{ gridTemplateColumns: `repeat(${Math.min(visibleWorkspaces.length, 5)}, minmax(0, 1fr))` }}>
+          <div className="grid gap-4 mb-8 responsive-metric-grid" style={{ gridTemplateColumns: `repeat(${Math.min(visibleWorkspaces.length, 5)}, minmax(0, 1fr))` }}>
             {visibleWorkspaces.map(([key, mod]) => (
               <button
                 key={key}
@@ -391,10 +391,10 @@ export default function Dashboard() {
 
       {/* Bottom section — Activity + Attention */}
       {(visibleActivity.length > 0 || visibleAttention.length > 0) && (
-        <div className="grid grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           {/* Left column — Recent Agent Activity */}
           {visibleActivity.length > 0 && (
-            <div className={visibleAttention.length > 0 ? 'col-span-3' : 'col-span-5'}>
+            <div className={visibleAttention.length > 0 ? 'md:col-span-3' : 'md:col-span-5'}>
               <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
                 Recent Agent Activity
               </h2>
@@ -416,7 +416,7 @@ export default function Dashboard() {
 
           {/* Right column — Needs Attention (compact) */}
           {visibleAttention.length > 0 && (
-            <div className={visibleActivity.length > 0 ? 'col-span-2' : 'col-span-5'}>
+            <div className={visibleActivity.length > 0 ? 'md:col-span-2' : 'md:col-span-5'}>
               <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
                 Needs Attention
               </h2>

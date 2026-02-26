@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Eye, X, Bot, AlertTriangle, FileText, CheckCircle } from 'lucide-react';
+import { Search, Bell, Eye, X, Bot, AlertTriangle, FileText, CheckCircle, Menu } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 
@@ -48,7 +48,7 @@ const BREADCRUMB_MAP = {
   '/admin/settings': ['Admin', 'Settings'],
 };
 
-export default function TopBar() {
+export default function TopBar({ isMobile, onMenuToggle }) {
   const location = useLocation();
   const crumbs = BREADCRUMB_MAP[location.pathname] || ['Dashboard'];
   const { realIsSuperAdmin, realUser, activeUsers, viewingAs, setViewingAs, clearViewingAs } = useUser();
@@ -87,9 +87,17 @@ export default function TopBar() {
 
   return (
     <>
-      <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
-        {/* Breadcrumb */}
+      <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6 shrink-0">
+        {/* Left: hamburger + breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
+          {isMobile && (
+            <button
+              onClick={onMenuToggle}
+              className="p-1.5 -ml-1 text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <Menu size={20} />
+            </button>
+          )}
           {crumbs.map((crumb, i) => (
             <span key={i} className="flex items-center gap-2">
               {i > 0 && <span className="text-gray-300">/</span>}
@@ -102,7 +110,7 @@ export default function TopBar() {
 
         {/* Right side */}
         <div className="flex items-center gap-4">
-          <div className="relative">
+          <div className="relative hidden md:block">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -158,9 +166,9 @@ export default function TopBar() {
             )}
           </div>
 
-          {/* View-as-user dropdown — super-admin only */}
+          {/* View-as-user dropdown — super-admin only, hidden on mobile */}
           {realIsSuperAdmin && (
-            <div className="relative" ref={viewAsRef}>
+            <div className="relative hidden md:block" ref={viewAsRef}>
               <button
                 onClick={() => setViewAsOpen(!viewAsOpen)}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors ${
@@ -204,7 +212,7 @@ export default function TopBar() {
             </div>
           )}
 
-          <span className="text-xs text-secondary-text">{today}</span>
+          <span className="text-xs text-secondary-text hidden md:inline">{today}</span>
         </div>
       </div>
 

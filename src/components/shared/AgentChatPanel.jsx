@@ -59,7 +59,7 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-screen w-[420px] bg-white shadow-xl z-50 flex flex-col">
+      <div className="fixed top-0 right-0 h-screen w-full md:w-[420px] bg-white shadow-xl z-50 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 h-14 border-b border-gray-200 shrink-0">
           <div className="flex items-center gap-2">

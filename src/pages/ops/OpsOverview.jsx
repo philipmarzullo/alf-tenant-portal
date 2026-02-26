@@ -85,7 +85,7 @@ export default function OpsOverview() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">Operations Workspace</h1>
         <button
           onClick={() => setChatOpen(true)}
@@ -96,7 +96,7 @@ export default function OpsOverview() {
         </button>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {METRICS.map((m) => (
           <MetricCard key={m.label} {...m} />
         ))}
@@ -114,7 +114,7 @@ export default function OpsOverview() {
       <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
         Planned Modules
       </h2>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {MODULES.map((m) => (
           <ComingSoonModule key={m.title} {...m} />
         ))}

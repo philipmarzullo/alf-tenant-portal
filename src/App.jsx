@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import PageWrapper from './components/layout/PageWrapper';
+import useMediaQuery from './hooks/useMediaQuery';
 import { useUser } from './contexts/UserContext';
 import { useAuth } from './contexts/AuthContext';
 
@@ -113,6 +114,8 @@ function ProtectedRoute({ moduleKey, adminOnly, children }) {
 
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   return (
     <Routes>
@@ -130,13 +133,16 @@ export default function App() {
               <Sidebar
                 collapsed={sidebarCollapsed}
                 onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+                isMobile={isMobile}
+                mobileOpen={mobileMenuOpen}
+                onMobileClose={() => setMobileMenuOpen(false)}
               />
               <div
                 className={`flex-1 flex flex-col transition-all duration-200 ${
-                  sidebarCollapsed ? 'ml-16' : 'ml-60'
+                  isMobile ? 'ml-0' : sidebarCollapsed ? 'ml-16' : 'ml-60'
                 }`}
               >
-                <TopBar />
+                <TopBar isMobile={isMobile} onMenuToggle={() => setMobileMenuOpen(true)} />
                 <PageWrapper>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />

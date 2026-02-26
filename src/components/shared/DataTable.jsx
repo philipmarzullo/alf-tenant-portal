@@ -1,7 +1,7 @@
 export default function DataTable({ columns, data, onRowClick }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+      <table className="w-full text-sm min-w-[600px]">
         <thead>
           <tr className="border-b border-gray-200 bg-gray-50/50">
             {columns.map((col) => (

@@ -242,7 +242,7 @@ export default function UserManagement() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <div>
           <h1 className="text-2xl font-light text-dark-text mb-1">User Management</h1>
           <p className="text-sm text-secondary-text">
@@ -259,7 +259,7 @@ export default function UserManagement() {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <MetricCard label="Total Users" value={allUsers.length} icon={Users} />
         <MetricCard label="Active" value={activeCount} icon={UserCheck} color="#16A34A" />
         <MetricCard label="Admins" value={adminCount} icon={Shield} color="#7C3AED" />

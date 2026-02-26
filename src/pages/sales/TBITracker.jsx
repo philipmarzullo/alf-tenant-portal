@@ -60,7 +60,7 @@ export default function TBITracker() {
   return (
     <div>
       {/* Summary bar */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
           <div className="text-xs text-secondary-text">Total TBI YTD</div>
           <div className="text-xl font-semibold text-dark-text">{fmt(totalTbiYtd)}</div>

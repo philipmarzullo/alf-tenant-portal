@@ -13,7 +13,7 @@ const ICON_MAP = {
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
 };
 
-export default function Sidebar({ collapsed, onToggle }) {
+export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {
   const location = useLocation();
   const { currentUser, isSuperAdmin, isAdmin } = useUser();
   const { signOut } = useAuth();
@@ -40,10 +40,15 @@ export default function Sidebar({ collapsed, onToggle }) {
     ? currentUser.name.split(' ').map((n) => n[0]).join('').toUpperCase()
     : '?';
 
-  return (
+  // On mobile: always show full-width sidebar (not collapsed)
+  const showCollapsed = !isMobile && collapsed;
+
+  const sidebar = (
     <aside
       className={`fixed top-0 left-0 h-screen bg-dark-nav flex flex-col transition-all duration-200 z-50 ${
-        collapsed ? 'w-16' : 'w-60'
+        isMobile
+          ? `w-60 transform transition-transform duration-200 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
+          : showCollapsed ? 'w-16' : 'w-60'
       }`}
     >
       {/* Logo */}
@@ -51,9 +56,9 @@ export default function Sidebar({ collapsed, onToggle }) {
         <img
           src="/logo-white.png"
           alt="A&A"
-          className={`transition-all duration-200 ${collapsed ? 'h-6' : 'h-7'}`}
+          className={`transition-all duration-200 ${showCollapsed ? 'h-6' : 'h-7'}`}
         />
-        {!collapsed && (
+        {!showCollapsed && (
           <span className="text-white/70 text-xs leading-tight mt-1">
             Operations<br />Portal
           </span>
@@ -64,7 +69,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       <nav className="flex-1 overflow-y-auto py-4">
         {filteredNav.map((group) => (
           <div key={group.group} className="mb-4">
-            {!collapsed && (
+            {!showCollapsed && (
               <div className="px-4 mb-2 text-[11px] font-semibold tracking-wider text-white/30 uppercase">
                 {group.group}
               </div>
@@ -76,6 +81,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  onClick={() => isMobile && onMobileClose?.()}
                   className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-md text-sm transition-colors relative ${
                     active
                       ? 'bg-white/10 text-white'
@@ -86,7 +92,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-aa-blue rounded-r" />
                   )}
                   {Icon && <Icon size={18} />}
-                  {!collapsed && <span>{item.label}</span>}
+                  {!showCollapsed && <span>{item.label}</span>}
                 </NavLink>
               );
             })}
@@ -97,7 +103,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* User info + logout */}
       <div className="border-t border-white/10 shrink-0">
         <div className="w-full px-4 py-3 flex items-center gap-3">
-          {collapsed ? (
+          {showCollapsed ? (
             <div className="w-8 h-8 rounded-full bg-aa-blue/20 flex items-center justify-center text-aa-blue text-xs font-bold">
               {initials}
             </div>
@@ -122,13 +128,28 @@ export default function Sidebar({ collapsed, onToggle }) {
         </div>
       </div>
 
-      {/* Collapse toggle */}
-      <button
-        onClick={onToggle}
-        className="border-t border-white/10 px-4 py-3 text-white/30 hover:text-white/60 transition-colors flex items-center justify-center"
-      >
-        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-      </button>
+      {/* Collapse toggle — hidden on mobile */}
+      {!isMobile && (
+        <button
+          onClick={onToggle}
+          className="border-t border-white/10 px-4 py-3 text-white/30 hover:text-white/60 transition-colors flex items-center justify-center"
+        >
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
+      )}
     </aside>
+  );
+
+  return (
+    <>
+      {/* Backdrop — mobile only */}
+      {isMobile && mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40"
+          onClick={onMobileClose}
+        />
+      )}
+      {sidebar}
+    </>
   );
 }

@@ -1014,7 +1014,7 @@ export default function QBUBuilder() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2">
         <h1 className="text-2xl font-light text-dark-text">QBU Builder</h1>
         <div className="flex items-center gap-2">
           {excelParsed && (
@@ -1413,14 +1413,14 @@ export default function QBUBuilder() {
 
       {/* Recent QBUs */}
       <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent QBUs</h2>
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         {history.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-secondary-text">
             <Clock size={20} className="mx-auto mb-2 text-gray-300" />
             No QBUs generated yet
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50/50">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Client</th>
