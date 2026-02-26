@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Presentation, ChevronDown, ChevronUp, Plus, Trash2, Bot, Download } from 'lucide-react';
+import { Presentation, ChevronDown, ChevronUp, Plus, Trash2, Download } from 'lucide-react';
+import AlfIcon from '../../components/shared/AlfIcon';
 import AgentActionButton from '../../components/shared/AgentActionButton';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import StatusBadge from '../../components/shared/StatusBadge';
@@ -201,8 +202,8 @@ export default function SalesDeckBuilder() {
           onClick={() => setChatOpen(true)}
           className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
         >
-          <Bot size={16} />
-          Ask Sales Deck Agent
+          <AlfIcon size={16} />
+          Ask Alf
         </button>
       </div>
       <p className="text-sm text-secondary-text mb-6">

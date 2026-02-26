@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { DollarSign, AlertTriangle, FileText, TrendingDown, Bot } from 'lucide-react';
+import { DollarSign, AlertTriangle, FileText, TrendingDown } from 'lucide-react';
+import AlfIcon from '../../components/shared/AlfIcon';
 import MetricCard from '../../components/shared/MetricCard';
 import ComingSoonModule from '../../components/shared/ComingSoonModule';
 import DataTable from '../../components/shared/DataTable';
@@ -50,8 +51,8 @@ export default function FinanceOverview() {
           onClick={() => setChatOpen(true)}
           className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
         >
-          <Bot size={16} />
-          Ask Finance Agent
+          <AlfIcon size={16} />
+          Ask Alf
         </button>
       </div>
 

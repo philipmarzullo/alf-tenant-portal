@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { HardHat, ShieldCheck, AlertTriangle, Clock, Bot } from 'lucide-react';
+import { HardHat, ShieldCheck, AlertTriangle, Clock } from 'lucide-react';
+import AlfIcon from '../../components/shared/AlfIcon';
 import MetricCard from '../../components/shared/MetricCard';
 import DataTable from '../../components/shared/DataTable';
 import SlidePanel from '../../components/layout/SlidePanel';
@@ -91,8 +92,8 @@ export default function OpsOverview() {
           onClick={() => setChatOpen(true)}
           className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
         >
-          <Bot size={16} />
-          Ask Operations Agent
+          <AlfIcon size={16} />
+          Ask Alf
         </button>
       </div>
 

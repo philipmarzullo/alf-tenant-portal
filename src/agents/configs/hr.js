@@ -68,7 +68,7 @@ ${PEOPLE_FIRST_GUIDANCE}`,
       promptTemplate: (data) => `Generate a rate change batch for: ${data.union}. Effective date: ${data.effectiveDate}. Current rate: ${data.currentRate}/hr. New rate: ${data.newRate}/hr. Employees affected: ${data.employeesAffected}. Produce a WinTeam batch update checklist including: fields to update, effective date, any benefits or deduction impacts, and verification steps.`,
     },
     askAgent: {
-      label: 'Ask HR Agent',
+      label: 'Ask Alf',
       description: 'Open-ended HR operations question',
       promptTemplate: (data) => data.question,
     },

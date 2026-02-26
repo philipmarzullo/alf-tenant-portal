@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, Database, Loader2, CheckCircle } from 'lucide-react';
+import { Database, Loader2, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getAllSourceAgents } from '../../agents/registry';
 import DataTable from '../../components/shared/DataTable';

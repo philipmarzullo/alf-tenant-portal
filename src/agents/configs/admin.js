@@ -56,7 +56,7 @@ ${data.analysisContext || '[Cross-module data]'}
 Look for: correlated trends, cause-and-effect relationships between departments, early warning signals, and strategic opportunities. For example: rising AR aging + upcoming contract renewals = retention risk.`,
     },
     askAgent: {
-      label: 'Ask Admin Agent',
+      label: 'Ask Alf',
       description: 'Open-ended strategic question',
       promptTemplate: (data) => data.question,
     },

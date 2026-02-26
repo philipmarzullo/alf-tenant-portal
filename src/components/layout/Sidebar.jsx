@@ -1,17 +1,18 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
-  FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
+  FileBarChart, Presentation, Settings, UserCog, Briefcase,
   Building2, BarChart3, FileText, Palette,
   ChevronLeft, ChevronRight, LogOut,
 } from 'lucide-react';
 import { NAV_ITEMS } from '../../data/constants';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
+import AlfIcon from '../shared/AlfIcon';
 
 const ICON_MAP = {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
-  FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
+  FileBarChart, Presentation, Bot: AlfIcon, Settings, UserCog, Briefcase,
   Building2, BarChart3, FileText, Palette,
 };
 

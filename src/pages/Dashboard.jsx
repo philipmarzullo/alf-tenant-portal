@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Bot, DollarSign, FileText, TrendingUp, Clock, HardHat } from 'lucide-react';
+import { AlertTriangle, DollarSign, FileText, TrendingUp, Clock, HardHat } from 'lucide-react';
+import AlfIcon from '../components/shared/AlfIcon';
 import MetricCard from '../components/shared/MetricCard';
 import TaskCard from '../components/shared/TaskCard';
 import AgentChatPanel from '../components/shared/AgentChatPanel';
@@ -346,8 +347,8 @@ export default function Dashboard() {
             onClick={() => setChatOpen(true)}
             className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
           >
-            <Bot size={16} />
-            Ask Admin Agent
+            <AlfIcon size={16} />
+            Ask Alf
           </button>
         )}
       </div>

@@ -58,7 +58,7 @@ ${data.vpData || '[VP data summary]'}
 Compare safety and commercial inspection rates. Identify which VPs are below the 90% target. Highlight best performers. Recommend actions for underperformers. Calculate the overall company average for both metrics.`,
     },
     askAgent: {
-      label: 'Ask Operations Agent',
+      label: 'Ask Alf',
       description: 'Open-ended operations question',
       promptTemplate: (data) => data.question,
     },

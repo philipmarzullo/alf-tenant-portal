@@ -111,7 +111,7 @@ ${data.expiringContracts ? `Contracts expiring soon:\n${data.expiringContracts}`
 Provide: overall pipeline health assessment, priority actions for the next 30 days, risk areas, and revenue at risk from upcoming expirations.`,
     },
     askAgent: {
-      label: 'Ask Sales Agent',
+      label: 'Ask Alf',
       description: 'Open-ended sales operations question',
       promptTemplate: (data) => data.question,
     },
