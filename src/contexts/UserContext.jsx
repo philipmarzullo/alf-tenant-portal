@@ -67,8 +67,8 @@ export function UserProvider({ children }) {
 
   const activeUsers = allUsers.filter((u) => u.active);
 
-  // Impersonation — only super-admin can use this
-  const realIsSuperAdmin = realUser?.role === 'super-admin';
+  // Impersonation — super-admin and platform_owner can use this
+  const realIsSuperAdmin = realUser?.role === 'super-admin' || realUser?.role === 'platform_owner';
 
   const setViewingAs = useCallback(
     (user) => {
@@ -89,13 +89,14 @@ export function UserProvider({ children }) {
     (moduleKey) => {
       if (!currentUser) return false;
       if (!moduleKey) return true;
-      if (currentUser.role === 'admin' || currentUser.role === 'super-admin') return true;
+      if (currentUser.role === 'admin' || currentUser.role === 'super-admin' || currentUser.role === 'platform_owner') return true;
       return currentUser.modules.includes(moduleKey);
     },
     [currentUser],
   );
 
-  const isSuperAdmin = currentUser?.role === 'super-admin';
+  const isPlatformOwner = currentUser?.role === 'platform_owner';
+  const isSuperAdmin = currentUser?.role === 'super-admin' || isPlatformOwner;
   const isAdmin = currentUser?.role === 'admin' || isSuperAdmin;
 
   return (
@@ -109,6 +110,7 @@ export function UserProvider({ children }) {
         hasModule,
         isAdmin,
         isSuperAdmin,
+        isPlatformOwner,
         realIsSuperAdmin,
         viewingAs,
         setViewingAs,

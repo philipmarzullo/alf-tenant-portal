@@ -46,11 +46,20 @@ const BREADCRUMB_MAP = {
   '/admin/users': ['Admin', 'User Management'],
   '/admin/agents': ['Admin', 'Agent Management'],
   '/admin/settings': ['Admin', 'Settings'],
+  '/platform/tenants': ['Platform', 'Tenants'],
+  '/platform/tenants/new': ['Platform', 'Tenants', 'New Tenant'],
+  '/platform/usage': ['Platform', 'Usage'],
+  '/platform/agents': ['Platform', 'Agents'],
+  '/platform/config': ['Platform', 'Config'],
+  '/platform/templates': ['Platform', 'Templates'],
+  '/platform/brand': ['Platform', 'Brand'],
 };
 
 export default function TopBar({ isMobile, onMenuToggle }) {
   const location = useLocation();
-  const crumbs = BREADCRUMB_MAP[location.pathname] || ['Dashboard'];
+  const crumbs = BREADCRUMB_MAP[location.pathname]
+    || (location.pathname.startsWith('/platform/tenants/') ? ['Platform', 'Tenants', 'Detail'] : null)
+    || ['Dashboard'];
   const { realIsSuperAdmin, realUser, activeUsers, viewingAs, setViewingAs, clearViewingAs } = useUser();
 
   const [viewAsOpen, setViewAsOpen] = useState(false);

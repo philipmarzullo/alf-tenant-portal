@@ -1,21 +1,30 @@
 import { getAgent, getAgentAction } from './registry';
+import { supabase } from '../lib/supabase';
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 /**
- * Call the Anthropic Claude API with an agent configuration.
+ * Get the current Supabase session access token for proxy auth.
+ */
+async function getAccessToken() {
+  if (!supabase) return null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Call the Claude API through the backend proxy with an agent configuration.
  *
  * @param {string} agentKey - Key from the registry (e.g., 'hr', 'finance')
  * @param {string} actionKey - Action within the agent (e.g., 'draftReminder')
  * @param {object} data - Data to populate the prompt template
- * @param {string} [apiKey] - Anthropic API key (from env or user input)
  * @returns {Promise<string>} - The assistant's response text
  */
-function getStoredKey() {
-  try { return localStorage.getItem('aa_anthropic_key') || ''; } catch { return ''; }
-}
-
-export async function callAgent(agentKey, actionKey, data, apiKey) {
+export async function callAgent(agentKey, actionKey, data) {
   const agent = getAgent(agentKey);
   const action = getAgentAction(agentKey, actionKey);
 
@@ -24,32 +33,31 @@ export async function callAgent(agentKey, actionKey, data, apiKey) {
   }
 
   const userMessage = action.promptTemplate(data);
-  const key = apiKey || getStoredKey();
+  const token = await getAccessToken();
 
-  // If no API key, return a mock response for demo purposes
-  if (!key) {
+  // No session or no backend — fall back to mock responses
+  if (!token) {
     return getMockResponse(agentKey, actionKey, data);
   }
 
-  const response = await fetch(API_URL, {
+  const response = await fetch(`${BACKEND_URL}/api/claude`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({
       model: agent.model,
       max_tokens: agent.maxTokens || 4096,
       system: agent.systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
+      agent_key: agentKey,
     }),
   });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `API error: ${response.status}`);
+    throw new Error(err.error || `API error: ${response.status}`);
   }
 
   const result = await response.json();
@@ -57,37 +65,36 @@ export async function callAgent(agentKey, actionKey, data, apiKey) {
 }
 
 /**
- * Chat with an agent (multi-turn).
+ * Chat with an agent (multi-turn) through the backend proxy.
  */
-export async function chatWithAgent(agentKey, messages, apiKey) {
+export async function chatWithAgent(agentKey, messages) {
   const agent = getAgent(agentKey);
   if (!agent) throw new Error(`Agent not found: ${agentKey}`);
 
-  const key = apiKey || getStoredKey();
+  const token = await getAccessToken();
 
-  if (!key) {
-    return 'To enable live AI responses, add your Anthropic API key in Settings. For now, this is a demo of the chat interface — the agent would respond with context-aware answers based on loaded SOPs and company knowledge.';
+  if (!token) {
+    return 'Live AI responses require an active session and backend connection. For now, this is a demo of the chat interface — the agent would respond with context-aware answers based on loaded SOPs and company knowledge.';
   }
 
-  const response = await fetch(API_URL, {
+  const response = await fetch(`${BACKEND_URL}/api/claude`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({
       model: agent.model,
       max_tokens: 1024,
       system: agent.systemPrompt,
       messages,
+      agent_key: agentKey,
     }),
   });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `API error: ${response.status}`);
+    throw new Error(err.error || `API error: ${response.status}`);
   }
 
   const result = await response.json();

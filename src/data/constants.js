@@ -16,6 +16,7 @@ export const DEPT_COLORS = {
   sales: '#F59E0B',
   admin: '#E12F2C',
   tools: '#0284C7',
+  platform: '#6366F1',
 };
 
 export const STATUS = {
@@ -69,6 +70,17 @@ export const NAV_ITEMS = [
       { label: 'User Management', path: '/admin/users', icon: 'UserCog', moduleKey: 'admin' },
       { label: 'Agent Management', path: '/admin/agents', icon: 'Bot', moduleKey: 'admin' },
       { label: 'Settings', path: '/admin/settings', icon: 'Settings', moduleKey: 'admin' },
+    ],
+  },
+  {
+    group: 'PLATFORM',
+    items: [
+      { label: 'Tenants', path: '/platform/tenants', icon: 'Building2', moduleKey: 'platform' },
+      { label: 'Usage', path: '/platform/usage', icon: 'BarChart3', moduleKey: 'platform' },
+      { label: 'Agents', path: '/platform/agents', icon: 'Bot', moduleKey: 'platform' },
+      { label: 'Config', path: '/platform/config', icon: 'Settings', moduleKey: 'platform' },
+      { label: 'Templates', path: '/platform/templates', icon: 'FileText', moduleKey: 'platform' },
+      { label: 'Brand', path: '/platform/brand', icon: 'Palette', moduleKey: 'platform' },
     ],
   },
 ];

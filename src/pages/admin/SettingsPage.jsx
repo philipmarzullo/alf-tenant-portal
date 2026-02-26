@@ -1,22 +1,19 @@
-import { useState } from 'react';
-import { Key, Shield, Bell, Database } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Key, Shield, Bell, Database, CheckCircle, XCircle, Loader } from 'lucide-react';
+
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 export default function SettingsPage() {
-  const [apiKey, setApiKey] = useState(() => {
-    try { return localStorage.getItem('aa_anthropic_key') || ''; } catch { return ''; }
-  });
-  const [saved, setSaved] = useState(false);
-  const hasStoredKey = !!apiKey;
+  const [backendStatus, setBackendStatus] = useState({ loading: true, data: null, error: null });
 
-  const handleSave = () => {
-    if (apiKey) {
-      localStorage.setItem('aa_anthropic_key', apiKey);
-    } else {
-      localStorage.removeItem('aa_anthropic_key');
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/health`)
+      .then(r => r.json())
+      .then(data => setBackendStatus({ loading: false, data, error: null }))
+      .catch(() => setBackendStatus({ loading: false, data: null, error: 'Backend unreachable' }));
+  }, []);
+
+  const { loading, data: health, error: healthError } = backendStatus;
 
   return (
     <div>
@@ -24,41 +21,50 @@ export default function SettingsPage() {
       <p className="text-sm text-secondary-text mb-6">Portal configuration and AI agent settings.</p>
 
       <div className="space-y-6 max-w-2xl">
-        {/* API Key */}
+        {/* AI Backend Status */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-4">
             <Key size={16} className="text-aa-blue" />
-            <h2 className="text-sm font-semibold text-dark-text">Anthropic API Key</h2>
+            <h2 className="text-sm font-semibold text-dark-text">AI Backend</h2>
           </div>
           <p className="text-xs text-secondary-text mb-3">
-            Connect a Claude API key to enable live AI agent responses. Without a key, agents return demo mock responses.
+            Agent calls are routed through a secure backend proxy. The Anthropic API key is stored server-side and never exposed to the browser.
           </p>
-          <div className="flex items-center gap-3">
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-ant-..."
-              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue font-mono"
-            />
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 transition-colors"
-            >
-              {saved ? 'Saved' : 'Save'}
-            </button>
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <div className={`w-2 h-2 rounded-full ${hasStoredKey ? 'bg-green-500' : 'bg-gray-300'}`} />
-            <p className="text-[11px] text-secondary-text">
-              {hasStoredKey
-                ? 'API key connected — agents will return live Claude responses.'
-                : 'No key set — agents return demo mock responses.'}
-            </p>
-          </div>
-          <p className="text-[11px] text-secondary-text mt-1">
-            Key is stored in browser localStorage only. Never sent anywhere except the Anthropic API.
-          </p>
+
+          {loading ? (
+            <div className="flex items-center gap-2 text-xs text-secondary-text">
+              <Loader size={14} className="animate-spin" />
+              Checking backend connection...
+            </div>
+          ) : healthError ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <XCircle size={14} className="text-red-500" />
+                <span className="text-xs text-red-600 font-medium">Backend unreachable</span>
+              </div>
+              <p className="text-[11px] text-secondary-text">
+                The backend proxy at <code className="text-xs bg-gray-100 px-1 rounded">{BACKEND_URL}</code> is not responding.
+                Agents will return demo mock responses until the connection is restored.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle size={14} className="text-green-500" />
+                <span className="text-xs text-green-700 font-medium">Backend connected</span>
+                <span className="text-[10px] text-secondary-text">v{health.version}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <StatusRow label="Anthropic API Key" ok={health.anthropic_configured} />
+                <StatusRow label="Supabase" ok={health.supabase_configured} />
+              </div>
+              {!health.anthropic_configured && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  Anthropic API key is not configured on the server. Set ANTHROPIC_API_KEY in the backend environment.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Notifications */}
@@ -85,8 +91,8 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2 text-sm text-secondary-text">
             <p>Agent conversations are not persisted between sessions.</p>
-            <p>API calls are made directly from your browser to the Anthropic API — no A&A proxy.</p>
-            <p>Mock data is used for all employee records in this prototype.</p>
+            <p>API calls are routed through a secure backend proxy — the API key never reaches the browser.</p>
+            <p>All requests are authenticated via Supabase JWT and rate-limited per tenant.</p>
           </div>
         </div>
 
@@ -99,7 +105,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <span className="text-secondary-text">Version:</span>{' '}
-              <span className="text-dark-text font-medium">0.1.0-prototype</span>
+              <span className="text-dark-text font-medium">0.2.0</span>
             </div>
             <div>
               <span className="text-secondary-text">Model:</span>{' '}
@@ -107,15 +113,27 @@ export default function SettingsPage() {
             </div>
             <div>
               <span className="text-secondary-text">Agents:</span>{' '}
-              <span className="text-dark-text font-medium">5 configured</span>
+              <span className="text-dark-text font-medium">8 configured</span>
             </div>
             <div>
-              <span className="text-secondary-text">Knowledge Modules:</span>{' '}
-              <span className="text-dark-text font-medium">5 loaded</span>
+              <span className="text-secondary-text">API Routing:</span>{' '}
+              <span className="text-dark-text font-medium">Backend Proxy</span>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatusRow({ label, ok }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-green-500' : 'bg-amber-500'}`} />
+      <span className="text-[11px] text-secondary-text">{label}</span>
+      <span className={`text-[11px] font-medium ${ok ? 'text-green-700' : 'text-amber-600'}`}>
+        {ok ? 'Ready' : 'Not configured'}
+      </span>
     </div>
   );
 }

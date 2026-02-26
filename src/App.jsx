@@ -32,6 +32,16 @@ import UserManagement from './pages/admin/UserManagement';
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import {
+  PlatformTenantsPage,
+  PlatformTenantDetailPage,
+  PlatformNewTenantPage,
+  PlatformUsagePage,
+  PlatformConfigPage,
+  PlatformAgentsPage,
+  PlatformTemplatesPage,
+  PlatformBrandPage,
+} from './pages/platform';
 
 function LoadingScreen() {
   return (
@@ -105,8 +115,9 @@ function AuthGate({ children }) {
   return children;
 }
 
-function ProtectedRoute({ moduleKey, adminOnly, children }) {
-  const { hasModule, isSuperAdmin } = useUser();
+function ProtectedRoute({ moduleKey, adminOnly, platformOnly, children }) {
+  const { hasModule, isSuperAdmin, isPlatformOwner } = useUser();
+  if (platformOnly && !isPlatformOwner) return <Navigate to="/" replace />;
   if (adminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
   if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/" replace />;
   return children;
@@ -248,6 +259,16 @@ export default function App() {
                         </ProtectedRoute>
                       }
                     />
+
+                    {/* Platform routes — platform_owner only */}
+                    <Route path="/platform/tenants" element={<ProtectedRoute platformOnly><PlatformTenantsPage /></ProtectedRoute>} />
+                    <Route path="/platform/tenants/new" element={<ProtectedRoute platformOnly><PlatformNewTenantPage /></ProtectedRoute>} />
+                    <Route path="/platform/tenants/:id" element={<ProtectedRoute platformOnly><PlatformTenantDetailPage /></ProtectedRoute>} />
+                    <Route path="/platform/usage" element={<ProtectedRoute platformOnly><PlatformUsagePage /></ProtectedRoute>} />
+                    <Route path="/platform/agents" element={<ProtectedRoute platformOnly><PlatformAgentsPage /></ProtectedRoute>} />
+                    <Route path="/platform/config" element={<ProtectedRoute platformOnly><PlatformConfigPage /></ProtectedRoute>} />
+                    <Route path="/platform/templates" element={<ProtectedRoute platformOnly><PlatformTemplatesPage /></ProtectedRoute>} />
+                    <Route path="/platform/brand" element={<ProtectedRoute platformOnly><PlatformBrandPage /></ProtectedRoute>} />
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
