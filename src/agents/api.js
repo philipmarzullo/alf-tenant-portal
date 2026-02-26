@@ -638,7 +638,104 @@ SLIDE 9: NEXT STEPS
 Presenter Notes: Be specific about next steps and timelines. Offer to schedule the walkthrough before leaving the meeting. Leave behind: company overview one-pager + contact card.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Note: Review all content against A&A claim governance before presenting. Items marked [PLACEHOLDER] require prospect-specific data.`,
+Note: Review all content against A&A claim governance before presenting. Items marked [PLACEHOLDER] require prospect-specific data.
+
+<!-- NARRATIVE:COVER:TAGLINE -->
+The Performance-Focused Choice
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S2:BULLETS -->
+98%+ client retention rate — our clients stay because we deliver
+99%+ SLA compliance across all managed accounts
+7+ year average client relationship duration
+Cost efficiency consistently below industry benchmarks
+53 years of continuous operations under stable leadership
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S2:NOTES -->
+This is A&A's strongest opening. Let the numbers speak. Pause after the retention rate — it's our most differentiating metric. If asked about comparison to their current provider, stay positive: "We focus on what we deliver, not what others don't."
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S3:BULLETS -->
+${data.concerns ? data.concerns.split('\n').filter(Boolean).map(line => line.trim()).join('\n') || 'Key challenges identified from discovery conversations' : 'Key challenges identified from discovery conversations'}
+${data.reasonForChange ? `Driver for change: ${data.reasonForChange}` : 'Contract expiring — exploring options for improved service'}
+${data.specialRequirements ? `Special requirements: ${data.specialRequirements}` : 'No special requirements noted — standard facility services scope'}
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S3:NOTES -->
+Mirror the prospect's language back to them. Show that you listened during discovery. Address each stakeholder by name when discussing their specific pain points. This builds trust and shows that A&A takes a consultative approach, not a cookie-cutter one.
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S4:BULLETS -->
+Deep experience in ${data.industry || 'facility'} environments — we understand the regulatory, operational, and cultural nuances
+${data.facilityType ? `Specialized protocols for ${data.facilityType} operations` : 'Facility-specific protocols tailored to your environment'}
+Manager-heavy model ensures daily on-site accountability and oversight
+Single-point accountability across ${data.servicesRequested || 'janitorial, grounds, and MEP'}
+SYNC task-based service model with 5 specialist roles for clarity
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S4:NOTES -->
+This is where we connect A&A's capabilities to their specific environment. Reference similar clients in ${data.industry || 'their industry'} when possible. Emphasize that A&A's approach is tailored, not templated.
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S5:BULLETS -->
+Employee-owned (ESOP) — every A&A team member has a stake in your facility's success
+People First™ is our operating philosophy — employee dignity drives service quality
+SYNC task-based model: 5 specialist roles for clarity and accountability
+25+ years managing union workforces seamlessly
+Industry-leading frontline retention driven by ownership culture
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S5:NOTES -->
+People First™ is not a slogan — it's how we operate. Give a concrete example: "When our team members feel respected and valued, they take ownership of your facility. That's why our frontline retention is among the highest in the industry."
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S6:BULLETS -->
+AA360 platform: QA tracking, multilingual training, AI-powered validation
+Lighthouse: real-time task completion tracking — full visibility into daily operations
+Predictive maintenance via TMA/CMMS integration
+Transparent reporting dashboards — no surprises, no black boxes
+Robotics and autonomous equipment where they improve outcomes, not replace people
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S6:NOTES -->
+Don't lead with tech — lead with what it solves. "You mentioned wanting better visibility into daily operations — here's exactly how we deliver that." Offer to demo AA360 if possible.
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S7:BULLETS -->
+Glide Path shared-savings program — verified efficiency gains returned to you
+Dedicated account management team with regional VP oversight
+Regular QBU (Quarterly Business Update) presentations with actionable metrics
+Continuous improvement built into the contract structure
+90-day transition plan with milestone checkpoints
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S7:NOTES -->
+Glide Path is a powerful differentiator. Frame it as aligned incentives: "We only save money when we find real efficiencies — and we share those savings with you. That's alignment you won't find with other providers."
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S8:BULLETS -->
+Performance-focused, not scale-focused — we choose partnerships carefully
+2,000+ employee-owners invested in your success
+41 years of leadership stability under one CEO
+Enterprise capabilities with relationship-driven service
+References available from similar ${data.industry || 'industry'} accounts
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S8:NOTES -->
+Close strong. "We're not the biggest — we're the best fit. And our 98%+ retention rate proves that our clients agree." Make eye contact with the decision maker. This is the slide where confidence matters most.
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S9:BULLETS -->
+Facility walkthrough and detailed needs assessment
+Customized scope and pricing proposal within 2 weeks of walkthrough
+Reference calls with similar ${data.industry || 'industry'} clients
+Proposed transition timeline if we move forward together
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:S9:NOTES -->
+Be specific about next steps and timelines. Offer to schedule the walkthrough before leaving the meeting. Leave behind: company overview one-pager + contact card. The goal is to keep momentum and demonstrate A&A's responsiveness from day one.
+<!-- /NARRATIVE -->`,
     },
   };
 

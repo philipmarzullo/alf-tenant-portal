@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Presentation, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { Presentation, ChevronDown, ChevronUp, Plus, Trash2, Bot, Download } from 'lucide-react';
 import AgentActionButton from '../../components/shared/AgentActionButton';
+import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import StatusBadge from '../../components/shared/StatusBadge';
 import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
+import { generateSalesDeckPptx } from '../../utils/salesDeckPptxTemplate';
 
 const VERTICALS = [
   'Education — Higher Ed',
@@ -111,6 +113,7 @@ function CollapsibleSection({ title, subtitle, defaultOpen = false, children }) 
 export default function SalesDeckBuilder() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [result, setResult] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
   const toast = useToast();
 
   const updateField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -183,9 +186,25 @@ export default function SalesDeckBuilder() {
     setResult(null);
   };
 
+  const handleDownload = async () => {
+    if (!result) { toast('Generate a sales deck first', 'error'); return; }
+    toast('Building PowerPoint...');
+    await generateSalesDeckPptx(form, result);
+    toast('PPTX downloaded');
+  };
+
   return (
     <div>
-      <h1 className="text-2xl font-light text-dark-text mb-2">Sales Deck Builder</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2">
+        <h1 className="text-2xl font-light text-dark-text">Sales Deck Builder</h1>
+        <button
+          onClick={() => setChatOpen(true)}
+          className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+        >
+          <Bot size={16} />
+          Ask Sales Deck Agent
+        </button>
+      </div>
       <p className="text-sm text-secondary-text mb-6">
         Build prospect-specific sales presentation content. Fill in as much detail as possible — the more context, the more tailored the output.
       </p>
@@ -444,12 +463,20 @@ export default function SalesDeckBuilder() {
             <div className="bg-white rounded-lg border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Generated Content</div>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(result); toast('Copied to clipboard'); }}
-                  className="text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors"
-                >
-                  Copy All
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleDownload}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors"
+                  >
+                    <Download size={12} /> Download PPTX
+                  </button>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(result); toast('Copied to clipboard'); }}
+                    className="text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors"
+                  >
+                    Copy All
+                  </button>
+                </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-[600px] overflow-y-auto">
                 {result}
@@ -493,6 +520,14 @@ export default function SalesDeckBuilder() {
           </div>
         </div>
       </div>
+
+      <AgentChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        agentKey="salesDeck"
+        agentName="Sales Deck Agent"
+        context="Sales presentation strategy, competitive positioning, prospect messaging, and A&A differentiators"
+      />
     </div>
   );
 }
