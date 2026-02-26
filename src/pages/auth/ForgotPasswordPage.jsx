@@ -19,11 +19,12 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
+    <div className="min-h-screen bg-dark-nav-warm flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <img src="/logo-white.png" alt="A&A" className="h-10" />
+        <div className="flex flex-col items-center mb-8">
+          <img src="/alf-logo.jpg" alt="Alf" className="h-16 w-16 rounded-full mb-3" />
+          <span className="text-amber-400 font-bold text-2xl">Alf</span>
         </div>
 
         {/* Card */}
@@ -37,7 +38,7 @@ export default function ForgotPasswordPage() {
               </p>
               <Link
                 to="/auth/login"
-                className="inline-flex items-center gap-1.5 text-sm text-aa-blue hover:text-aa-blue/80 transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm text-amber-600 hover:text-amber-700 transition-colors"
               >
                 <ArrowLeft size={14} />
                 Back to sign in
@@ -57,8 +58,8 @@ export default function ForgotPasswordPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
-                    placeholder="you@aaefs.com"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
+                    placeholder="you@company.com"
                     autoComplete="email"
                     autoFocus
                   />
@@ -73,7 +74,7 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={submitting || !email.trim()}
-                  className="w-full py-2.5 bg-aa-blue text-white text-sm font-medium rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {submitting && <Loader2 size={16} className="animate-spin" />}
                   Send Reset Link
@@ -83,7 +84,7 @@ export default function ForgotPasswordPage() {
               <div className="mt-4 text-center">
                 <Link
                   to="/auth/login"
-                  className="inline-flex items-center gap-1.5 text-sm text-aa-blue hover:text-aa-blue/80 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm text-amber-600 hover:text-amber-700 transition-colors"
                 >
                   <ArrowLeft size={14} />
                   Back to sign in

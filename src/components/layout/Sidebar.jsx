@@ -49,7 +49,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
 
   const sidebar = (
     <aside
-      className={`fixed top-0 left-0 h-screen bg-dark-nav flex flex-col transition-all duration-200 z-50 ${
+      className={`fixed top-0 left-0 h-screen ${isPlatformOwner ? 'bg-dark-nav-warm' : 'bg-dark-nav'} flex flex-col transition-all duration-200 z-50 ${
         isMobile
           ? `w-60 transform transition-transform duration-200 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
           : showCollapsed ? 'w-16' : 'w-60'
