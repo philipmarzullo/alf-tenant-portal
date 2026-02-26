@@ -279,7 +279,7 @@ export default function PlatformTenantDetailPage() {
     {
       key: 'role', label: 'Role',
       render: (val) => {
-        const styles = val === 'platform_owner' ? 'bg-indigo-50 text-indigo-700'
+        const styles = val === 'platform_owner' ? 'bg-amber-50 text-amber-700'
           : (val === 'admin' || val === 'super-admin') ? 'bg-purple-50 text-purple-700'
           : val === 'manager' ? 'bg-blue-50 text-blue-700'
           : 'bg-gray-100 text-gray-700';
@@ -302,7 +302,7 @@ export default function PlatformTenantDetailPage() {
             onClick={(e) => { e.stopPropagation(); handleResetPassword(row.email); }}
             disabled={userActionLoading === row.email}
             title="Send password reset email"
-            className="p-1 text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-50"
+            className="p-1 text-gray-400 hover:text-amber-600 transition-colors disabled:opacity-50"
           >
             {userActionLoading === row.email ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
           </button>
@@ -327,7 +327,7 @@ export default function PlatformTenantDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 size={24} className="text-indigo-500 animate-spin" />
+        <Loader2 size={24} className="text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -336,7 +336,7 @@ export default function PlatformTenantDetailPage() {
     return (
       <div className="text-center py-24">
         <p className="text-secondary-text">Tenant not found.</p>
-        <button onClick={() => navigate('/platform/tenants')} className="text-sm text-indigo-600 hover:underline mt-2">
+        <button onClick={() => navigate('/platform/tenants')} className="text-sm text-amber-600 hover:underline mt-2">
           Back to Tenants
         </button>
       </div>
@@ -365,7 +365,7 @@ export default function PlatformTenantDetailPage() {
                 onClick={() => setTab(tab.key)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                   isActive
-                    ? 'border-indigo-600 text-indigo-600'
+                    ? 'border-amber-600 text-amber-600'
                     : 'border-transparent text-secondary-text hover:text-dark-text hover:border-gray-300'
                 }`}
               >
@@ -401,7 +401,7 @@ export default function PlatformTenantDetailPage() {
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
                   />
                 </div>
                 <div>
@@ -409,7 +409,7 @@ export default function PlatformTenantDetailPage() {
                   <select
                     value={editPlan}
                     onChange={(e) => setEditPlan(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
                   >
                     {['free', 'starter', 'pro', 'enterprise'].map((p) => (
                       <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
@@ -421,7 +421,7 @@ export default function PlatformTenantDetailPage() {
                   <select
                     value={editStatus}
                     onChange={(e) => setEditStatus(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -432,7 +432,7 @@ export default function PlatformTenantDetailPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors shrink-0"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors shrink-0"
               >
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                 Save
@@ -448,21 +448,21 @@ export default function PlatformTenantDetailPage() {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3">
-              <div className="p-2 bg-indigo-50 rounded-lg"><Users size={18} className="text-indigo-500" /></div>
+              <div className="p-2 bg-amber-50 rounded-lg"><Users size={18} className="text-amber-500" /></div>
               <div>
                 <div className="text-2xl font-semibold text-dark-text">{users.length}</div>
                 <div className="text-xs text-secondary-text">Users</div>
               </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3">
-              <div className="p-2 bg-indigo-50 rounded-lg"><MapPin size={18} className="text-indigo-500" /></div>
+              <div className="p-2 bg-amber-50 rounded-lg"><MapPin size={18} className="text-amber-500" /></div>
               <div>
                 <div className="text-2xl font-semibold text-dark-text">{sites.length}</div>
                 <div className="text-xs text-secondary-text">Sites</div>
               </div>
             </div>
             <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3">
-              <div className="p-2 bg-indigo-50 rounded-lg"><Activity size={18} className="text-indigo-500" /></div>
+              <div className="p-2 bg-amber-50 rounded-lg"><Activity size={18} className="text-amber-500" /></div>
               <div>
                 <div className="text-2xl font-semibold text-dark-text">{totalTokens.toLocaleString()}</div>
                 <div className="text-xs text-secondary-text">Total Tokens (last 100 calls)</div>
@@ -476,7 +476,7 @@ export default function PlatformTenantDetailPage() {
               <h2 className="text-sm font-semibold text-dark-text">Users ({users.length})</h2>
               <button
                 onClick={() => setShowAddUser(!showAddUser)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors"
               >
                 <Plus size={14} />
                 Add User
@@ -484,7 +484,7 @@ export default function PlatformTenantDetailPage() {
             </div>
 
             {showAddUser && (
-              <div className="bg-white rounded-lg border border-indigo-200 p-4 mb-3 space-y-3">
+              <div className="bg-white rounded-lg border border-amber-200 p-4 mb-3 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-secondary-text mb-1">Name</label>
@@ -492,7 +492,7 @@ export default function PlatformTenantDetailPage() {
                       type="text"
                       value={newUserForm.name}
                       onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
                       placeholder="Full name"
                     />
                   </div>
@@ -502,7 +502,7 @@ export default function PlatformTenantDetailPage() {
                       type="email"
                       value={newUserForm.email}
                       onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
                       placeholder="email@company.com"
                     />
                   </div>
@@ -512,7 +512,7 @@ export default function PlatformTenantDetailPage() {
                       type="password"
                       value={newUserForm.password}
                       onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
                       placeholder="Min 6 characters"
                       autoComplete="new-password"
                     />
@@ -522,7 +522,7 @@ export default function PlatformTenantDetailPage() {
                     <select
                       value={newUserForm.role}
                       onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
                     >
                       <option value="user">User</option>
                       <option value="manager">Manager</option>
@@ -534,7 +534,7 @@ export default function PlatformTenantDetailPage() {
                   <button
                     onClick={handleCreateUser}
                     disabled={creatingUser || !newUserForm.name.trim() || !newUserForm.email.trim() || newUserForm.password.length < 6}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
                   >
                     {creatingUser ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                     Create User
@@ -645,21 +645,21 @@ function FeaturesTab({ tenant, sourceAgents, savingModules, onToggleModule }) {
             <div
               key={mod.key}
               className={`bg-white rounded-lg border p-4 transition-colors ${
-                isEnabled ? 'border-indigo-200' : 'border-gray-200'
+                isEnabled ? 'border-amber-200' : 'border-gray-200'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Puzzle size={16} className={isEnabled ? 'text-indigo-500' : 'text-gray-400'} />
+                  <Puzzle size={16} className={isEnabled ? 'text-amber-500' : 'text-gray-400'} />
                   <h3 className="text-sm font-semibold text-dark-text">{mod.label}</h3>
                 </div>
                 <button
                   onClick={() => onToggleModule(mod.key)}
                   disabled={savingModules}
-                  className="text-gray-500 hover:text-indigo-600 transition-colors disabled:opacity-50"
+                  className="text-gray-500 hover:text-amber-600 transition-colors disabled:opacity-50"
                 >
                   {isEnabled
-                    ? <ToggleRight size={24} className="text-indigo-600" />
+                    ? <ToggleRight size={24} className="text-amber-600" />
                     : <ToggleLeft size={24} className="text-gray-400" />
                   }
                 </button>
@@ -749,7 +749,7 @@ function AgentsTab({ tenant, sourceAgents, dbAgents, agentOverrides, savingOverr
                         </span>
                       )}
                       {dbAgent && (
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-indigo-50 text-indigo-600">
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-50 text-amber-600">
                           DB Seeded
                         </span>
                       )}
@@ -773,14 +773,14 @@ function AgentsTab({ tenant, sourceAgents, dbAgents, agentOverrides, savingOverr
                         onToggleAgent(agent.key, override);
                       }}
                       disabled={savingOverride === agent.key}
-                      className="text-gray-500 hover:text-indigo-600 transition-colors disabled:opacity-50"
+                      className="text-gray-500 hover:text-amber-600 transition-colors disabled:opacity-50"
                     >
                       {savingOverride === agent.key ? (
-                        <Loader2 size={20} className="animate-spin text-indigo-500" />
+                        <Loader2 size={20} className="animate-spin text-amber-500" />
                       ) : (override && !override.is_enabled) ? (
                         <ToggleLeft size={24} className="text-gray-400" />
                       ) : (
-                        <ToggleRight size={24} className="text-indigo-600" />
+                        <ToggleRight size={24} className="text-amber-600" />
                       )}
                     </button>
                   )}
@@ -825,7 +825,7 @@ function AgentsTab({ tenant, sourceAgents, dbAgents, agentOverrides, savingOverr
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {agent.knowledgeModules.map((km) => (
-                          <span key={km} className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700">
+                          <span key={km} className="px-2 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700">
                             {km}
                           </span>
                         ))}
@@ -1008,7 +1008,7 @@ function ApiKeysTab({ tenantId }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 size={20} className="text-indigo-500 animate-spin" />
+        <Loader2 size={20} className="text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -1098,7 +1098,7 @@ function ApiKeysTab({ tenantId }) {
                         value={formKey}
                         onChange={(e) => setFormKey(e.target.value)}
                         placeholder={svc.placeholder}
-                        className="w-full px-3 py-2 pr-10 text-sm font-mono border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                        className="w-full px-3 py-2 pr-10 text-sm font-mono border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
                         autoComplete="off"
                       />
                       <button
@@ -1117,14 +1117,14 @@ function ApiKeysTab({ tenantId }) {
                       value={formLabel}
                       onChange={(e) => setFormLabel(e.target.value)}
                       placeholder="e.g., Production Key"
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleSave(svc.key)}
                       disabled={saving || !formKey.trim()}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
                     >
                       {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                       Save Key
@@ -1144,7 +1144,7 @@ function ApiKeysTab({ tenantId }) {
                 {!isEditing && (
                   <button
                     onClick={() => startEdit(svc.key)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors"
                   >
                     <Key size={14} />
                     {cred ? 'Replace Key' : 'Add Key'}

@@ -65,7 +65,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
               className={`rounded-full transition-all duration-200 ${showCollapsed ? 'h-8 w-8' : 'h-9 w-9'}`}
             />
             {!showCollapsed && (
-              <span className="text-indigo-400 font-bold text-lg leading-tight">Alf</span>
+              <span className="text-amber-400 font-bold text-lg leading-tight">Alf</span>
             )}
           </>
         ) : (
@@ -109,7 +109,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
                 >
                   {active && (
                     <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r ${
-                      isPlatformOwner ? 'bg-indigo-500' : 'bg-aa-blue'
+                      isPlatformOwner ? 'bg-amber-500' : 'bg-aa-blue'
                     }`} />
                   )}
                   {Icon && <Icon size={18} />}
@@ -126,14 +126,14 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
         <div className="w-full px-4 py-3 flex items-center gap-3">
           {showCollapsed ? (
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-              isPlatformOwner ? 'bg-indigo-500/20 text-indigo-400' : 'bg-aa-blue/20 text-aa-blue'
+              isPlatformOwner ? 'bg-amber-500/20 text-amber-400' : 'bg-aa-blue/20 text-aa-blue'
             }`}>
               {initials}
             </div>
           ) : (
             <>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                isPlatformOwner ? 'bg-indigo-500/20 text-indigo-400' : 'bg-aa-blue/20 text-aa-blue'
+                isPlatformOwner ? 'bg-amber-500/20 text-amber-400' : 'bg-aa-blue/20 text-aa-blue'
               }`}>
                 {initials}
               </div>

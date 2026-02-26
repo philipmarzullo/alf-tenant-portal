@@ -179,7 +179,7 @@ export default function UserManagement() {
       render: (val) => {
         const styles =
           val === 'platform_owner'
-            ? 'bg-indigo-50 text-indigo-700'
+            ? 'bg-amber-50 text-amber-700'
             : val === 'super-admin' || val === 'admin'
             ? 'bg-purple-50 text-purple-700'
             : val === 'manager'

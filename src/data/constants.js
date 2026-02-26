@@ -16,7 +16,7 @@ export const DEPT_COLORS = {
   sales: '#F59E0B',
   admin: '#E12F2C',
   tools: '#0284C7',
-  platform: '#6366F1',
+  platform: '#F59E0B',
 };
 
 export const STATUS = {

@@ -117,7 +117,7 @@ export default function PlatformAgentsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 size={24} className="text-indigo-500 animate-spin" />
+        <Loader2 size={24} className="text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -134,7 +134,7 @@ export default function PlatformAgentsPage() {
         <button
           onClick={handleSeed}
           disabled={seeding}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
         >
           {seeding ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}
           {seeding ? 'Seeding...' : 'Seed to Database'}

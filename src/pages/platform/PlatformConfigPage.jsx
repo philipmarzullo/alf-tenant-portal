@@ -75,7 +75,7 @@ export default function PlatformConfigPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 size={24} className="text-indigo-500 animate-spin" />
+        <Loader2 size={24} className="text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -90,7 +90,7 @@ export default function PlatformConfigPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
         >
           {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           {saving ? 'Saving...' : 'Save Changes'}
@@ -119,7 +119,7 @@ export default function PlatformConfigPage() {
             <select
               value={config.default_model}
               onChange={(e) => setConfig({ ...config, default_model: e.target.value })}
-              className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+              className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
             >
               {MODEL_OPTIONS.map((m) => (
                 <option key={m.value} value={m.value}>{m.label}</option>
@@ -141,7 +141,7 @@ export default function PlatformConfigPage() {
               onChange={(e) => setConfig({ ...config, max_tokens: parseInt(e.target.value) || 0 })}
               min={256}
               max={32768}
-              className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+              className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
             />
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function PlatformConfigPage() {
               onChange={(e) => setConfig({ ...config, rate_limit_per_minute: parseInt(e.target.value) || 0 })}
               min={1}
               max={100}
-              className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+              className="w-full md:w-80 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
             />
           </div>
         </div>

@@ -103,7 +103,7 @@ export default function PlatformTenantsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 size={24} className="text-indigo-500 animate-spin" />
+        <Loader2 size={24} className="text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -117,7 +117,7 @@ export default function PlatformTenantsPage() {
         </div>
         <button
           onClick={() => navigate('/platform/tenants/new')}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
         >
           <Plus size={16} />
           New Tenant
@@ -131,9 +131,9 @@ export default function PlatformTenantsPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <MetricCard label="Total Tenants" value={tenants.length} icon={Building2} color="#6366F1" />
-        <MetricCard label="Total Users" value={totalUsers} icon={Users} color="#6366F1" />
-        <MetricCard label="Agent Calls (30d)" value={totalUsage.toLocaleString()} icon={Activity} color="#6366F1" />
+        <MetricCard label="Total Tenants" value={tenants.length} icon={Building2} color="#F59E0B" />
+        <MetricCard label="Total Users" value={totalUsers} icon={Users} color="#F59E0B" />
+        <MetricCard label="Agent Calls (30d)" value={totalUsage.toLocaleString()} icon={Activity} color="#F59E0B" />
       </div>
 
       {/* Expandable Tenants Table */}
@@ -211,7 +211,7 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
           <div className="text-xs text-secondary-text">{tenant.slug}</div>
         </td>
         <td className="px-4 py-3">
-          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-50 text-indigo-700 capitalize">
+          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-50 text-amber-700 capitalize">
             {tenant.plan || 'free'}
           </span>
         </td>
@@ -241,7 +241,7 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                 {/* Company Info Card */}
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Building2 size={16} className="text-indigo-500" />
+                    <Building2 size={16} className="text-amber-500" />
                     <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Company Info</h3>
                   </div>
                   <div className="space-y-2 text-sm">
@@ -281,14 +281,14 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                 {/* Features Card */}
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/platform/tenants/${tenant.id}?tab=features`); }}
-                  className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-indigo-300 hover:shadow-sm transition-all group"
+                  className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-amber-300 hover:shadow-sm transition-all group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Puzzle size={16} className="text-indigo-500" />
+                      <Puzzle size={16} className="text-amber-500" />
                       <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Features</h3>
                     </div>
-                    <ArrowRight size={14} className="text-gray-300 group-hover:text-indigo-400 transition-colors" />
+                    <ArrowRight size={14} className="text-gray-300 group-hover:text-amber-400 transition-colors" />
                   </div>
                   <div className="text-lg font-semibold text-dark-text mb-2">
                     {enabledModuleCount} of {MODULE_OPTIONS.length} enabled
@@ -301,7 +301,7 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                           key={mod.key}
                           className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                             isOn
-                              ? 'bg-indigo-50 text-indigo-700'
+                              ? 'bg-amber-50 text-amber-700'
                               : 'bg-gray-100 text-gray-400'
                           }`}
                         >
@@ -315,14 +315,14 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                 {/* Agents Card */}
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/platform/tenants/${tenant.id}?tab=agents`); }}
-                  className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-indigo-300 hover:shadow-sm transition-all group"
+                  className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-amber-300 hover:shadow-sm transition-all group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Bot size={16} className="text-indigo-500" />
+                      <Bot size={16} className="text-amber-500" />
                       <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Agents</h3>
                     </div>
-                    <ArrowRight size={14} className="text-gray-300 group-hover:text-indigo-400 transition-colors" />
+                    <ArrowRight size={14} className="text-gray-300 group-hover:text-amber-400 transition-colors" />
                   </div>
                   <div className="text-lg font-semibold text-dark-text mb-2">
                     {activeAgentCount} of {sourceAgents.length} active
@@ -350,7 +350,7 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                 {/* Quick Stats Card */}
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Activity size={16} className="text-indigo-500" />
+                    <Activity size={16} className="text-amber-500" />
                     <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Quick Stats</h3>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
@@ -359,8 +359,8 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                       onClick={(e) => { e.stopPropagation(); navigate(`/platform/tenants/${tenant.id}`); }}
                       className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-colors group relative"
                     >
-                      <ExternalLink size={10} className="absolute top-2 right-2 text-gray-300 group-hover:text-indigo-400 transition-colors" />
-                      <Users size={18} className="text-indigo-500 mx-auto mb-1" />
+                      <ExternalLink size={10} className="absolute top-2 right-2 text-gray-300 group-hover:text-amber-400 transition-colors" />
+                      <Users size={18} className="text-amber-500 mx-auto mb-1" />
                       <div className="text-lg font-semibold text-dark-text">{tenant.user_count}</div>
                       <div className="text-xs text-secondary-text">Users</div>
                     </button>
@@ -369,8 +369,8 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                       onClick={(e) => { e.stopPropagation(); navigate(`/platform/tenants/${tenant.id}`); }}
                       className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-colors group relative"
                     >
-                      <ExternalLink size={10} className="absolute top-2 right-2 text-gray-300 group-hover:text-indigo-400 transition-colors" />
-                      <MapPin size={18} className="text-indigo-500 mx-auto mb-1" />
+                      <ExternalLink size={10} className="absolute top-2 right-2 text-gray-300 group-hover:text-amber-400 transition-colors" />
+                      <MapPin size={18} className="text-amber-500 mx-auto mb-1" />
                       <div className="text-lg font-semibold text-dark-text">{tenant.site_count}</div>
                       <div className="text-xs text-secondary-text">Sites</div>
                     </button>
@@ -379,8 +379,8 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                       onClick={(e) => { e.stopPropagation(); navigate(`/platform/tenants/${tenant.id}`); }}
                       className="bg-gray-50 rounded-lg p-3 text-center hover:bg-gray-100 transition-colors group relative"
                     >
-                      <ExternalLink size={10} className="absolute top-2 right-2 text-gray-300 group-hover:text-indigo-400 transition-colors" />
-                      <Activity size={18} className="text-indigo-500 mx-auto mb-1" />
+                      <ExternalLink size={10} className="absolute top-2 right-2 text-gray-300 group-hover:text-amber-400 transition-colors" />
+                      <Activity size={18} className="text-amber-500 mx-auto mb-1" />
                       <div className="text-lg font-semibold text-dark-text">{tenant.usage_30d.toLocaleString()}</div>
                       <div className="text-xs text-secondary-text">Calls (30d)</div>
                     </button>
@@ -390,16 +390,16 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                 {/* API Keys Card */}
                 <button
                   onClick={(e) => { e.stopPropagation(); navigate(`/platform/tenants/${tenant.id}?tab=api-keys`); }}
-                  className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-indigo-300 hover:shadow-sm transition-all group"
+                  className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-amber-300 hover:shadow-sm transition-all group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Lock size={16} className="text-gray-400" />
                       <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider">API Keys</h3>
                     </div>
-                    <ArrowRight size={14} className="text-gray-300 group-hover:text-indigo-400 transition-colors" />
+                    <ArrowRight size={14} className="text-gray-300 group-hover:text-amber-400 transition-colors" />
                   </div>
-                  <div className="flex items-center justify-center h-16 text-sm text-indigo-600 font-medium">
+                  <div className="flex items-center justify-center h-16 text-sm text-amber-600 font-medium">
                     Manage credentials
                   </div>
                 </button>
@@ -409,7 +409,7 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
               <div className="flex justify-end pt-1">
                 <button
                   onClick={(e) => { e.stopPropagation(); onManage(); }}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors"
                 >
                   Manage
                   <ArrowRight size={14} />

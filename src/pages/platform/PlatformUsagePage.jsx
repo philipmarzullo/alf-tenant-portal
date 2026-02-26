@@ -87,7 +87,7 @@ export default function PlatformUsagePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 size={24} className="text-indigo-500 animate-spin" />
+        <Loader2 size={24} className="text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -106,9 +106,9 @@ export default function PlatformUsagePage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <MetricCard label="Total Calls" value={totalCalls.toLocaleString()} icon={Activity} color="#6366F1" />
-        <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} icon={Zap} color="#6366F1" />
-        <MetricCard label="Unique Users" value={uniqueUsers} icon={Hash} color="#6366F1" />
+        <MetricCard label="Total Calls" value={totalCalls.toLocaleString()} icon={Activity} color="#F59E0B" />
+        <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} icon={Zap} color="#F59E0B" />
+        <MetricCard label="Unique Users" value={uniqueUsers} icon={Hash} color="#F59E0B" />
       </div>
 
       {/* Daily Bar Chart */}
@@ -127,7 +127,7 @@ export default function PlatformUsagePage() {
                 contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
                 labelFormatter={(d) => `Date: ${d}`}
               />
-              <Bar dataKey="calls" fill="#6366F1" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="calls" fill="#F59E0B" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (

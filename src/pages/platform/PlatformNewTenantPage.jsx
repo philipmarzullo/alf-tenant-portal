@@ -104,7 +104,7 @@ export default function PlatformNewTenantPage() {
               type="text"
               value={form.company_name}
               onChange={(e) => handleNameChange(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
               placeholder="Acme Corp"
             />
           </div>
@@ -114,7 +114,7 @@ export default function PlatformNewTenantPage() {
               type="text"
               value={form.slug}
               onChange={(e) => setForm({ ...form, slug: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500 font-mono"
               placeholder="acme-corp"
             />
             <p className="text-xs text-secondary-text mt-1">Auto-generated from company name. You can override it.</p>
@@ -124,7 +124,7 @@ export default function PlatformNewTenantPage() {
             <select
               value={form.plan}
               onChange={(e) => setForm({ ...form, plan: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
             >
               {PLAN_OPTIONS.map((p) => (
                 <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>
@@ -144,7 +144,7 @@ export default function PlatformNewTenantPage() {
                   onClick={() => toggleModule(mod.key)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
                     form.modules.includes(mod.key)
-                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                      ? 'bg-amber-50 border-amber-300 text-amber-700'
                       : 'bg-white border-gray-200 text-secondary-text hover:border-gray-300'
                   }`}
                 >
@@ -162,7 +162,7 @@ export default function PlatformNewTenantPage() {
                 value={form.max_users}
                 onChange={(e) => setForm({ ...form, max_users: parseInt(e.target.value) || 0 })}
                 min={1}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
               />
             </div>
             <div>
@@ -172,7 +172,7 @@ export default function PlatformNewTenantPage() {
                 value={form.max_agents}
                 onChange={(e) => setForm({ ...form, max_agents: parseInt(e.target.value) || 0 })}
                 min={1}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
               />
             </div>
           </div>
@@ -182,7 +182,7 @@ export default function PlatformNewTenantPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 px-5 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
           >
             {saving && <Loader2 size={16} className="animate-spin" />}
             {saving ? 'Creating...' : 'Create Tenant'}
