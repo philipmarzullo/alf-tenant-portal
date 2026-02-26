@@ -1,90 +1,74 @@
-# Alf Platform — Claude Code Context
+# Alf Tenant Portal — Claude Code Context
 
-> This is the platform-level CLAUDE.md for the Alf codebase. It governs all work in this repo.
+> This is the tenant portal repo. It contains ZERO platform admin code. The Alf platform lives in a separate repo (alf-platform).
 
-## What is Alf?
+## What Is This Repo?
 
-Alf is a managed SaaS platform for facility services operations. It provisions tenant organizations with workspace modules, AI agents, and operational tools. A&A Elevated Facility Solutions is the first (and currently only) tenant.
+This is the tenant-facing portal for facility services operations. Each tenant (starting with A&A Elevated Facility Solutions) gets their own deploy of this codebase, configured via environment variables.
 
-**Key principle:** Alf is the platform. A&A is a tenant. They are never the same thing.
+**Key principle:** This repo is 100% tenant experience. No Alf branding, no platform admin pages, no isPlatformOwner logic.
 
-## Deployment Model
+## Architecture
 
-This single codebase serves two contexts:
+| Component | Where |
+|-----------|-------|
+| **This repo** | Tenant UI — React + Vite static build |
+| **alf-platform repo** | Platform admin + backend API (separate repo) |
+| **Supabase** | Shared database — both repos connect to same instance |
 
-| Context | URL | Who sees it | Branding |
-|---------|-----|-------------|----------|
-| **A&A's portal** | https://aa-portal-08cq.onrender.com/ | A&A users + Philip | A&A — aa-blue, A&A logo, dark-nav bg |
-| **Alf platform admin** | http://localhost:5173/ | Philip only | Alf — amber, warm tones, Alf logo |
+The tenant portal has no backend. It calls the alf-platform backend via `VITE_BACKEND_URL` for agent API calls.
 
-**The Render deploy IS A&A's world.** Everything there — including auth pages — is A&A branded. Alf branding only appears on localhost.
+## Env Vars
 
-**Future:** Each tenant gets its own deploy and URL. Alf gets its own deploy. Alf dictates tenant URLs, API connections, agent configs, and module assignments from its own admin interface.
-
-## Platform Governance Rules
-
-1. **Alf controls all API keys and credentials** — stored encrypted, managed per tenant via the platform admin
-2. **Alf designs, builds, maintains, and trains all AI agents** — tenants use agents but never configure them
-3. **Alf decides which modules each tenant gets** — module assignment is a platform decision, not tenant self-serve
-4. **Tenants never see Alf branding** — on tenant deploys (like Render), zero Alf references
-
-## File Ownership (CRITICAL)
-
-### Tenant-facing files (A&A branded on Render — DO NOT add Alf branding)
-- `src/pages/auth/*` — login, forgot password, reset password (A&A branded)
-- `src/pages/Dashboard.jsx`
-- `src/pages/hr/*`, `src/pages/sales/*`, `src/pages/finance/*`, `src/pages/ops/*`, `src/pages/purchasing/*`
-- `src/pages/tools/*` (QBUBuilder, SalesDeckBuilder)
-- `src/pages/admin/*` (UserManagement, AgentManagement, Settings)
-- `src/components/shared/AgentChatPanel.jsx`
-- `src/components/admin/AgentCard.jsx`
-- `src/components/layout/TopBar.jsx`
-- `src/agents/configs/*`
-- `index.html` — favicon, page title, meta tags (visible to all users in browser tab)
-- `public/*` — assets served without auth
-
-### Platform-owner files (Alf branded, localhost only)
-- `src/pages/platform/*` — all platform admin pages
-- `src/components/shared/AlfIcon.jsx`
-
-### Shared files (modify with care — use `isPlatformOwner` conditionals)
-- `src/components/layout/Sidebar.jsx` — uses `isPlatformOwner` for Alf styling post-login
-- `src/index.css` — theme variables
-- `src/App.jsx`
-
-## Color & Branding Reference
-
-| Context | Color | Usage |
-|---------|-------|-------|
-| A&A tenant (Render) | `aa-blue` (#009ADE) | Buttons, accents, focus rings, auth pages |
-| A&A backgrounds | `dark-nav` (#1B2133) | Auth page bg, sidebar bg |
-| Alf platform (localhost) | `amber-*` (Tailwind palette) | Buttons, accents, badges |
-| Alf platform hex | `#F59E0B` (amber-500) | Primary Alf color |
-| Alf sidebar bg | `dark-nav-warm` (#231A12) | Warm tone, localhost only |
-
-### Key Conditional Pattern
-```jsx
-isPlatformOwner ? 'amber/warm styling' : 'aa-blue/standard styling'
+```
+VITE_SUPABASE_URL=...              # Supabase project URL
+VITE_SUPABASE_ANON_KEY=...         # Supabase public anon key
+VITE_BACKEND_URL=https://alfpro.ai # Alf backend for agent calls
+VITE_TENANT_ID=<uuid>              # This tenant's ID from alf_tenants
 ```
 
-This conditional handles the edge case where Philip logs into A&A's deploy as platform owner. Post-login sidebar is the only place Alf styling appears on Render.
+## File Ownership
+
+**Everything in this repo is tenant-facing. There are no platform-owner files.**
+
+- `src/pages/auth/*` — Login, forgot password, reset password (tenant-branded)
+- `src/pages/Dashboard.jsx` — Tenant dashboard
+- `src/pages/hr/*`, `src/pages/finance/*`, `src/pages/sales/*`, `src/pages/ops/*`, `src/pages/purchasing/*` — Workspace pages
+- `src/pages/tools/*` — QBU Builder, Sales Deck Builder
+- `src/pages/admin/*` — User Management, Agent Management, Settings
+- `src/components/` — Shared UI components (no Alf branding)
+- `src/agents/` — Agent configs, registry, API calls
+- `src/contexts/` — Auth and User contexts (no isPlatformOwner)
+
+## Branding (A&A — current tenant)
+
+| Element | Value |
+|---------|-------|
+| Primary color | `aa-blue` (#009ADE) |
+| Background | `dark-nav` (#1B2133) |
+| Logo (dark bg) | `/logo-white.png` |
+| Logo (light bg) | `/logo-color.png` |
+| Auth page subtitle | "A&A Operations Portal" |
+
+## Things That Do NOT Exist In This Repo
+
+- No `isPlatformOwner` conditionals
+- No `src/pages/platform/` directory
+- No `AlfIcon.jsx` component
+- No `alf-logo.jpg` asset
+- No `backend/` directory
+- No amber/warm Alf styling
+- No platform nav items in sidebar
 
 ## Tech Stack
 
 - **Frontend:** React 19 + Vite + Tailwind CSS v4
-- **Backend:** Express (Node.js)
 - **Database & Auth:** Supabase (PostgreSQL + Auth + RLS)
-- **Deployment:** Render (A&A), localhost (Alf admin)
-
-## Voice & Tone
-
-- **Tenant-facing (A&A):** Follow A&A brand voice from parent CLAUDE.md — friendly, confident, concrete
-- **Platform admin (Alf):** Direct, technical, clear. Warmer informal tone ("Melmac" personality). No marketing language.
-- Reference specific tools and systems by name (AA360, Lighthouse, TMA)
+- **Deployment:** Render (static site)
 
 ## Working Style
 
 - Plan before building — specs and architecture first
 - Always verify builds before pushing
 - Commit messages: concise, explain "why" not "what"
-- Before committing: "Will an A&A user see Alf branding?" If yes, stop.
+- Before committing: "Does any Alf branding appear?" If yes, stop.
