@@ -35,14 +35,8 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-nav-warm flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <img src="/alf-logo.jpg" alt="Alf" className="h-16 w-16 rounded-full mb-3" />
-          <span className="text-amber-400 font-bold text-2xl">Alf</span>
-        </div>
-
         {/* Card */}
         <div className="bg-white rounded-xl shadow-lg p-8">
           {done ? (
@@ -65,7 +59,7 @@ export default function ResetPasswordPage() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
                     placeholder="At least 6 characters"
                     autoComplete="new-password"
                     autoFocus
@@ -78,7 +72,7 @@ export default function ResetPasswordPage() {
                     type="password"
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
                     placeholder="Re-enter password"
                     autoComplete="new-password"
                   />
@@ -93,7 +87,7 @@ export default function ResetPasswordPage() {
                 <button
                   type="submit"
                   disabled={submitting || !password || !confirm}
-                  className="w-full py-2.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-gray-700 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {submitting && <Loader2 size={16} className="animate-spin" />}
                   Update Password

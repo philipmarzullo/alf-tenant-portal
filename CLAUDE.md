@@ -33,7 +33,7 @@ These rules define how Alf operates as a managed service:
 
 **Platform-owner files (safe to modify for Alf features):**
 - `src/pages/platform/*` — all platform admin pages
-- `src/pages/auth/*` — login/auth pages (Alf-branded, correct for now)
+- `src/pages/auth/*` — login/auth pages (brand-neutral on shared deploy; per-tenant branding later)
 - Sidebar conditional blocks gated by `isPlatformOwner`
 - `src/components/shared/AlfIcon.jsx`
 
