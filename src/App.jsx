@@ -115,9 +115,10 @@ function AuthGate({ children }) {
   return children;
 }
 
-function ProtectedRoute({ moduleKey, adminOnly, platformOnly, children }) {
-  const { hasModule, isAdmin, isPlatformOwner } = useUser();
+function ProtectedRoute({ moduleKey, adminOnly, superAdminOnly, platformOnly, children }) {
+  const { hasModule, isAdmin, isSuperAdmin, isPlatformOwner } = useUser();
   if (platformOnly && !isPlatformOwner) return <Navigate to="/" replace />;
+  if (superAdminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
   if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/" replace />;
   return children;
@@ -245,7 +246,7 @@ export default function App() {
                     <Route
                       path="/admin/agents"
                       element={
-                        <ProtectedRoute adminOnly>
+                        <ProtectedRoute superAdminOnly>
                           <AgentManagement />
                         </ProtectedRoute>
                       }
@@ -254,7 +255,7 @@ export default function App() {
                     <Route
                       path="/admin/settings"
                       element={
-                        <ProtectedRoute adminOnly>
+                        <ProtectedRoute superAdminOnly>
                           <SettingsPage />
                         </ProtectedRoute>
                       }
