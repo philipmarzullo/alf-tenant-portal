@@ -6,7 +6,7 @@ import {
   fetchLogoBase64, fileToBase64,
   setContentBackground, addSectionTitle, addLogoBottomRight,
   addCard, addCalloutBox, addBrandedTable, addCardBullets,
-  calcCardH, estimateBulletH, fmtCurrency, hasData,
+  calcCardH, estimateBulletH, splitItemsToFit, fmtCurrency, hasData,
   parseAgentNarratives, getNarrativeLines, getNarrativeText,
   addDarkCoverSlide, addDarkThankYouSlide,
 } from './pptxBrandKit';
@@ -86,55 +86,76 @@ function addIntroductionsSlide(pptx, form, logoColor) {
 // ── Slide 3: A.1 Safety Moment ──────────────────────────
 
 function addSafetyMomentSlide(pptx, form, logoColor, narratives) {
-  const slide = pptx.addSlide();
-  setContentBackground(slide);
-
   const s = form.safety;
   const theme = s.theme || 'Safety Awareness';
-  addSectionTitle(slide, `Safety Moment \u2014 ${theme}`);
-
-  const cardY = 1.15;
   const tips = getNarrativeLines(narratives, 'A1:TIPS') || (s.keyTips ? s.keyTips.split('\n').filter(Boolean) : []);
   const reminders = getNarrativeLines(narratives, 'A1:REMINDERS') || (s.quickReminders ? s.quickReminders.split('\n').filter(Boolean) : []);
-  const maxBullets = Math.max(tips.length, reminders.length, 1);
   const whyItMatters = getNarrativeText(narratives, 'A1:WHYITMATTERS') || s.whyItMatters;
   const hasWhyItMatters = !!whyItMatters;
-  const maxCardBottom = hasWhyItMatters ? 4.05 : 4.85;
-  const cardH = Math.min(calcCardH(maxBullets, { headerH: 0.55, itemH: 0.4 }), maxCardBottom - cardY);
-  const x1 = MARGIN;
-  const x2 = MARGIN + COL2_W + 0.3;
 
-  // Key Safety Tips card (blue left border)
-  addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
-  slide.addShape('rect', { x: x1 + 0.05, y: cardY, w: 0.4, h: 0.04, fill: { color: AA_RED } });
-  slide.addText('KEY SAFETY TIPS', {
-    x: x1 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
-    fontSize: 11, fontFace: FONT, color: DARK, bold: true,
-  });
-  if (tips.length) {
-    addCardBullets(slide, tips, { x: x1, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
-  }
+  const cardY = 1.15;
+  const maxCardBottom = hasWhyItMatters ? 4.05 : LOGO_SAFE_Y;
+  const maxCardH = maxCardBottom - cardY;
+  const headerPad = 0.65;
+  const availBulletH = maxCardH - headerPad;
+  const bulletColW = COL2_W - 0.5;
 
-  // Quick Reminders card (red left border)
-  addCard(slide, { x: x2, y: cardY, w: COL2_W, h: cardH, borderColor: AA_RED, borderSide: 'left' });
-  slide.addText('QUICK REMINDERS', {
-    x: x2 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
-    fontSize: 11, fontFace: FONT, color: DARK, bold: true,
-  });
-  if (reminders.length) {
-    addCardBullets(slide, reminders, { x: x2, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
-  }
+  // Split tips and reminders into pages that fit
+  const tipPages = splitItemsToFit(tips, availBulletH, bulletColW);
+  const reminderPages = splitItemsToFit(reminders, availBulletH, bulletColW);
+  const totalPages = Math.max(tipPages.length, reminderPages.length, 1);
 
-  // Why It Matters callout box at bottom
-  if (hasWhyItMatters) {
-    const callY = cardY + cardH + 0.2;
-    addCalloutBox(slide, {
-      x: MARGIN, y: callY, w: CONTENT_W, h: 0.85,
-      label: 'Why It Matters:', text: whyItMatters,
+  for (let page = 0; page < totalPages; page++) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    const title = page === 0
+      ? `Safety Moment \u2014 ${theme}`
+      : `Safety Moment \u2014 ${theme} (cont.)`;
+    addSectionTitle(slide, title);
+
+    const pageTips = tipPages[page] || [];
+    const pageReminders = reminderPages[page] || [];
+    const maxBulletH = Math.max(
+      estimateBulletH(pageTips, bulletColW),
+      estimateBulletH(pageReminders, bulletColW),
+      0.5
+    );
+    const cardH = Math.min(maxBulletH + headerPad, maxCardH);
+    const x1 = MARGIN;
+    const x2 = MARGIN + COL2_W + 0.3;
+
+    // Key Safety Tips card (blue left border)
+    addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
+    slide.addShape('rect', { x: x1 + 0.05, y: cardY, w: 0.4, h: 0.04, fill: { color: AA_RED } });
+    slide.addText('KEY SAFETY TIPS', {
+      x: x1 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
+      fontSize: 11, fontFace: FONT, color: DARK, bold: true,
     });
-  }
+    if (pageTips.length) {
+      addCardBullets(slide, pageTips, { x: x1, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
+    }
 
-  addLogoBottomRight(slide, logoColor);
+    // Quick Reminders card (red left border)
+    addCard(slide, { x: x2, y: cardY, w: COL2_W, h: cardH, borderColor: AA_RED, borderSide: 'left' });
+    slide.addText('QUICK REMINDERS', {
+      x: x2 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
+      fontSize: 11, fontFace: FONT, color: DARK, bold: true,
+    });
+    if (pageReminders.length) {
+      addCardBullets(slide, pageReminders, { x: x2, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
+    }
+
+    // Why It Matters callout box on first page only
+    if (page === 0 && hasWhyItMatters) {
+      const callY = cardY + cardH + 0.2;
+      addCalloutBox(slide, {
+        x: MARGIN, y: callY, w: CONTENT_W, h: 0.85,
+        label: 'Why It Matters:', text: whyItMatters,
+      });
+    }
+
+    addLogoBottomRight(slide, logoColor);
+  }
 }
 
 // ── Slide 4: A.2 Safety & Compliance Review ─────────────
@@ -563,41 +584,78 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
       if (fits) break;
       batchSize--;
     }
-    // Floor at 1 category per slide even if it overflows slightly
     if (batchSize < 1) batchSize = 1;
     chosenKeys = allCatKeys.slice(catIdx, catIdx + batchSize);
     chosenColW = batchSize === 1 ? CONTENT_W : batchSize === 2 ? COL2_W : COL3_W;
     chosenGap = batchSize === 2 ? 0.3 : gap;
 
-    const slide = pptx.addSlide();
-    setContentBackground(slide);
-    addSectionTitle(slide, slideIdx === 0
-      ? 'Completed Projects Showcase'
-      : 'Completed Projects Showcase (cont.)');
+    // Single category that overflows — split its items across pages
+    if (batchSize === 1 && !fits) {
+      const catKey = chosenKeys[0];
+      const availBulletH = maxCardH - headerPad;
+      const itemPages = splitItemsToFit(categories[catKey], availBulletH, chosenColW - 0.5);
 
-    const maxBulletH = Math.max(...chosenKeys.map((k) => estimateBulletH(categories[k], chosenColW - 0.5)));
-    const cardH = Math.min(maxBulletH + headerPad, maxCardH);
+      for (let p = 0; p < itemPages.length; p++) {
+        const slide = pptx.addSlide();
+        setContentBackground(slide);
+        addSectionTitle(slide, slideIdx === 0 && p === 0
+          ? 'Completed Projects Showcase'
+          : 'Completed Projects Showcase (cont.)');
 
-    chosenKeys.forEach((cat, i) => {
-      const x = MARGIN + i * (chosenColW + chosenGap);
-      addCard(slide, { x, y: cardY, w: chosenColW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
-      slide.addText(cat.toUpperCase(), {
-        x: x + 0.15, y: cardY + 0.15, w: chosenColW - 0.3, h: 0.3,
-        fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+        const pageItems = itemPages[p];
+        const bulletH = estimateBulletH(pageItems, chosenColW - 0.5);
+        const pageCardH = Math.min(bulletH + headerPad, maxCardH);
+        const x = MARGIN;
+
+        addCard(slide, { x, y: cardY, w: chosenColW, h: pageCardH, borderColor: AA_BLUE, borderSide: 'top' });
+        slide.addText(catKey.toUpperCase(), {
+          x: x + 0.15, y: cardY + 0.15, w: chosenColW - 0.3, h: 0.3,
+          fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+        });
+        slide.addText(
+          pageItems.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
+          {
+            x: x + 0.25, y: cardY + 0.6, w: chosenColW - 0.5, h: pageCardH - headerPad,
+            fontSize: 10, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
+            valign: 'top',
+          }
+        );
+        addLogoBottomRight(slide, logoColor);
+        slideIdx++;
+      }
+    } else {
+      // Normal case — categories fit on one slide
+      const slide = pptx.addSlide();
+      setContentBackground(slide);
+      addSectionTitle(slide, slideIdx === 0
+        ? 'Completed Projects Showcase'
+        : 'Completed Projects Showcase (cont.)');
+
+      const maxBulletH = Math.max(...chosenKeys.map((k) => estimateBulletH(categories[k], chosenColW - 0.5)));
+      const cardH = Math.min(maxBulletH + headerPad, maxCardH);
+
+      chosenKeys.forEach((cat, i) => {
+        const x = MARGIN + i * (chosenColW + chosenGap);
+        addCard(slide, { x, y: cardY, w: chosenColW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
+        slide.addText(cat.toUpperCase(), {
+          x: x + 0.15, y: cardY + 0.15, w: chosenColW - 0.3, h: 0.3,
+          fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+        });
+        slide.addText(
+          categories[cat].map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
+          {
+            x: x + 0.25, y: cardY + 0.6, w: chosenColW - 0.5, h: cardH - headerPad,
+            fontSize: 10, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
+            valign: 'top',
+          }
+        );
       });
-      slide.addText(
-        categories[cat].map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
-        {
-          x: x + 0.25, y: cardY + 0.6, w: chosenColW - 0.5, h: cardH - headerPad,
-          fontSize: 10, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
-          valign: 'top',
-        }
-      );
-    });
 
-    addLogoBottomRight(slide, logoColor);
+      addLogoBottomRight(slide, logoColor);
+      slideIdx++;
+    }
+
     catIdx += batchSize;
-    slideIdx++;
   }
 }
 
@@ -741,57 +799,77 @@ function addTestimonialsSlide(pptx, form, logoColor, narratives) {
     return;
   }
 
-  // Calculate adaptive heights per testimonial based on content length
-  const maxShow = Math.min(testimonials.length, 3);
-  const availableH = SLIDE_H - 1.15 - 0.45;
-  const totalGap = (maxShow - 1) * 0.15;
-
   // Estimate each testimonial's needed height
-  const quoteHeights = testimonials.slice(0, maxShow).map((t) => {
+  function estimateTestimonialH(t) {
     const chars = (t.quote || '').length;
     const charsPerLine = Math.floor((CONTENT_W - 0.6) * 11);
     const lines = Math.max(1, Math.ceil(chars / charsPerLine));
     const locH = t.location ? 0.25 : 0;
     const attrH = t.attribution ? 0.3 : 0;
-    return locH + lines * 0.18 + attrH + 0.25;
-  });
-  const totalNeeded = quoteHeights.reduce((s, h) => s + h, 0) + totalGap;
-  const scale = totalNeeded > availableH ? availableH / totalNeeded : 1;
-  const quoteFontSize = scale < 0.85 ? 8 : 10;
+    return locH + lines * 0.2 + attrH + 0.25;
+  }
 
-  let currentY = 1.15;
-  testimonials.slice(0, maxShow).forEach((t, i) => {
-    const cardH = Math.max(0.8, quoteHeights[i] * scale);
-    addCard(slide, { x: MARGIN, y: currentY, w: CONTENT_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
+  // Paginate testimonials — fit as many as possible per slide
+  const availableH = LOGO_SAFE_Y - 1.15;
+  const gapH = 0.15;
+  const pages = [];
+  let currentPage = [];
+  let pageH = 0;
 
-    const loc = t.location || '';
-    let textY = currentY + 0.08;
-    if (loc) {
-      slide.addText(loc.toUpperCase(), {
-        x: MARGIN + 0.2, y: textY, w: CONTENT_W - 0.4, h: 0.2,
-        fontSize: 9, fontFace: FONT, color: AA_BLUE, bold: true,
-      });
-      textY += 0.22;
+  for (const t of testimonials) {
+    const tH = estimateTestimonialH(t);
+    if (currentPage.length > 0 && pageH + gapH + tH > availableH) {
+      pages.push(currentPage);
+      currentPage = [t];
+      pageH = tH;
+    } else {
+      currentPage.push(t);
+      pageH += (currentPage.length > 1 ? gapH : 0) + tH;
+    }
+  }
+  if (currentPage.length) pages.push(currentPage);
+
+  pages.forEach((pageItems, pageIdx) => {
+    const pageSlide = pageIdx === 0 ? slide : pptx.addSlide();
+    if (pageIdx > 0) {
+      setContentBackground(pageSlide);
+      addSectionTitle(pageSlide, 'Service & Client Satisfaction (cont.)');
     }
 
-    const quoteH = cardH - (textY - currentY) - (t.attribution ? 0.3 : 0.1);
-    slide.addText(`\u201C${t.quote}\u201D`, {
-      x: MARGIN + 0.2, y: textY, w: CONTENT_W - 0.4, h: Math.max(0.3, quoteH),
-      fontSize: quoteFontSize, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
-      lineSpacingMultiple: 1.2,
+    let currentY = 1.15;
+    pageItems.forEach((t) => {
+      const cardH = Math.max(0.8, estimateTestimonialH(t));
+      addCard(pageSlide, { x: MARGIN, y: currentY, w: CONTENT_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
+
+      const loc = t.location || '';
+      let textY = currentY + 0.08;
+      if (loc) {
+        pageSlide.addText(loc.toUpperCase(), {
+          x: MARGIN + 0.2, y: textY, w: CONTENT_W - 0.4, h: 0.2,
+          fontSize: 9, fontFace: FONT, color: AA_BLUE, bold: true,
+        });
+        textY += 0.22;
+      }
+
+      const quoteH = cardH - (textY - currentY) - (t.attribution ? 0.3 : 0.1);
+      pageSlide.addText(`\u201C${t.quote}\u201D`, {
+        x: MARGIN + 0.2, y: textY, w: CONTENT_W - 0.4, h: Math.max(0.3, quoteH),
+        fontSize: 10, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
+        lineSpacingMultiple: 1.2,
+      });
+
+      if (t.attribution) {
+        pageSlide.addText(`\u2014 ${t.attribution}`, {
+          x: MARGIN + 0.2, y: currentY + cardH - 0.28, w: CONTENT_W - 0.4, h: 0.25,
+          fontSize: 9, fontFace: FONT, color: DARK, bold: true,
+        });
+      }
+
+      currentY += cardH + gapH;
     });
 
-    if (t.attribution) {
-      slide.addText(`\u2014 ${t.attribution}`, {
-        x: MARGIN + 0.2, y: currentY + cardH - 0.28, w: CONTENT_W - 0.4, h: 0.25,
-        fontSize: 9, fontFace: FONT, color: DARK, bold: true,
-      });
-    }
-
-    currentY += cardH + 0.15;
+    addLogoBottomRight(pageSlide, logoColor);
   });
-
-  addLogoBottomRight(slide, logoColor);
 }
 
 // ── Slide 12: E.1 Addressing Key Operational Challenges ─
@@ -841,33 +919,42 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
       : [];
   }
 
-  // Dynamic items per slide — estimate heights to determine how many fit
+  // Split paired items across slides using cumulative height (not averages)
   const cardY = 1.15;
   const maxCardH = LOGO_SAFE_Y - cardY;
   const headerPad = 0.8; // card header + padding above bullets
   const availBulletH = maxCardH - headerPad;
 
-  // Estimate average item height using both challenge and action text
-  let totalItemH = 0;
+  const batches = [];
+  let batchStart = 0;
+  let batchH = 0;
   for (let i = 0; i < allChallengeTexts.length; i++) {
     const chH = estimateBulletH([allChallengeTexts[i]], COL2_W - 0.5);
     const acH = estimateBulletH([allActionTexts[i]], COL2_W - 0.5);
-    totalItemH += Math.max(chH, acH);
+    const itemH = Math.max(chH, acH);
+    if (i > batchStart && batchH + itemH > availBulletH) {
+      batches.push({ start: batchStart, end: i });
+      batchStart = i;
+      batchH = itemH;
+    } else {
+      batchH += itemH;
+    }
   }
-  const avgItemH = allChallengeTexts.length > 0 ? totalItemH / allChallengeTexts.length : 0.5;
-  const perSlide = Math.max(2, Math.min(5, Math.floor(availBulletH / avgItemH)));
-  const totalBatches = Math.max(1, Math.ceil(allChallengeTexts.length / perSlide));
+  if (batchStart < allChallengeTexts.length) {
+    batches.push({ start: batchStart, end: allChallengeTexts.length });
+  }
+  if (!batches.length) batches.push({ start: 0, end: 0 });
 
-  for (let batch = 0; batch < totalBatches; batch++) {
+  for (let batch = 0; batch < batches.length; batch++) {
     const slide = pptx.addSlide();
     setContentBackground(slide);
     addSectionTitle(slide, batch === 0
       ? 'Addressing Key Operational Challenges'
       : 'Addressing Key Operational Challenges (cont.)');
 
-    const startIdx = batch * perSlide;
-    const challengeTexts = allChallengeTexts.slice(startIdx, startIdx + perSlide);
-    const actionTexts = allActionTexts.slice(startIdx, startIdx + perSlide);
+    const { start: startIdx, end: endIdx } = batches[batch];
+    const challengeTexts = allChallengeTexts.slice(startIdx, endIdx);
+    const actionTexts = allActionTexts.slice(startIdx, endIdx);
 
     const x1 = MARGIN;
     const x2 = MARGIN + COL2_W + 0.3;
@@ -999,7 +1086,11 @@ function addFinancialSlide(pptx, form, logoColor, narratives) {
   const strategyNarrative = getNarrativeLines(narratives, 'F1:STRATEGY');
   const notes = strategyNarrative || (f.strategyNotes || []).filter(Boolean);
   if (notes.length) {
-    addCardBullets(slide, notes, { x: x2, y: cardY + 0.6, w: COL2_W, h: cardH - 0.8 });
+    // Clip to items that fit within the card to prevent overflow
+    const availH = cardH - 0.8;
+    const bulletColW = COL2_W - 0.5;
+    const fittingPages = splitItemsToFit(notes, availH, bulletColW);
+    addCardBullets(slide, fittingPages[0], { x: x2, y: cardY + 0.6, w: COL2_W, h: availH });
   }
 
   addLogoBottomRight(slide, logoColor);
@@ -1096,37 +1187,89 @@ function addInnovationSlide(pptx, form, logoColor, narratives) {
     highlights = Object.values(merged);
   }
 
-  // Render in batches of 3 per slide
-  for (let batch = 0; batch < highlights.length; batch += 3) {
-    const slide = pptx.addSlide();
-    setContentBackground(slide);
-    addSectionTitle(slide, batch === 0
-      ? 'Innovation & Technology Integration'
-      : 'Innovation & Technology Integration (cont.)');
+  // Render in batches — try 3 per slide, reduce if overflow, split single-card items if needed
+  const cardY = 1.15;
+  const gap = 0.3;
+  const maxCardH = LOGO_SAFE_Y - cardY;
+  const headerPad = 0.8;
+  let hIdx = 0;
+  let slideNum = 0;
 
-    const batchItems = highlights.slice(batch, batch + 3);
-    const cardY = 1.15;
-    const gap = 0.3;
-    const show = batchItems.length;
-    const colW = show === 1 ? CONTENT_W : show === 2 ? COL2_W : COL3_W;
-    const colGap = show === 2 ? 0.3 : gap;
-    const maxCardH = LOGO_SAFE_Y - cardY;
-    const maxBulletH = Math.max(...batchItems.map((h) => estimateBulletH(h.bullets, colW - 0.5)));
-    const cardH = Math.min(maxBulletH + 0.8, maxCardH);
+  while (hIdx < highlights.length) {
+    // Try fitting 3, then 2, then 1 on a slide
+    let batchSize = Math.min(3, highlights.length - hIdx);
+    let fits = false;
 
-    batchItems.forEach((h, i) => {
-      const x = MARGIN + i * (colW + colGap);
-      addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
-      slide.addText((h.innovation || '').toUpperCase(), {
-        x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
-        fontSize: 10, fontFace: FONT, color: DARK, bold: true,
-      });
-      if (h.bullets.length) {
-        addCardBullets(slide, h.bullets, { x, y: cardY + 0.6, w: colW, h: cardH - 0.8 });
+    while (batchSize >= 1) {
+      const batchItems = highlights.slice(hIdx, hIdx + batchSize);
+      const colW = batchSize === 1 ? CONTENT_W : batchSize === 2 ? COL2_W : COL3_W;
+      const tallest = Math.max(...batchItems.map((h) => estimateBulletH(h.bullets, colW - 0.5)));
+      fits = tallest + headerPad <= maxCardH;
+      if (fits) break;
+      batchSize--;
+    }
+    if (batchSize < 1) batchSize = 1;
+
+    const batchItems = highlights.slice(hIdx, hIdx + batchSize);
+    const colW = batchSize === 1 ? CONTENT_W : batchSize === 2 ? COL2_W : COL3_W;
+    const colGap = batchSize === 2 ? 0.3 : gap;
+
+    // Single innovation that overflows — split its bullets across pages
+    if (batchSize === 1 && !fits) {
+      const h = batchItems[0];
+      const availBulletH = maxCardH - headerPad;
+      const bulletPages = splitItemsToFit(h.bullets, availBulletH, colW - 0.5);
+
+      for (let p = 0; p < bulletPages.length; p++) {
+        const slide = pptx.addSlide();
+        setContentBackground(slide);
+        addSectionTitle(slide, slideNum === 0 && p === 0
+          ? 'Innovation & Technology Integration'
+          : 'Innovation & Technology Integration (cont.)');
+
+        const pageItems = bulletPages[p];
+        const bulletH = estimateBulletH(pageItems, colW - 0.5);
+        const pageCardH = Math.min(bulletH + headerPad, maxCardH);
+
+        addCard(slide, { x: MARGIN, y: cardY, w: colW, h: pageCardH, borderColor: AA_BLUE, borderSide: 'top' });
+        slide.addText((h.innovation || '').toUpperCase(), {
+          x: MARGIN + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
+          fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+        });
+        if (pageItems.length) {
+          addCardBullets(slide, pageItems, { x: MARGIN, y: cardY + 0.6, w: colW, h: pageCardH - headerPad });
+        }
+        addLogoBottomRight(slide, logoColor);
+        slideNum++;
       }
-    });
+    } else {
+      // Normal case — batch fits on one slide
+      const slide = pptx.addSlide();
+      setContentBackground(slide);
+      addSectionTitle(slide, slideNum === 0
+        ? 'Innovation & Technology Integration'
+        : 'Innovation & Technology Integration (cont.)');
 
-    addLogoBottomRight(slide, logoColor);
+      const maxBulletH = Math.max(...batchItems.map((h) => estimateBulletH(h.bullets, colW - 0.5)));
+      const cardH = Math.min(maxBulletH + headerPad, maxCardH);
+
+      batchItems.forEach((h, i) => {
+        const x = MARGIN + i * (colW + colGap);
+        addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
+        slide.addText((h.innovation || '').toUpperCase(), {
+          x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
+          fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+        });
+        if (h.bullets.length) {
+          addCardBullets(slide, h.bullets, { x, y: cardY + 0.6, w: colW, h: cardH - headerPad });
+        }
+      });
+
+      addLogoBottomRight(slide, logoColor);
+      slideNum++;
+    }
+
+    hIdx += batchSize;
   }
 }
 

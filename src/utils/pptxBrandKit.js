@@ -192,11 +192,32 @@ export function estimateBulletH(items, colW = 4.0) {
   let total = 0;
   for (const item of (items || [])) {
     const chars = (item || '').length;
-    const charsPerLine = Math.floor(colW * 12); // ~12 chars per inch at 10pt
+    const charsPerLine = Math.floor(colW * 11); // ~11 chars per inch at 10pt (conservative)
     const lines = Math.max(1, Math.ceil(chars / charsPerLine));
-    total += lines * 0.22 + 0.06; // line height + spacing
+    total += lines * 0.24 + 0.08; // line height + inter-bullet spacing
   }
   return total;
+}
+
+/** Split bullet items into page-sized chunks that each fit within availH */
+export function splitItemsToFit(items, availH, colW = 4.0) {
+  if (!items || !items.length) return [[]];
+  const pages = [];
+  let current = [];
+  let currentH = 0;
+  for (const item of items) {
+    const itemH = estimateBulletH([item], colW);
+    if (current.length > 0 && currentH + itemH > availH) {
+      pages.push(current);
+      current = [item];
+      currentH = itemH;
+    } else {
+      current.push(item);
+      currentH += itemH;
+    }
+  }
+  if (current.length) pages.push(current);
+  return pages.length ? pages : [[]];
 }
 
 /** Format a value as currency if it's a number */
