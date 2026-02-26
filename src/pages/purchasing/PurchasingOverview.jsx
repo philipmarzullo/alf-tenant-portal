@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { ShoppingCart, ClipboardCheck, Truck, AlertTriangle } from 'lucide-react';
-import AlfIcon from '../../components/shared/AlfIcon';
+import { ShoppingCart, ClipboardCheck, Truck, AlertTriangle, Bot } from 'lucide-react';
 import MetricCard from '../../components/shared/MetricCard';
 import ComingSoonModule from '../../components/shared/ComingSoonModule';
 import AgentActionButton from '../../components/shared/AgentActionButton';
@@ -35,8 +34,8 @@ export default function PurchasingOverview() {
           onClick={() => setChatOpen(true)}
           className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
         >
-          <AlfIcon size={16} />
-          Ask Alf
+          <Bot size={16} />
+          Ask Purchasing Agent
         </button>
       </div>
 

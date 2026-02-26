@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Eye, X, AlertTriangle, FileText, CheckCircle, Menu } from 'lucide-react';
-import AlfIcon from '../shared/AlfIcon';
+import { Search, Bell, Eye, X, Bot, AlertTriangle, FileText, CheckCircle, Menu } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useUser } from '../../contexts/UserContext';
 
 const NOTIF_ICONS = {
-  agent: AlfIcon,
+  agent: Bot,
   alert: AlertTriangle,
   update: FileText,
   success: CheckCircle,

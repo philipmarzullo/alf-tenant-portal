@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, DollarSign, FileText, TrendingUp, Clock, HardHat } from 'lucide-react';
-import AlfIcon from '../components/shared/AlfIcon';
+import { AlertTriangle, Bot, DollarSign, FileText, TrendingUp, Clock, HardHat } from 'lucide-react';
 import MetricCard from '../components/shared/MetricCard';
 import TaskCard from '../components/shared/TaskCard';
 import AgentChatPanel from '../components/shared/AgentChatPanel';
@@ -347,8 +346,8 @@ export default function Dashboard() {
             onClick={() => setChatOpen(true)}
             className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
           >
-            <AlfIcon size={16} />
-            Ask Alf
+            <Bot size={16} />
+            Ask Admin Agent
           </button>
         )}
       </div>
@@ -403,7 +402,7 @@ export default function Dashboard() {
                 {visibleActivity.map((item, i) => (
                   <div key={item.id} className={`flex items-start gap-3 px-4 py-3 ${i < visibleActivity.length - 1 ? 'border-b border-gray-100' : ''}`}>
                     <div className="p-1.5 bg-aa-blue/10 rounded shrink-0 mt-0.5">
-                      <AlfIcon size={14} />
+                      <Bot size={14} className="text-aa-blue" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-dark-text leading-snug">{item.text}</div>

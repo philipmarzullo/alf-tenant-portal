@@ -1,5 +1,4 @@
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import AlfIcon from '../shared/AlfIcon';
+import { Bot, ChevronDown, ChevronRight } from 'lucide-react';
 import StatusBadge from '../shared/StatusBadge';
 import { DEPT_COLORS } from '../../data/constants';
 import { hasOverride } from '../../agents/overrides';
@@ -28,7 +27,7 @@ export default function AgentCard({ agent, stats, isOpen, isDirty, onClick }) {
         )}
 
         <div className="p-2 rounded-lg" style={{ backgroundColor: deptColor + '15' }}>
-          <AlfIcon size={18} />
+          <Bot size={18} style={{ color: deptColor }} />
         </div>
 
         <div className="flex-1">
