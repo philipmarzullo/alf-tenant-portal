@@ -60,7 +60,7 @@ export default function TopBar({ isMobile, onMenuToggle }) {
   const crumbs = BREADCRUMB_MAP[location.pathname]
     || (location.pathname.startsWith('/platform/tenants/') ? ['Platform', 'Tenants', 'Detail'] : null)
     || ['Dashboard'];
-  const { realIsSuperAdmin, realUser, activeUsers, viewingAs, setViewingAs, clearViewingAs } = useUser();
+  const { realIsAdmin, realUser, activeUsers, viewingAs, setViewingAs, clearViewingAs } = useUser();
 
   const [viewAsOpen, setViewAsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -90,7 +90,7 @@ export default function TopBar({ isMobile, onMenuToggle }) {
   });
 
   // Users available for impersonation (exclude self)
-  const impersonateList = realIsSuperAdmin
+  const impersonateList = realIsAdmin
     ? activeUsers.filter((u) => u.id !== realUser?.id)
     : [];
 
@@ -176,7 +176,7 @@ export default function TopBar({ isMobile, onMenuToggle }) {
           </div>
 
           {/* View-as-user dropdown — super-admin only, hidden on mobile */}
-          {realIsSuperAdmin && (
+          {realIsAdmin && (
             <div className="relative hidden md:block" ref={viewAsRef}>
               <button
                 onClick={() => setViewAsOpen(!viewAsOpen)}

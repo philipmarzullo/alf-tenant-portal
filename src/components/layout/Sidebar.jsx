@@ -32,7 +32,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       items: group.items.filter((item) => {
         if (!item.moduleKey) return true;
         if (item.moduleKey === 'platform') return isPlatformOwner;
-        if (item.moduleKey === 'admin') return isSuperAdmin;
+        if (item.moduleKey === 'admin') return isAdmin;
         if (isAdmin) return true;
         return currentUser?.modules?.includes(item.moduleKey);
       }),

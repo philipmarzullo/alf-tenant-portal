@@ -67,15 +67,16 @@ export function UserProvider({ children }) {
 
   const activeUsers = allUsers.filter((u) => u.active);
 
-  // Impersonation — super-admin and platform_owner can use this
+  // Impersonation — admin, super-admin, and platform_owner can use this
   const realIsSuperAdmin = realUser?.role === 'super-admin' || realUser?.role === 'platform_owner';
+  const realIsAdmin = realUser?.role === 'admin' || realIsSuperAdmin;
 
   const setViewingAs = useCallback(
     (user) => {
-      if (!realIsSuperAdmin) return;
+      if (!realIsAdmin) return;
       setViewingAsState(user);
     },
-    [realIsSuperAdmin],
+    [realIsAdmin],
   );
 
   const clearViewingAs = useCallback(() => {
@@ -112,6 +113,7 @@ export function UserProvider({ children }) {
         isSuperAdmin,
         isPlatformOwner,
         realIsSuperAdmin,
+        realIsAdmin,
         viewingAs,
         setViewingAs,
         clearViewingAs,

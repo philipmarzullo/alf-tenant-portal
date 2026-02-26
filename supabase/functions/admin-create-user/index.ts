@@ -36,14 +36,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check caller is admin
+    // Check caller is admin or platform_owner
     const { data: callerProfile } = await adminClient
       .from('profiles')
-      .select('role')
+      .select('role, tenant_id')
       .eq('id', caller.id)
       .single();
 
-    if (callerProfile?.role !== 'admin' && callerProfile?.role !== 'super-admin') {
+    const callerRole = callerProfile?.role;
+    if (callerRole !== 'admin' && callerRole !== 'super-admin' && callerRole !== 'platform_owner') {
       return new Response(JSON.stringify({ error: 'Admin access required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -51,13 +52,23 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { email, password, name, title, role, modules } = await req.json();
+    const { email, password, name, title, role, modules, tenant_id } = await req.json();
 
     if (!email || !password) {
       return new Response(JSON.stringify({ error: 'Email and password are required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Determine tenant_id for the new user:
+    // - platform_owner: use the provided tenant_id (can create users in any tenant)
+    // - admin/super-admin: forced to caller's own tenant_id (security)
+    let resolvedTenantId: string | null = null;
+    if (callerRole === 'platform_owner') {
+      resolvedTenantId = tenant_id || null;
+    } else {
+      resolvedTenantId = callerProfile?.tenant_id || null;
     }
 
     // Create the auth user with service_role (bypasses email confirmation)
@@ -73,6 +84,14 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Update the profile row with tenant_id (the trigger creates the profile, we patch it)
+    if (resolvedTenantId) {
+      await adminClient
+        .from('profiles')
+        .update({ tenant_id: resolvedTenantId })
+        .eq('id', newUser.user.id);
     }
 
     return new Response(JSON.stringify({ user: { id: newUser.user.id, email: newUser.user.email } }), {

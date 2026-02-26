@@ -5,6 +5,7 @@ import {
   Puzzle, Bot, Lock, ToggleLeft, ToggleRight,
   ChevronDown, ChevronRight, FileText, Zap, BookOpen,
   Key, Trash2, CheckCircle, XCircle, Eye, EyeOff, FlaskConical,
+  Plus, Mail, UserX, UserCheck,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import DataTable from '../../components/shared/DataTable';
@@ -56,6 +57,12 @@ export default function PlatformTenantDetailPage() {
   const [savingModules, setSavingModules] = useState(false);
   const [savingOverride, setSavingOverride] = useState(null);
   const [error, setError] = useState(null);
+
+  // User management state
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({ name: '', email: '', password: '', role: 'user' });
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [userActionLoading, setUserActionLoading] = useState(null);
 
   const sourceAgents = getAllSourceAgents();
 
@@ -182,6 +189,84 @@ export default function PlatformTenantDetailPage() {
     setSavingOverride(null);
   }
 
+  async function handleCreateUser() {
+    if (!newUserForm.name.trim() || !newUserForm.email.trim() || !newUserForm.password || newUserForm.password.length < 6) return;
+    setCreatingUser(true);
+    setError(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-user`;
+
+      const res = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': anonKey,
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          email: newUserForm.email.trim(),
+          password: newUserForm.password,
+          name: newUserForm.name.trim(),
+          title: '',
+          role: newUserForm.role,
+          modules: [],
+          tenant_id: id,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error || `Failed to create user (${res.status})`);
+      } else {
+        setNewUserForm({ name: '', email: '', password: '', role: 'user' });
+        setShowAddUser(false);
+        // Refresh users
+        const { data } = await supabase.from('profiles').select('id, name, email, role, active').eq('tenant_id', id).order('name');
+        setUsers(data || []);
+      }
+    } catch (err) {
+      setError('Could not reach admin-create-user: ' + err.message);
+    }
+    setCreatingUser(false);
+  }
+
+  async function handleResetPassword(userEmail) {
+    setUserActionLoading(userEmail);
+    setError(null);
+    try {
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(userEmail);
+      if (resetErr) {
+        setError(resetErr.message);
+      } else {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+    setUserActionLoading(null);
+  }
+
+  async function handleToggleUserActive(user) {
+    setUserActionLoading(user.id);
+    setError(null);
+    const newActive = !user.active;
+    const { error: updateErr } = await supabase
+      .from('profiles')
+      .update({ active: newActive })
+      .eq('id', user.id);
+
+    if (updateErr) {
+      setError(updateErr.message);
+    } else {
+      setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, active: newActive } : u));
+    }
+    setUserActionLoading(null);
+  }
+
   function setTab(tabKey) {
     setSearchParams({ tab: tabKey }, { replace: true });
   }
@@ -193,7 +278,13 @@ export default function PlatformTenantDetailPage() {
     { key: 'email', label: 'Email', render: (val) => <span className="text-xs text-secondary-text">{val}</span> },
     {
       key: 'role', label: 'Role',
-      render: (val) => <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-700 capitalize">{val}</span>,
+      render: (val) => {
+        const styles = val === 'platform_owner' ? 'bg-indigo-50 text-indigo-700'
+          : (val === 'admin' || val === 'super-admin') ? 'bg-purple-50 text-purple-700'
+          : val === 'manager' ? 'bg-blue-50 text-blue-700'
+          : 'bg-gray-100 text-gray-700';
+        return <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${styles}`}>{val}</span>;
+      },
     },
     {
       key: 'active', label: 'Status',
@@ -201,6 +292,29 @@ export default function PlatformTenantDetailPage() {
         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${val ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
           {val ? 'Active' : 'Inactive'}
         </span>
+      ),
+    },
+    {
+      key: 'id', label: 'Actions',
+      render: (_, row) => (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleResetPassword(row.email); }}
+            disabled={userActionLoading === row.email}
+            title="Send password reset email"
+            className="p-1 text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-50"
+          >
+            {userActionLoading === row.email ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleToggleUserActive(row); }}
+            disabled={userActionLoading === row.id}
+            title={row.active ? 'Deactivate user' : 'Activate user'}
+            className={`p-1 transition-colors disabled:opacity-50 ${row.active ? 'text-gray-400 hover:text-red-500' : 'text-gray-400 hover:text-green-600'}`}
+          >
+            {userActionLoading === row.id ? <Loader2 size={14} className="animate-spin" /> : row.active ? <UserX size={14} /> : <UserCheck size={14} />}
+          </button>
+        </div>
       ),
     },
   ];
@@ -358,7 +472,83 @@ export default function PlatformTenantDetailPage() {
 
           {/* Users Table */}
           <div>
-            <h2 className="text-sm font-semibold text-dark-text mb-3">Users ({users.length})</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-dark-text">Users ({users.length})</h2>
+              <button
+                onClick={() => setShowAddUser(!showAddUser)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+              >
+                <Plus size={14} />
+                Add User
+              </button>
+            </div>
+
+            {showAddUser && (
+              <div className="bg-white rounded-lg border border-indigo-200 p-4 mb-3 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-secondary-text mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={newUserForm.name}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-secondary-text mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={newUserForm.email}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                      placeholder="email@company.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-secondary-text mb-1">Password</label>
+                    <input
+                      type="password"
+                      value={newUserForm.password}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                      placeholder="Min 6 characters"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-secondary-text mb-1">Role</label>
+                    <select
+                      value={newUserForm.role}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="user">User</option>
+                      <option value="manager">Manager</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCreateUser}
+                    disabled={creatingUser || !newUserForm.name.trim() || !newUserForm.email.trim() || newUserForm.password.length < 6}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {creatingUser ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                    Create User
+                  </button>
+                  <button
+                    onClick={() => { setShowAddUser(false); setNewUserForm({ name: '', email: '', password: '', role: 'user' }); }}
+                    className="px-3 py-1.5 text-sm text-secondary-text hover:text-dark-text transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {users.length > 0 ? (
               <DataTable columns={userColumns} data={users} />
             ) : (

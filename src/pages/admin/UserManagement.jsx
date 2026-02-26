@@ -11,7 +11,7 @@ import { supabase } from '../../lib/supabase';
 const EMPTY_FORM = { name: '', email: '', title: '', role: 'user', modules: [], active: true, password: '' };
 
 export default function UserManagement() {
-  const { currentUser, allUsers, refreshUsers } = useUser();
+  const { currentUser, allUsers, refreshUsers, isPlatformOwner } = useUser();
   const { session, resetPassword } = useAuth();
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -97,6 +97,7 @@ export default function UserManagement() {
             title: form.title.trim(),
             role: form.role,
             modules,
+            tenant_id: currentUser.tenant_id,
           }),
         });
 
@@ -140,11 +141,17 @@ export default function UserManagement() {
   };
 
   const isSelf = editingUser?.id === currentUser?.id;
-  const activeCount = allUsers.filter((u) => u.active).length;
-  const adminCount = allUsers.filter((u) => (u.role === 'admin' || u.role === 'super-admin') && u.active).length;
+
+  // Tenant admins shouldn't see or edit platform_owner users
+  const visibleUsers = isPlatformOwner
+    ? allUsers
+    : allUsers.filter((u) => u.role !== 'platform_owner');
+
+  const activeCount = visibleUsers.filter((u) => u.active).length;
+  const adminCount = visibleUsers.filter((u) => (u.role === 'admin' || u.role === 'super-admin') && u.active).length;
   const avgModules =
-    allUsers.length > 0
-      ? (allUsers.reduce((sum, u) => sum + u.modules.length, 0) / allUsers.length).toFixed(1)
+    visibleUsers.length > 0
+      ? (visibleUsers.reduce((sum, u) => sum + u.modules.length, 0) / visibleUsers.length).toFixed(1)
       : 0;
 
   // Group module definitions for the form checkbox UI
@@ -171,13 +178,19 @@ export default function UserManagement() {
       label: 'Role',
       render: (val) => {
         const styles =
-          val === 'super-admin'
-            ? 'bg-red-50 text-red-700'
-            : val === 'admin'
+          val === 'platform_owner'
+            ? 'bg-indigo-50 text-indigo-700'
+            : val === 'super-admin' || val === 'admin'
             ? 'bg-purple-50 text-purple-700'
+            : val === 'manager'
+            ? 'bg-blue-50 text-blue-700'
             : 'bg-gray-100 text-gray-600';
         const label =
-          val === 'super-admin' ? 'Super Admin' : val === 'admin' ? 'Admin' : 'User';
+          val === 'platform_owner' ? 'Platform Owner'
+            : val === 'super-admin' ? 'Super Admin'
+            : val === 'admin' ? 'Admin'
+            : val === 'manager' ? 'Manager'
+            : 'User';
         return (
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles}`}>
             {label}
@@ -260,14 +273,14 @@ export default function UserManagement() {
 
       {/* Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <MetricCard label="Total Users" value={allUsers.length} icon={Users} />
+        <MetricCard label="Total Users" value={visibleUsers.length} icon={Users} />
         <MetricCard label="Active" value={activeCount} icon={UserCheck} color="#16A34A" />
         <MetricCard label="Admins" value={adminCount} icon={Shield} color="#7C3AED" />
         <MetricCard label="Avg Modules/User" value={avgModules} icon={Boxes} />
       </div>
 
       {/* Table */}
-      <DataTable columns={columns} data={allUsers} onRowClick={openEdit} />
+      <DataTable columns={columns} data={visibleUsers} onRowClick={openEdit} />
 
       {/* SlidePanel form */}
       <SlidePanel
@@ -341,8 +354,8 @@ export default function UserManagement() {
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="user">User</option>
+              <option value="manager">Manager</option>
               <option value="admin">Admin</option>
-              <option value="super-admin">Super Admin</option>
             </select>
             {isSelf && (
               <p className="text-xs text-secondary-text mt-1">You cannot change your own role.</p>
@@ -386,7 +399,7 @@ export default function UserManagement() {
           {(form.role === 'admin' || form.role === 'super-admin') && (
             <div className="bg-purple-50 rounded-lg px-4 py-3">
               <p className="text-sm text-purple-700">
-                {form.role === 'super-admin' ? 'Super Admins' : 'Admins'} automatically have access to all modules.
+                Admins automatically have access to all modules.
               </p>
             </div>
           )}
