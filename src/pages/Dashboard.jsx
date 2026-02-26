@@ -403,7 +403,7 @@ export default function Dashboard() {
                 {visibleActivity.map((item, i) => (
                   <div key={item.id} className={`flex items-start gap-3 px-4 py-3 ${i < visibleActivity.length - 1 ? 'border-b border-gray-100' : ''}`}>
                     <div className="p-1.5 bg-aa-blue/10 rounded shrink-0 mt-0.5">
-                      <Bot size={14} className="text-aa-blue" />
+                      <AlfIcon size={14} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-dark-text leading-snug">{item.text}</div>

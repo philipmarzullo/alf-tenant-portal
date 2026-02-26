@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import {
   Building2, Users, Activity, Plus, Loader2,
   ChevronDown, MapPin, Lock, ExternalLink, ArrowRight,
-  Bot, Puzzle,
+  Puzzle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import MetricCard from '../../components/shared/MetricCard';
+import AlfIcon from '../../components/shared/AlfIcon';
 import { getAllSourceAgents } from '../../agents/registry';
 
 const MODULE_OPTIONS = [
@@ -319,7 +320,7 @@ function TenantRow({ tenant, isExpanded, onToggle, onManage, sourceAgents }) {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Bot size={16} className="text-amber-500" />
+                      <AlfIcon size={16} />
                       <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Agents</h3>
                     </div>
                     <ArrowRight size={14} className="text-gray-300 group-hover:text-amber-400 transition-colors" />
