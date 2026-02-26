@@ -33,7 +33,7 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-xl font-semibold text-dark-text mb-1">Sign in</h1>
-          <p className="text-sm text-secondary-text mb-6">Alf Operations Platform</p>
+          <p className="text-sm text-secondary-text mb-6">Melmac Mission Control</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
