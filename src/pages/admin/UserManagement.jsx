@@ -6,7 +6,7 @@ import SlidePanel from '../../components/layout/SlidePanel';
 import { MODULE_DEFINITIONS } from '../../data/users';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase, getFreshToken } from '../../lib/supabase';
 
 const EMPTY_FORM = { name: '', email: '', title: '', role: 'user', modules: [], active: true, password: '' };
 
@@ -79,7 +79,8 @@ export default function UserManagement() {
       }
 
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const token = await getFreshToken();
+        if (!token) throw new Error('Not authenticated — please sign in again');
         const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-user`;
 
@@ -88,7 +89,7 @@ export default function UserManagement() {
           headers: {
             'Content-Type': 'application/json',
             'apikey': anonKey,
-            'Authorization': `Bearer ${currentSession.access_token}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             email: form.email.trim(),

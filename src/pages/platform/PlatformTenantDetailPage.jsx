@@ -7,7 +7,7 @@ import {
   Key, Trash2, CheckCircle, XCircle, Eye, EyeOff, FlaskConical,
   Plus, Mail, UserX, UserCheck,
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, getFreshToken } from '../../lib/supabase';
 import DataTable from '../../components/shared/DataTable';
 import { getAllSourceAgents } from '../../agents/registry';
 import { DEPT_COLORS } from '../../data/constants';
@@ -195,7 +195,8 @@ export default function PlatformTenantDetailPage() {
     setError(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const token = await getFreshToken();
+      if (!token) throw new Error('Not authenticated — please sign in again');
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-user`;
 
@@ -204,7 +205,7 @@ export default function PlatformTenantDetailPage() {
         headers: {
           'Content-Type': 'application/json',
           'apikey': anonKey,
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           email: newUserForm.email.trim(),
@@ -875,9 +876,8 @@ const SERVICE_TYPES = [
 ];
 
 async function credentialFetch(path, options = {}) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) throw new Error('Not authenticated');
+  const token = await getFreshToken();
+  if (!token) throw new Error('Not authenticated — please sign in again');
 
   const res = await fetch(`${BACKEND_URL}/api/credentials${path}`, {
     ...options,

@@ -1,20 +1,7 @@
 import { getAgent, getAgentAction } from './registry';
-import { supabase } from '../lib/supabase';
+import { supabase, getFreshToken } from '../lib/supabase';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-
-/**
- * Get the current Supabase session access token for proxy auth.
- */
-async function getAccessToken() {
-  if (!supabase) return null;
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Resolve the active tenant_id for API calls.
@@ -74,7 +61,7 @@ export async function callAgent(agentKey, actionKey, data) {
   }
 
   const userMessage = action.promptTemplate(data);
-  const token = await getAccessToken();
+  const token = await getFreshToken();
 
   // No session or no backend — fall back to mock responses
   if (!token) {
@@ -115,7 +102,7 @@ export async function chatWithAgent(agentKey, messages) {
   const agent = getAgent(agentKey);
   if (!agent) throw new Error(`Agent not found: ${agentKey}`);
 
-  const token = await getAccessToken();
+  const token = await getFreshToken();
 
   if (!token) {
     return 'Live AI responses require an active session and backend connection. For now, this is a demo of the chat interface — the agent would respond with context-aware answers based on loaded SOPs and company knowledge.';
