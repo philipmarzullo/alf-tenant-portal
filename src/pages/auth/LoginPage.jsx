@@ -22,12 +22,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <img src="/logo-white.png" alt="A&A Elevated Facility Solutions" className="h-12 mb-2" />
+        </div>
+
         {/* Card */}
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-xl font-semibold text-dark-text mb-1">Sign in</h1>
-          <p className="text-sm text-secondary-text mb-6">Operations Portal</p>
+          <p className="text-sm text-secondary-text mb-6">A&A Operations Portal</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -36,7 +41,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
                 placeholder="you@company.com"
                 autoComplete="email"
                 autoFocus
@@ -49,7 +54,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
                 placeholder="Enter password"
                 autoComplete="current-password"
               />
@@ -64,7 +69,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting || !email.trim() || !password}
-              className="w-full py-2.5 bg-gray-700 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-aa-blue text-white text-sm font-medium rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 size={16} className="animate-spin" />}
               Sign In
@@ -74,7 +79,7 @@ export default function LoginPage() {
           <div className="mt-4 text-center">
             <Link
               to="/auth/forgot-password"
-              className="text-sm text-blue-500 hover:text-blue-600 transition-colors"
+              className="text-sm text-aa-blue hover:text-aa-blue/80 transition-colors"
             >
               Forgot password?
             </Link>
