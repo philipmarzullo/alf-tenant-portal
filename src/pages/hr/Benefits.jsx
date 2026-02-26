@@ -15,6 +15,7 @@ const STATUS_ICON = {
 export default function Benefits() {
   const [selected, setSelected] = useState(null);
   const [agentResult, setAgentResult] = useState(null);
+  const [auditResult, setAuditResult] = useState(null);
   const toast = useToast();
 
   const grouped = KANBAN_COLUMNS.map((col) => ({
@@ -29,8 +30,15 @@ export default function Benefits() {
           Track new hire benefits enrollment from waiting period through completion.
         </p>
         <AgentActionButton label="Run Enrollment Audit" variant="default" onClick={async () => {
-          const result = await callAgent('hr', 'runEnrollmentAudit', { count: benefitsEnrollments.length });
-          setAgentResult(result);
+          const result = await callAgent('hr', 'runEnrollmentAudit', {
+            enrollments: benefitsEnrollments.map((e) => ({
+              name: e.name,
+              hireDate: e.hireDate,
+              daysRemaining: e.daysRemaining,
+              status: e.status,
+            })),
+          });
+          setAuditResult(result);
           toast('Enrollment audit complete — results ready');
         }} />
       </div>
@@ -75,6 +83,16 @@ export default function Benefits() {
         ))}
       </div>
 
+      {/* Audit Result */}
+      {auditResult && (
+        <div className="mt-6">
+          <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2">Enrollment Audit Results</div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4 text-sm text-dark-text font-mono leading-relaxed whitespace-pre-wrap max-h-80 overflow-y-auto">
+            {auditResult}
+          </div>
+        </div>
+      )}
+
       {/* Slide Panel */}
       <SlidePanel open={!!selected} onClose={() => setSelected(null)} title={selected?.name || ''}>
         {selected && (
@@ -113,6 +131,7 @@ export default function Benefits() {
                 <AgentActionButton label="Draft Reminder Email" variant="primary" onClick={async () => {
                   const result = await callAgent('hr', 'draftReminder', {
                     employeeName: selected.name,
+                    hireDate: selected.hireDate,
                     daysRemaining: selected.daysRemaining,
                   });
                   setAgentResult(result);
