@@ -2,17 +2,18 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
-  BookOpen, Zap, ChevronLeft, ChevronRight, LogOut,
+  BookOpen, Zap, BarChart3, ChevronLeft, ChevronRight, LogOut,
 } from 'lucide-react';
 import { NAV_ITEMS } from '../../data/constants';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenantConfig } from '../../contexts/TenantConfigContext';
+import { useBranding } from '../../contexts/BrandingContext';
 
 const ICON_MAP = {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
-  BookOpen, Zap,
+  BookOpen, Zap, BarChart3,
 };
 
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {
@@ -20,6 +21,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   const { currentUser, isSuperAdmin, isAdmin } = useUser();
   const { signOut } = useAuth();
   const { tenantHasModule } = useTenantConfig();
+  const brand = useBranding();
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
@@ -60,13 +62,24 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 h-16 border-b border-white/10 shrink-0">
         <img
-          src="/logo-white.png"
-          alt="A&A"
+          src={brand.logoUrl || '/logo-white.png'}
+          alt={brand.companyName || 'Company'}
           className={`transition-all duration-200 ${showCollapsed ? 'h-6' : 'h-7'}`}
         />
         {!showCollapsed && (
           <span className="text-white/70 text-xs leading-tight mt-1">
-            Operations<br />Portal
+            {(brand.displayName || 'Operations Portal').split(' ').reduce((lines, word, i) => {
+              // Split display name into two lines at roughly the midpoint
+              const mid = Math.ceil((brand.displayName || 'Operations Portal').split(' ').length / 2);
+              if (i < mid) {
+                lines[0] = lines[0] ? `${lines[0]} ${word}` : word;
+              } else {
+                lines[1] = lines[1] ? `${lines[1]} ${word}` : word;
+              }
+              return lines;
+            }, ['', '']).filter(Boolean).map((line, i) => (
+              <span key={i}>{i > 0 && <br />}{line}</span>
+            ))}
           </span>
         )}
       </div>

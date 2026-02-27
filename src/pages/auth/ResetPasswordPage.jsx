@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBranding } from '../../contexts/BrandingContext';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const { updatePassword, authError } = useAuth();
+  const brand = useBranding();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -39,7 +41,11 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo-white.png" alt="A&A Elevated Facility Solutions" className="h-12 mb-2" />
+          {brand.logoUrl ? (
+            <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-12 mb-2" />
+          ) : (
+            <img src="/logo-white.png" alt={brand.companyName || 'Company'} className="h-12 mb-2" />
+          )}
         </div>
 
         {/* Card */}

@@ -336,18 +336,19 @@ function addSingleCardSlide(pptx, { title, bullets, notes, logoColor }) {
 
 // ── Main Export ─────────────────────────────────────────
 
-export async function generateSalesDeckPptx(form, agentOutput) {
+export async function generateSalesDeckPptx(form, agentOutput, branding) {
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'SALES_16x9', width: SLIDE_W, height: SLIDE_H });
   pptx.layout = 'SALES_16x9';
-  pptx.author = 'A&A Elevated Facility Solutions';
+  pptx.author = branding?.companyName || 'A&A Elevated Facility Solutions';
   pptx.subject = `Sales Deck — ${form.companyName || 'Prospect'}`;
   pptx.title = `Sales Presentation — ${form.companyName || 'Prospect'}`;
 
-  // Fetch logos
+  // Fetch logos — use tenant branding URL if available, fall back to local assets
+  const logoSrc = branding?.logoUrl;
   const [logoWhite, logoColor] = await Promise.all([
-    fetchLogoBase64('/logo-white.png'),
-    fetchLogoBase64('/logo-color.png'),
+    fetchLogoBase64(logoSrc || '/logo-white.png'),
+    fetchLogoBase64(logoSrc || '/logo-color.png'),
   ]);
 
   // Parse NARRATIVE blocks from agent output

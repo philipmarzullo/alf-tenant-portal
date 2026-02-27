@@ -9,6 +9,7 @@ import { callAgent } from '../../agents/api';
 import { getQBUHistory, saveQBU, getQBUById, deleteQBU } from '../../data/qbuHistory';
 import { generateQBUPptx } from '../../utils/qbuPptxTemplate';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
+import { useBranding } from '../../contexts/BrandingContext';
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -247,6 +248,7 @@ export default function QBUBuilder() {
   const [showDataReview, setShowDataReview] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const toast = useToast();
+  const brand = useBranding();
   const photoInputRef = useRef(null);
   const innovationPhotoInputRef = useRef(null);
   const excelInputRef = useRef(null);
@@ -981,7 +983,7 @@ export default function QBUBuilder() {
   const handleDownload = async () => {
     if (!result) { toast('Generate QBU first', 'error'); return; }
     toast('Building PowerPoint...');
-    await generateQBUPptx(form, result);
+    await generateQBUPptx(form, result, brand);
     toast('PPTX downloaded');
   };
 
@@ -999,7 +1001,7 @@ export default function QBUBuilder() {
     const entry = getQBUById(id);
     if (!entry) return;
     toast('Building PowerPoint...');
-    await generateQBUPptx(entry.formData, entry.agentOutput);
+    await generateQBUPptx(entry.formData, entry.agentOutput, brand);
     toast('PPTX downloaded');
   };
 

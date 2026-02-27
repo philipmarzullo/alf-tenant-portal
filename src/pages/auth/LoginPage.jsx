@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBranding } from '../../contexts/BrandingContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { signIn, authError } = useAuth();
+  const brand = useBranding();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -26,13 +28,17 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo-white.png" alt="A&A Elevated Facility Solutions" className="h-12 mb-2" />
+          {brand.logoUrl ? (
+            <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-12 mb-2" />
+          ) : (
+            <img src="/logo-white.png" alt={brand.companyName || 'Company'} className="h-12 mb-2" />
+          )}
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-xl font-semibold text-dark-text mb-1">Sign in</h1>
-          <p className="text-sm text-secondary-text mb-6">A&A Operations Portal</p>
+          <p className="text-sm text-secondary-text mb-6">{brand.displayName}</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

@@ -18,11 +18,11 @@ const NOTIF_COLORS = {
 };
 
 const NOTIFICATIONS = [
-  { id: 1, type: 'agent', text: 'QBU Builder generated Q4 deck for Fordham University', time: '10m ago', unread: true },
-  { id: 2, type: 'alert', text: 'Contract expiring in 18d — NYC Housing Authority', time: '25m ago', unread: true },
+  { id: 1, type: 'agent', text: 'QBU Builder generated quarterly deck', time: '10m ago', unread: true },
+  { id: 2, type: 'alert', text: 'Contract expiring in 18 days', time: '25m ago', unread: true },
   { id: 3, type: 'agent', text: 'Sales Agent flagged 4 contracts expiring within 90 days', time: '1h ago', unread: true },
-  { id: 4, type: 'alert', text: 'Medical/FMLA certification overdue — James Rodriguez', time: '2h ago', unread: false },
-  { id: 5, type: 'success', text: 'Benefits enrollment completed for Aisha Patel', time: '3h ago', unread: false },
+  { id: 4, type: 'alert', text: 'Medical/FMLA certification overdue', time: '2h ago', unread: false },
+  { id: 5, type: 'success', text: 'Benefits enrollment completed', time: '3h ago', unread: false },
   { id: 6, type: 'agent', text: 'Operations Agent flagged 2 VPs below safety target', time: '4h ago', unread: false },
 ];
 

@@ -280,16 +280,16 @@ function computeDashboard() {
 }
 
 const ACTIVITY = [
-  { id: 1, text: 'Operations Agent generated VP performance summary for Eric Wheeler', time: '10m ago', module: 'ops' },
-  { id: 2, text: 'Sales Agent generated renewal brief for Related Companies', time: '30m ago', module: 'sales' },
+  { id: 1, text: 'Operations Agent generated VP performance summary', time: '10m ago', module: 'ops' },
+  { id: 2, text: 'Sales Agent generated contract renewal brief', time: '30m ago', module: 'sales' },
   { id: 3, text: 'Admin Agent ran cross-department analysis', time: '1h ago', module: 'admin' },
   { id: 4, text: 'HR Agent drafted benefits reminder for 12 employees', time: '2h ago', module: 'hr' },
   { id: 5, text: 'Sales Agent flagged 4 contracts expiring within 90 days', time: '3h ago', module: 'sales' },
   { id: 6, text: 'Operations Agent flagged 2 VPs below safety inspection target', time: '4h ago', module: 'ops' },
-  { id: 7, text: 'HR Agent flagged 32BJ pay increase — 847 employees affected', time: '4h ago', module: 'hr' },
-  { id: 8, text: 'Finance Agent summarized Greenfield University account', time: '6h ago', module: 'finance' },
+  { id: 7, text: 'HR Agent flagged union pay increase — 847 employees affected', time: '4h ago', module: 'hr' },
+  { id: 8, text: 'Finance Agent summarized client account', time: '6h ago', module: 'finance' },
   { id: 9, text: 'Purchasing Agent ran reorder analysis for Floor Finish', time: 'Yesterday', module: 'purchasing' },
-  { id: 10, text: 'QBU Builder generated Q4 2025 deck for Fordham University', time: 'Yesterday', module: 'qbu' },
+  { id: 10, text: 'QBU Builder generated quarterly business update deck', time: 'Yesterday', module: 'qbu' },
 ];
 
 const MODULE_LABELS = {

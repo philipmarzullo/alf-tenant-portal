@@ -6,6 +6,7 @@ import StatusBadge from '../../components/shared/StatusBadge';
 import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { generateSalesDeckPptx } from '../../utils/salesDeckPptxTemplate';
+import { useBranding } from '../../contexts/BrandingContext';
 
 const VERTICALS = [
   'Education — Higher Ed',
@@ -115,6 +116,7 @@ export default function SalesDeckBuilder() {
   const [result, setResult] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
   const toast = useToast();
+  const brand = useBranding();
 
   const updateField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -189,7 +191,7 @@ export default function SalesDeckBuilder() {
   const handleDownload = async () => {
     if (!result) { toast('Generate a sales deck first', 'error'); return; }
     toast('Building PowerPoint...');
-    await generateSalesDeckPptx(form, result);
+    await generateSalesDeckPptx(form, result, brand);
     toast('PPTX downloaded');
   };
 

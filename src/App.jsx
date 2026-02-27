@@ -8,6 +8,7 @@ import useMediaQuery from './hooks/useMediaQuery';
 import { useUser } from './contexts/UserContext';
 import { useAuth } from './contexts/AuthContext';
 import { useTenantConfig } from './contexts/TenantConfigContext';
+import { useBranding } from './contexts/BrandingContext';
 
 import Dashboard from './pages/Dashboard';
 import HRLayout from './pages/hr/HRLayout';
@@ -32,6 +33,13 @@ import KnowledgePage from './pages/admin/KnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
 import UserManagement from './pages/admin/UserManagement';
 import AutomationInsightsPage from './pages/admin/AutomationInsightsPage';
+import DashboardsLayout from './pages/dashboards/DashboardsLayout';
+import OperationsDashboard from './pages/dashboards/OperationsDashboard';
+import LaborDashboard from './pages/dashboards/LaborDashboard';
+import QualityDashboard from './pages/dashboards/QualityDashboard';
+import TimekeepingDashboard from './pages/dashboards/TimekeepingDashboard';
+import SafetyDashboard from './pages/dashboards/SafetyDashboard';
+import ActionPlansPage from './pages/dashboards/ActionPlansPage';
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
@@ -45,11 +53,12 @@ function LoadingScreen() {
 }
 
 function SetupScreen() {
+  const brand = useBranding();
   return (
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <img src="/logo-white.png" alt="A&A" className="h-10" />
+          <img src={brand.logoUrl || '/logo-white.png'} alt={brand.companyName || 'Company'} className="h-10" />
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-xl font-semibold text-dark-text mb-2">Setup Required</h1>
@@ -71,11 +80,12 @@ VITE_SUPABASE_ANON_KEY=your-anon-key`}
 
 function DeactivatedScreen() {
   const { signOut } = useAuth();
+  const brand = useBranding();
   return (
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <img src="/logo-white.png" alt="A&A" className="h-10" />
+          <img src={brand.logoUrl || '/logo-white.png'} alt={brand.companyName || 'Company'} className="h-10" />
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8 text-center">
           <h1 className="text-xl font-semibold text-dark-text mb-2">Account Deactivated</h1>
@@ -207,6 +217,22 @@ export default function App() {
                       <Route path="contracts" element={<ProtectedRoute moduleKey="sales" pageKey="contracts"><SalesContracts /></ProtectedRoute>} />
                       <Route path="apc" element={<ProtectedRoute moduleKey="sales" pageKey="apc"><APCTracker /></ProtectedRoute>} />
                       <Route path="tbi" element={<ProtectedRoute moduleKey="sales" pageKey="tbi"><TBITracker /></ProtectedRoute>} />
+                    </Route>
+
+                    <Route
+                      path="/dashboards"
+                      element={
+                        <ProtectedRoute moduleKey="dashboards">
+                          <DashboardsLayout />
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route index element={<OperationsDashboard />} />
+                      <Route path="labor" element={<LaborDashboard />} />
+                      <Route path="quality" element={<QualityDashboard />} />
+                      <Route path="timekeeping" element={<TimekeepingDashboard />} />
+                      <Route path="safety" element={<SafetyDashboard />} />
+                      <Route path="action-plans" element={<ActionPlansPage />} />
                     </Route>
 
                     <Route

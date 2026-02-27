@@ -6,6 +6,7 @@ import { salesDeckAgent } from './configs/salesDeck';
 import { salesAgent } from './configs/sales';
 import { opsAgent } from './configs/ops';
 import { adminAgent } from './configs/admin';
+import { actionPlanAgent } from './configs/actionPlan';
 import { mergeOverride } from './overrides';
 
 const agents = {
@@ -17,13 +18,21 @@ const agents = {
   admin: adminAgent,
   qbu: qbuAgent,
   salesDeck: salesDeckAgent,
+  actionPlan: actionPlanAgent,
 };
 
-/** Returns the agent config with any localStorage overrides merged in. */
-export function getAgent(agentKey) {
+/** Returns the agent config with any localStorage overrides merged in.
+ *  If tenantContext is provided, replaces A&A references in systemPrompt. */
+export function getAgent(agentKey, tenantContext) {
   const source = agents[agentKey];
   if (!source) return null;
-  return mergeOverride(source, agentKey);
+  const merged = mergeOverride(source, agentKey);
+  if (tenantContext?.companyName && !tenantContext.companyName.includes('A&A')) {
+    merged.systemPrompt = merged.systemPrompt
+      .replaceAll('A&A Elevated Facility Solutions', tenantContext.companyName)
+      .replaceAll('A&A', tenantContext.companyName);
+  }
+  return merged;
 }
 
 /** Returns the original source-code config, ignoring overrides. */
@@ -31,8 +40,8 @@ export function getSourceAgentConfig(agentKey) {
   return agents[agentKey] || null;
 }
 
-export function getAgentAction(agentKey, actionKey) {
-  const agent = getAgent(agentKey);
+export function getAgentAction(agentKey, actionKey, tenantContext) {
+  const agent = getAgent(agentKey, tenantContext);
   if (!agent) return null;
   return agent.actions[actionKey] || null;
 }

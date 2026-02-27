@@ -17,11 +17,12 @@ function getTenantId() {
  * @param {string} agentKey - Key from the registry (e.g., 'hr', 'finance')
  * @param {string} actionKey - Action within the agent (e.g., 'draftReminder')
  * @param {object} data - Data to populate the prompt template
+ * @param {object} [tenantContext] - Optional { companyName } for prompt parameterization
  * @returns {Promise<string>} - The assistant's response text
  */
-export async function callAgent(agentKey, actionKey, data) {
-  const agent = getAgent(agentKey);
-  const action = getAgentAction(agentKey, actionKey);
+export async function callAgent(agentKey, actionKey, data, tenantContext) {
+  const agent = getAgent(agentKey, tenantContext);
+  const action = getAgentAction(agentKey, actionKey, tenantContext);
 
   if (!agent || !action) {
     throw new Error(`Agent or action not found: ${agentKey}/${actionKey}`);
@@ -32,7 +33,7 @@ export async function callAgent(agentKey, actionKey, data) {
 
   // No session or no backend — fall back to mock responses
   if (!token) {
-    return getMockResponse(agentKey, actionKey, data);
+    return getMockResponse(agentKey, actionKey, data, tenantContext);
   }
 
   const tenantId = getTenantId();
@@ -65,8 +66,8 @@ export async function callAgent(agentKey, actionKey, data) {
 /**
  * Chat with an agent (multi-turn) through the backend proxy.
  */
-export async function chatWithAgent(agentKey, messages) {
-  const agent = getAgent(agentKey);
+export async function chatWithAgent(agentKey, messages, tenantContext) {
+  const agent = getAgent(agentKey, tenantContext);
   if (!agent) throw new Error(`Agent not found: ${agentKey}`);
 
   const token = await getFreshToken();
@@ -102,15 +103,17 @@ export async function chatWithAgent(agentKey, messages) {
   return result.content?.[0]?.text || 'No response generated.';
 }
 
-function getMockResponse(agentKey, actionKey, data) {
+function getMockResponse(agentKey, actionKey, data, tenantContext) {
   // Realistic mock responses for demo without API key
+  const co = tenantContext?.companyName || 'the company';
+  const coTeam = tenantContext?.companyName ? `${tenantContext.companyName} Team` : 'the team';
   const mocks = {
     hr: {
       draftReminder: `Subject: Action Needed — Complete Your Benefits Enrollment
 
 Hi ${data.employeeName || 'there'},
 
-Welcome to A&A Elevated Facility Solutions! As part of your onboarding, you're eligible to enroll in our benefits program.
+Welcome to ${co}! As part of your onboarding, you're eligible to enroll in our benefits program.
 
 You have ${data.daysRemaining || 'several'} days remaining to complete your enrollment through Employee Navigator. Here's what you need to do:
 
@@ -122,7 +125,7 @@ You have ${data.daysRemaining || 'several'} days remaining to complete your enro
 If you have questions about plan options or need help navigating the portal, please reach out to HR — we're here to help.
 
 Best regards,
-A&A HR Team`,
+${coTeam}`,
       generateWinTeamUpdate: `WinTeam Update Instructions — ${data.employeeName || 'Employee'}
 
 1. Open WinTeam → Employee Master File
@@ -209,7 +212,7 @@ You can submit documents via:
 If you're experiencing any difficulty, please don't hesitate to reach out — we're happy to help.
 
 Best regards,
-A&A HR Team`,
+${coTeam}`,
       runEnrollmentAudit: `Benefits Enrollment Audit Summary
 
 Reviewed: ${data.count || 'N/A'} open enrollments
@@ -234,7 +237,7 @@ Next audit recommended: 1 week`,
 
 Dear ${data.client || 'Client'} Accounts Payable Team,
 
-I hope this finds you well. I'm reaching out regarding your account with A&A Elevated Facility Solutions.
+I hope this finds you well. I'm reaching out regarding your account with ${co}.
 
 Our records show a current outstanding balance of ${data.total || '$XX,XXX'}. Here's a summary:
 - Current (1-30 days): ${data.bucket30 || '$XX,XXX'}
@@ -246,7 +249,7 @@ We value our partnership and want to ensure there are no issues with the invoice
 Could you provide an update on the expected payment schedule? We're happy to work with your team on any billing questions.
 
 Best regards,
-A&A Finance Team`,
+${coTeam}`,
       summarizeAccount: `Account Summary — ${data.client || 'Client'}
 
 Total Outstanding: ${data.total || '$0'}
@@ -317,7 +320,7 @@ Recommended actions:
 • Track week-over-week improvement for flagged VPs`,
     },
     admin: {
-      executiveBriefing: `EXECUTIVE BRIEFING — A&A ELEVATED FACILITY SOLUTIONS
+      executiveBriefing: `EXECUTIVE BRIEFING — ${co.toUpperCase()}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -387,10 +390,10 @@ ${c.regionVP ? `Region VP: ${c.regionVP}` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 SLIDE 1: COVER
-A&A Elevated Facility Solutions
+${co}
 Quarterly Business Update — ${quarter}
 ${clientName}
-${c.aaTeam?.filter(t => t.name).length ? `\nA&A Team: ${c.aaTeam.filter(t => t.name).map(t => `${t.name}, ${t.title}`).join(' | ')}` : ''}
+${c.aaTeam?.filter(t => t.name).length ? `\nOur Team: ${c.aaTeam.filter(t => t.name).map(t => `${t.name}, ${t.title}`).join(' | ')}` : ''}
 ${c.clientTeam?.filter(t => t.name).length ? `Client Team: ${c.clientTeam.filter(t => t.name).map(t => `${t.name}, ${t.title}`).join(' | ')}` : ''}
 
 SLIDE 2: SAFETY MOMENT — ${safetyTheme.toUpperCase()}
@@ -473,10 +476,10 @@ Account Manager: ${data.accountManager || '[N/A]'}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 RELATIONSHIP SUMMARY
-This is a valued A&A client with a strong service history. Annual APC of ${data.apcAnnual || '[N/A]'} positions this as a significant account. ${data.apcPriorYear ? `Prior year APC was ${data.apcPriorYear}, reflecting steady growth in the partnership.` : ''}
+This is a valued client with a strong service history. Annual APC of ${data.apcAnnual || '[N/A]'} positions this as a significant account. ${data.apcPriorYear ? `Prior year APC was ${data.apcPriorYear}, reflecting steady growth in the partnership.` : ''}
 
 PERFORMANCE HIGHLIGHTS TO LEAD WITH
-• 98%+ client retention rate — A&A's track record speaks for itself
+• 98%+ client retention rate — our track record speaks for itself
 • Consistent SLA compliance across all service areas
 • Dedicated account management with proactive communication
 • People First™ approach driving frontline quality
@@ -543,7 +546,7 @@ In Renewal: ${data.inRenewalCount || '[N/A]'}
 TBI Pending: ${data.totalTbiPending || '[N/A]'}
 
 PIPELINE HEALTH: GOOD
-A&A's 98%+ retention rate means the renewal pipeline is primarily a timing and execution exercise, not a risk exercise. However, attention is needed on upcoming expirations.
+Our 98%+ retention rate means the renewal pipeline is primarily a timing and execution exercise, not a risk exercise. However, attention is needed on upcoming expirations.
 
 PRIORITY ACTIONS (NEXT 30 DAYS)
 1. Schedule renewal meetings for all contracts expiring within 60 days
@@ -556,7 +559,7 @@ ${data.expiringSoonCount && Number(data.expiringSoonCount) > 0 ? `• ${data.exp
 ${data.inRenewalCount && Number(data.inRenewalCount) > 0 ? `• ${data.inRenewalCount} contracts in active renewal — monitor negotiation progress` : ''}
 
 REVENUE AT RISK
-Contracts expiring in the next 90 days represent significant annual APC. With A&A's retention track record, conversion probability is high, but proactive engagement is essential.`,
+Contracts expiring in the next 90 days represent significant annual APC. With our retention track record, conversion probability is high, but proactive engagement is essential.`,
     },
     salesDeck: {
       generateDeck: `SALES PRESENTATION — ${data.prospect || '[Prospect]'}
@@ -569,7 +572,7 @@ ${data.presentationDate ? `Date: ${data.presentationDate}` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 SLIDE 1: COVER
-A&A Elevated Facility Solutions
+${co}
 "The Performance-Focused Choice"
 Prepared for: ${data.prospect || '[Prospect]'}${data.site ? ` — ${data.site}` : ''}
 ${data.aaTeam ? `\nPresented by: ${data.aaTeam}` : ''}
@@ -584,7 +587,7 @@ SLIDE 2: WHY PERFORMANCE MATTERS
 • Cost efficiency consistently below industry benchmarks
 • 53 years of continuous operations under stable leadership
 
-Presenter Notes: This is A&A's strongest opening. Let the numbers speak. Pause after retention rate — it's our most differentiating metric. If asked about comparison to ${data.currentProvider || 'their current provider'}, stay positive: "We focus on what we deliver, not what others don't."
+Presenter Notes: This is our strongest opening. Let the numbers speak. Pause after retention rate — it's our most differentiating metric. If asked about comparison to ${data.currentProvider || 'their current provider'}, stay positive: "We focus on what we deliver, not what others don't."
 
 SLIDE 3: UNDERSTANDING YOUR NEEDS
 ${data.concerns ? `Key challenges identified:\n${data.concerns.split('\n').filter(Boolean).map(line => `• ${line.trim()}`).join('\n') || data.concerns}` : '[PLACEHOLDER: prospect-specific pain points]'}
@@ -599,10 +602,10 @@ SLIDE 4: OUR APPROACH — ${(data.industry || 'YOUR INDUSTRY').toUpperCase()}
 • Manager-heavy model ensures daily on-site accountability and oversight
 • Single-point accountability across ${data.servicesRequested || 'janitorial, grounds, and MEP'}
 
-Presenter Notes: This is where we connect A&A's capabilities to their specific environment. Reference similar clients in ${data.industry || 'their industry'} (check with sales team for approved references).
+Presenter Notes: This is where we connect our capabilities to their specific environment. Reference similar clients in ${data.industry || 'their industry'} (check with sales team for approved references).
 
 SLIDE 5: PEOPLE FIRST™ & ESOP
-• Employee-owned (ESOP) — every A&A team member has a stake in your facility's success
+• Employee-owned (ESOP) — every team member has a stake in your facility's success
 • People First™ is our operating philosophy — employee dignity drives service quality
 • SYNC task-based model: 5 specialist roles for clarity and accountability
 • 25+ years managing union workforces seamlessly
@@ -628,7 +631,7 @@ SLIDE 7: PARTNERSHIP MODEL
 
 Presenter Notes: Glide Path is a powerful differentiator. Frame it as aligned incentives: "We only save money when we find real efficiencies — and we share those savings with you. That's alignment you won't find with other providers."
 
-SLIDE 8: WHY A&A
+SLIDE 8: WHY US
 • Performance-focused, not scale-focused — we choose partnerships carefully
 • 2,000+ employee-owners invested in your success
 • 41 years of leadership stability under one CEO
@@ -646,7 +649,7 @@ SLIDE 9: NEXT STEPS
 Presenter Notes: Be specific about next steps and timelines. Offer to schedule the walkthrough before leaving the meeting. Leave behind: company overview one-pager + contact card.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Note: Review all content against A&A claim governance before presenting. Items marked [PLACEHOLDER] require prospect-specific data.
+Note: Review all content against claim governance before presenting. Items marked [PLACEHOLDER] require prospect-specific data.
 
 <!-- NARRATIVE:COVER:TAGLINE -->
 The Performance-Focused Choice
@@ -661,7 +664,7 @@ Cost efficiency consistently below industry benchmarks
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S2:NOTES -->
-This is A&A's strongest opening. Let the numbers speak. Pause after the retention rate — it's our most differentiating metric. If asked about comparison to their current provider, stay positive: "We focus on what we deliver, not what others don't."
+This is our strongest opening. Let the numbers speak. Pause after the retention rate — it's our most differentiating metric. If asked about comparison to their current provider, stay positive: "We focus on what we deliver, not what others don't."
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S3:BULLETS -->
@@ -671,7 +674,7 @@ ${data.specialRequirements ? `Special requirements: ${data.specialRequirements}`
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S3:NOTES -->
-Mirror the prospect's language back to them. Show that you listened during discovery. Address each stakeholder by name when discussing their specific pain points. This builds trust and shows that A&A takes a consultative approach, not a cookie-cutter one.
+Mirror the prospect's language back to them. Show that you listened during discovery. Address each stakeholder by name when discussing their specific pain points. This builds trust and shows a consultative approach, not a cookie-cutter one.
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S4:BULLETS -->
@@ -683,11 +686,11 @@ SYNC task-based service model with 5 specialist roles for clarity
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S4:NOTES -->
-This is where we connect A&A's capabilities to their specific environment. Reference similar clients in ${data.industry || 'their industry'} when possible. Emphasize that A&A's approach is tailored, not templated.
+This is where we connect our capabilities to their specific environment. Reference similar clients in ${data.industry || 'their industry'} when possible. Emphasize that our approach is tailored, not templated.
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S5:BULLETS -->
-Employee-owned (ESOP) — every A&A team member has a stake in your facility's success
+Employee-owned (ESOP) — every team member has a stake in your facility's success
 People First™ is our operating philosophy — employee dignity drives service quality
 SYNC task-based model: 5 specialist roles for clarity and accountability
 25+ years managing union workforces seamlessly
@@ -742,7 +745,7 @@ Proposed transition timeline if we move forward together
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S9:NOTES -->
-Be specific about next steps and timelines. Offer to schedule the walkthrough before leaving the meeting. Leave behind: company overview one-pager + contact card. The goal is to keep momentum and demonstrate A&A's responsiveness from day one.
+Be specific about next steps and timelines. Offer to schedule the walkthrough before leaving the meeting. Leave behind: company overview one-pager + contact card. The goal is to keep momentum and demonstrate responsiveness from day one.
 <!-- /NARRATIVE -->`,
     },
   };

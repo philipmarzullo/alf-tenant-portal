@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBranding } from '../../contexts/BrandingContext';
 
 export default function ForgotPasswordPage() {
   const { resetPassword, authError } = useAuth();
+  const brand = useBranding();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -23,7 +25,11 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo-white.png" alt="A&A Elevated Facility Solutions" className="h-12 mb-2" />
+          {brand.logoUrl ? (
+            <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-12 mb-2" />
+          ) : (
+            <img src="/logo-white.png" alt={brand.companyName || 'Company'} className="h-12 mb-2" />
+          )}
         </div>
 
         {/* Card */}

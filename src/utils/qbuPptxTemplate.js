@@ -1383,18 +1383,19 @@ function addThankYouSlide(pptx, form, logoWhite) {
 
 // ── Main Export ───────────────────────────────────────────
 
-export async function generateQBUPptx(form, agentOutput) {
+export async function generateQBUPptx(form, agentOutput, branding) {
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'QBU_16x9', width: SLIDE_W, height: SLIDE_H });
   pptx.layout = 'QBU_16x9';
-  pptx.author = 'A&A Elevated Facility Solutions';
+  pptx.author = branding?.companyName || 'A&A Elevated Facility Solutions';
   pptx.subject = `QBU — ${form.cover.clientName || 'Client'} — ${form.cover.quarter || ''}`;
   pptx.title = `QBU ${form.cover.clientName || 'Client'} ${form.cover.quarter || ''}`;
 
-  // Fetch logos
+  // Fetch logos — use tenant branding URL if available, fall back to local assets
+  const logoSrc = branding?.logoUrl;
   const [logoWhite, logoColor] = await Promise.all([
-    fetchLogoBase64('/logo-white.png'),
-    fetchLogoBase64('/logo-color.png'),
+    fetchLogoBase64(logoSrc || '/logo-white.png'),
+    fetchLogoBase64(logoSrc || '/logo-color.png'),
   ]);
 
   // Parse agent narrative blocks (gracefully returns {} if none found)
