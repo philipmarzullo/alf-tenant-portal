@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAuth } from './AuthContext';
 import { getFreshToken } from '../lib/supabase';
 
 const TENANT_ID = import.meta.env.VITE_TENANT_ID;
@@ -7,17 +8,19 @@ const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'
 const DashboardConfigContext = createContext(null);
 
 export function DashboardConfigProvider({ children }) {
+  const { session } = useAuth();
   const [configs, setConfigs] = useState({});  // { operations: {...}, labor: {...}, ... }
   const [loading, setLoading] = useState(true);
 
-  // Load all dashboard configs on mount
+  // Load all dashboard configs when authenticated
   useEffect(() => {
-    if (!TENANT_ID) {
+    if (!TENANT_ID || !session) {
       setLoading(false);
       return;
     }
 
     let cancelled = false;
+    setLoading(true);
 
     async function load() {
       try {
@@ -29,7 +32,6 @@ export function DashboardConfigProvider({ children }) {
         });
 
         if (!res.ok) {
-          // 404 or error = no configs yet, that's fine
           console.warn('[DashboardConfig] Config fetch returned', res.status);
           return;
         }
@@ -47,7 +49,7 @@ export function DashboardConfigProvider({ children }) {
 
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [session]);
 
   // Get config for a specific dashboard, or null if none exists
   const getConfig = useCallback((dashboardKey) => {
