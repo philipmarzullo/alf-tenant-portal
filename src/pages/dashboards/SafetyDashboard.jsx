@@ -1,11 +1,17 @@
 import { useState, useMemo } from 'react';
-import { Loader2, ShieldAlert, Activity, ThumbsUp, AlertTriangle } from 'lucide-react';
+import { Loader2, ShieldAlert, Activity, ThumbsUp, AlertTriangle, Settings2 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import useDashboardData from '../../hooks/useDashboardData';
 import useDashboardConfig from '../../hooks/useDashboardConfig';
+import useDomainCustomize from '../../hooks/useDomainCustomize';
 import DashboardFilters from '../../components/dashboards/DashboardFilters';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 import KPICard from '../../components/dashboards/KPICard';
+import SortableGrid from '../../components/dashboards/SortableGrid';
+import DraggableWidget from '../../components/dashboards/DraggableWidget';
+import CustomizeToolbar from '../../components/dashboards/CustomizeToolbar';
+import { useUser } from '../../contexts/UserContext';
+import { resolveConfig } from '../../data/dashboardKPIRegistry';
 
 const ICON_MAP = { ShieldAlert, Activity, ThumbsUp, AlertTriangle };
 
@@ -13,9 +19,18 @@ export default function SafetyDashboard() {
   const [filters, setFilters] = useState({ dateFrom: '2025-01-01', dateTo: '2025-12-31', jobIds: null });
   const { data, loading, error } = useDashboardData('safety', filters);
   const { kpis, charts } = useDashboardConfig('safety');
+  const { isAdmin } = useUser();
 
-  const chartLabel = (id) => charts.find(c => c.id === id)?.label ?? id;
-  const chartVisible = (id) => charts.find(c => c.id === id)?.visible !== false;
+  const {
+    isCustomizing, enterCustomize, exitCustomize,
+    draft, saveDraft, resetToDefaults,
+    isDirty, saving, source,
+    reorderKpis, toggleKpi, renameKpi,
+    reorderCharts, toggleChart, renameChart,
+  } = useDomainCustomize('safety');
+
+  const activeKpis = isCustomizing && draft ? resolveConfig('safety', draft).kpis : kpis;
+  const activeCharts = isCustomizing && draft ? resolveConfig('safety', draft).charts : charts;
 
   const metrics = useMemo(() => {
     if (!data?.safety?.length) return null;
@@ -72,41 +87,22 @@ export default function SafetyDashboard() {
 
     const trirChart = Object.entries(trirByMonth)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, v]) => ({
-        month: month.slice(5),
-        trir: (v.sum / v.count).toFixed(3),
-      }));
+      .map(([month, v]) => ({ month: month.slice(5), trir: (v.sum / v.count).toFixed(3) }));
 
     const goodSavesChart = Object.entries(goodSavesBySite).map(([name, value]) => ({ name, goodSaves: value }));
 
     return { totalRecordables, avgTRIR, totalGoodSaves, totalNearMisses, recordablesChart, trirChart, goodSavesChart, siteNames };
   }, [data]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 size={24} className="text-aa-blue animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-20">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="text-aa-blue animate-spin" /></div>;
+  if (error) return <div className="text-center py-20"><div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto"><p className="text-sm text-red-700">{error}</p></div></div>;
   if (!metrics) return <DashboardEmptyState domain="safety" />;
 
   const SITE_COLORS = ['#009ADE', '#E12F2C', '#5A5D62'];
 
   const kpiCards = {
     total_recordables: {
-      value: metrics.totalRecordables,
-      icon: ShieldAlert,
+      value: metrics.totalRecordables, icon: ShieldAlert,
       trend: metrics.totalRecordables > 10 ? 'down' : 'up',
       trendLabel: metrics.totalRecordables > 10 ? 'Above threshold' : 'Within target',
     },
@@ -115,77 +111,94 @@ export default function SafetyDashboard() {
     near_misses: { value: metrics.totalNearMisses, icon: AlertTriangle },
   };
 
-  const visibleKpis = kpis.filter(k => k.visible !== false && kpiCards[k.id]);
+  const allKpis = activeKpis.filter(k => kpiCards[k.id]);
+  const visibleKpis = isCustomizing ? allKpis : allKpis.filter(k => k.visible !== false);
+  const visibleChartItems = isCustomizing ? activeCharts : activeCharts.filter(c => c.visible !== false);
+
+  const chartRenderers = {
+    recordables_by_site_quarter: () => (
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart data={metrics.recordablesChart}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="quarter" tick={{ fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+          <Tooltip />
+          <Legend />
+          {metrics.siteNames.map((site, i) => (
+            <Bar key={site} dataKey={site} fill={SITE_COLORS[i % SITE_COLORS.length]} radius={[4, 4, 0, 0]} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    ),
+    trir_trend: () => (
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart data={metrics.trirChart}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 12 }} />
+          <Tooltip />
+          <Line type="monotone" dataKey="trir" stroke="#E12F2C" strokeWidth={2} name="TRIR" />
+        </LineChart>
+      </ResponsiveContainer>
+    ),
+    good_saves_by_site: () => (
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart data={metrics.goodSavesChart}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+          <Tooltip />
+          <Bar dataKey="goodSaves" fill="#16A34A" name="Good Saves" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    ),
+  };
 
   return (
     <div className="space-y-6">
-      <DashboardFilters filters={filters} onChange={setFilters} />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {visibleKpis.map(k => {
-          const card = kpiCards[k.id];
-          return (
-            <KPICard
-              key={k.id}
-              label={k.label}
-              value={card.value}
-              icon={ICON_MAP[k.icon] || card.icon}
-              trend={card.trend}
-              trendLabel={card.trendLabel}
-            />
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {chartVisible('recordables_by_site_quarter') && (
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('recordables_by_site_quarter')}</h3>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={metrics.recordablesChart}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="quarter" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                {metrics.siteNames.map((site, i) => (
-                  <Bar key={site} dataKey={site} fill={SITE_COLORS[i % SITE_COLORS.length]} radius={[4, 4, 0, 0]} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {chartVisible('trir_trend') && (
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('trir_trend')}</h3>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={metrics.trirChart}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="trir" stroke="#E12F2C" strokeWidth={2} name="TRIR" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      {chartVisible('good_saves_by_site') && (
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('good_saves_by_site')}</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={metrics.goodSavesChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="goodSaves" fill="#16A34A" name="Good Saves" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      {isCustomizing && (
+        <CustomizeToolbar onSave={saveDraft} onCancel={exitCustomize} onReset={resetToDefaults} saving={saving} isDirty={isDirty} source={source} />
       )}
+
+      <div className="flex items-center justify-between">
+        <DashboardFilters filters={filters} onChange={setFilters} />
+        {isAdmin && !isCustomizing && (
+          <button onClick={enterCustomize} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-secondary-text bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shrink-0 ml-4">
+            <Settings2 size={16} />
+            Customize
+          </button>
+        )}
+      </div>
+
+      <SortableGrid items={allKpis.map(k => k.id)} onReorder={reorderKpis} disabled={!isCustomizing}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {visibleKpis.map(k => {
+            const card = kpiCards[k.id];
+            return (
+              <DraggableWidget key={k.id} id={k.id} isCustomizing={isCustomizing} visible={k.visible !== false} label={k.label} onToggleVisible={() => toggleKpi(k.id)} onRenameLabel={(label) => renameKpi(k.id, label)}>
+                <KPICard label={k.label} value={card.value} icon={ICON_MAP[k.icon] || card.icon} trend={card.trend} trendLabel={card.trendLabel} />
+              </DraggableWidget>
+            );
+          })}
+        </div>
+      </SortableGrid>
+
+      <SortableGrid items={activeCharts.map(c => c.id)} onReorder={reorderCharts} disabled={!isCustomizing}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {visibleChartItems.map(c => {
+            const renderer = chartRenderers[c.id];
+            if (!renderer) return null;
+            return (
+              <DraggableWidget key={c.id} id={c.id} isCustomizing={isCustomizing} visible={c.visible !== false} label={c.label} onToggleVisible={() => toggleChart(c.id)} onRenameLabel={(label) => renameChart(c.id, label)}>
+                <div className="bg-white rounded-lg border border-gray-200 p-5">
+                  <h3 className="text-sm font-semibold text-dark-text mb-4">{c.label}</h3>
+                  {renderer()}
+                </div>
+              </DraggableWidget>
+            );
+          })}
+        </div>
+      </SortableGrid>
     </div>
   );
 }

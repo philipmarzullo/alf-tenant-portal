@@ -116,8 +116,8 @@ export default function DashboardSettings() {
     <div>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <div>
-          <h1 className="text-2xl font-light text-dark-text mb-1">Dashboard Settings</h1>
-          <p className="text-sm text-secondary-text">Customize KPI labels, visibility, and order for each dashboard.</p>
+          <h1 className="text-2xl font-light text-dark-text mb-1">Dashboard Defaults</h1>
+          <p className="text-sm text-secondary-text">Set the default dashboard layout for all users. Individual users can override with their own customization.</p>
         </div>
         <div className="flex items-center gap-2">
           <button

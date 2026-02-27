@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Bot, DollarSign, FileText, TrendingUp, Clock, HardHat } from 'lucide-react';
+import { AlertTriangle, Bot, DollarSign, FileText, TrendingUp, Clock, HardHat, Settings2 } from 'lucide-react';
 import MetricCard from '../components/shared/MetricCard';
 import TaskCard from '../components/shared/TaskCard';
 import AgentChatPanel from '../components/shared/AgentChatPanel';
+import SortableGrid from '../components/dashboards/SortableGrid';
+import DraggableWidget from '../components/dashboards/DraggableWidget';
+import CustomizeToolbar from '../components/dashboards/CustomizeToolbar';
 import { DEPT_COLORS } from '../data/constants';
 import { useUser } from '../contexts/UserContext';
 import { useHomeConfig } from '../hooks/useDashboardConfig';
+import useCustomizeMode from '../hooks/useCustomizeMode';
+import { resolveHomeConfig } from '../data/dashboardKPIRegistry';
 
 // Data sources
 import { contracts, getSalesMetrics, daysUntilExpiry } from '../data/mock/salesMocks';
@@ -315,6 +320,30 @@ export default function Dashboard() {
   const { heroMetrics: heroConfig, workspaceCards, sections } = useHomeConfig();
   const data = computeDashboard();
 
+  const {
+    isCustomizing,
+    enterCustomize,
+    exitCustomize,
+    draft,
+    updateDraft,
+    saveDraft,
+    resetToDefaults,
+    isDirty,
+    saving,
+    source,
+  } = useCustomizeMode('home');
+
+  // Resolve config from draft when customizing, otherwise use live config
+  const activeHeroConfig = isCustomizing && draft
+    ? resolveHomeConfig(draft).heroMetrics
+    : heroConfig;
+  const activeWorkspaceCards = isCustomizing && draft
+    ? resolveHomeConfig(draft).workspaceCards
+    : workspaceCards;
+  const activeSections = isCustomizing && draft
+    ? resolveHomeConfig(draft).sections
+    : sections;
+
   // Hero metric value map — keyed by registry IDs
   const heroValues = {
     total_apc:          { value: fmtDollar(data.salesMetrics.totalApcAnnual), icon: DollarSign },
@@ -323,62 +352,208 @@ export default function Dashboard() {
     contracts_expiring: { value: String(data.salesMetrics.expiringSoonCount), icon: FileText, color: data.salesMetrics.expiringSoonCount > 0 ? '#DC2626' : undefined },
   };
 
-  // Build visible hero metrics from config, filtered by module access
-  const metrics = heroConfig
-    .filter(m => m.visible !== false && (!m.module || hasModule(m.module)) && heroValues[m.id])
+  // Build hero metrics — show all (including hidden dimmed) when customizing
+  const allHeroMetrics = activeHeroConfig
+    .filter(m => (!m.module || hasModule(m.module)) && heroValues[m.id])
     .map(m => ({
+      id: m.id,
       label: m.label,
       value: heroValues[m.id].value,
       icon: ICON_MAP[m.icon] || heroValues[m.id].icon,
       color: heroValues[m.id].color,
       module: m.module,
+      visible: m.visible !== false,
     }));
 
+  const visibleMetrics = isCustomizing
+    ? allHeroMetrics
+    : allHeroMetrics.filter(m => m.visible);
+
   // Build visible workspace cards from config, filtered by module access
-  const visibleWorkspaces = workspaceCards
-    .filter(c => c.visible !== false && hasModule(c.module) && data.workspaceKPIs[c.module])
-    .map(c => [c.module, data.workspaceKPIs[c.module]]);
+  const allWorkspaces = activeWorkspaceCards
+    .filter(c => hasModule(c.module) && data.workspaceKPIs[c.module])
+    .map(c => ({
+      module: c.module,
+      kpis: data.workspaceKPIs[c.module],
+      visible: c.visible !== false,
+    }));
+
+  const visibleWorkspaces = isCustomizing
+    ? allWorkspaces
+    : allWorkspaces.filter(c => c.visible);
 
   // Attention items and activity filtered by module access
-  const maxAttention = sections.needsAttention?.maxItems ?? 12;
+  const maxAttention = activeSections.needsAttention?.maxItems ?? 12;
   const visibleAttention = data.attentionItems.filter((item) => hasModule(item.dept)).slice(0, maxAttention);
   const visibleActivity = ACTIVITY.filter((item) => hasModule(item.module));
 
-  // Add Needs Attention card (count based on filtered items)
-  if (visibleAttention.length > 0) {
-    metrics.push({
+  // Add Needs Attention card (count based on filtered items) — only in normal mode
+  const displayMetrics = [...visibleMetrics];
+  if (!isCustomizing && visibleAttention.length > 0) {
+    displayMetrics.push({
+      id: '_attention',
       label: 'Needs Attention',
       value: String(visibleAttention.length),
       icon: AlertTriangle,
       color: '#DC2626',
+      visible: true,
     });
   }
 
-  const showAttention = sections.needsAttention?.visible !== false && visibleAttention.length > 0;
-  const showActivity = sections.agentActivity?.visible !== false && visibleActivity.length > 0;
+  const showAttention = activeSections.needsAttention?.visible !== false && visibleAttention.length > 0;
+  const showActivity = activeSections.agentActivity?.visible !== false && visibleActivity.length > 0;
+
+  // ─── Draft helpers ──────────────────────────────────────────────────────────
+
+  function reorderHeroMetrics(newIdOrder) {
+    updateDraft(prev => {
+      const config = prev || {};
+      const currentMetrics = resolveHomeConfig(config).heroMetrics;
+      const metricMap = {};
+      for (const m of currentMetrics) metricMap[m.id] = m;
+      return {
+        ...config,
+        heroMetrics: newIdOrder.map((id, i) => ({
+          ...metricMap[id],
+          order: i,
+        })),
+      };
+    });
+  }
+
+  function toggleHeroMetric(id) {
+    updateDraft(prev => {
+      const config = prev || {};
+      const currentMetrics = resolveHomeConfig(config).heroMetrics;
+      return {
+        ...config,
+        heroMetrics: currentMetrics.map(m =>
+          m.id === id ? { ...m, visible: m.visible === false ? true : false } : m
+        ),
+      };
+    });
+  }
+
+  function renameHeroMetric(id, label) {
+    updateDraft(prev => {
+      const config = prev || {};
+      const currentMetrics = resolveHomeConfig(config).heroMetrics;
+      return {
+        ...config,
+        heroMetrics: currentMetrics.map(m =>
+          m.id === id ? { ...m, label } : m
+        ),
+      };
+    });
+  }
+
+  function reorderWorkspaceCards(newModuleOrder) {
+    updateDraft(prev => {
+      const config = prev || {};
+      const currentCards = resolveHomeConfig(config).workspaceCards;
+      const cardMap = {};
+      for (const c of currentCards) cardMap[c.module] = c;
+      return {
+        ...config,
+        workspaceCards: newModuleOrder.map((mod, i) => ({
+          ...cardMap[mod],
+          order: i,
+        })),
+      };
+    });
+  }
+
+  function toggleWorkspaceCard(module) {
+    updateDraft(prev => {
+      const config = prev || {};
+      const currentCards = resolveHomeConfig(config).workspaceCards;
+      return {
+        ...config,
+        workspaceCards: currentCards.map(c =>
+          c.module === module ? { ...c, visible: c.visible === false ? true : false } : c
+        ),
+      };
+    });
+  }
+
+  function toggleSection(sectionKey) {
+    updateDraft(prev => {
+      const config = prev || {};
+      const currentSections = resolveHomeConfig(config).sections;
+      return {
+        ...config,
+        sections: {
+          ...currentSections,
+          [sectionKey]: {
+            ...currentSections[sectionKey],
+            visible: currentSections[sectionKey]?.visible === false ? true : false,
+          },
+        },
+      };
+    });
+  }
 
   return (
     <div>
+      {/* Customize Toolbar */}
+      {isCustomizing && (
+        <CustomizeToolbar
+          onSave={saveDraft}
+          onCancel={exitCustomize}
+          onReset={resetToDefaults}
+          saving={saving}
+          isDirty={isDirty}
+          source={source}
+        />
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">Dashboard</h1>
-        {isAdmin && (
-          <button
-            onClick={() => setChatOpen(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
-          >
-            <Bot size={16} />
-            Ask Admin Agent
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && !isCustomizing && (
+            <button
+              onClick={enterCustomize}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-secondary-text bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Settings2 size={16} />
+              Customize
+            </button>
+          )}
+          {isAdmin && !isCustomizing && (
+            <button
+              onClick={() => setChatOpen(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+            >
+              <Bot size={16} />
+              Ask Admin Agent
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Hero Metric Cards */}
-      {metrics.length > 0 && (
-        <div className="grid gap-4 mb-8 responsive-metric-grid" style={{ gridTemplateColumns: `repeat(${Math.min(metrics.length, 5)}, minmax(0, 1fr))` }}>
-          {metrics.map((m) => (
-            <MetricCard key={m.label} {...m} />
-          ))}
-        </div>
+      {displayMetrics.length > 0 && (
+        <SortableGrid
+          items={allHeroMetrics.map(m => m.id)}
+          onReorder={reorderHeroMetrics}
+          disabled={!isCustomizing}
+        >
+          <div className="grid gap-4 mb-8 responsive-metric-grid" style={{ gridTemplateColumns: `repeat(${Math.min(displayMetrics.length, 5)}, minmax(0, 1fr))` }}>
+            {displayMetrics.map((m) => (
+              <DraggableWidget
+                key={m.id}
+                id={m.id}
+                isCustomizing={isCustomizing && m.id !== '_attention'}
+                visible={m.visible}
+                label={m.label}
+                onToggleVisible={m.id !== '_attention' ? () => toggleHeroMetric(m.id) : undefined}
+                onRenameLabel={m.id !== '_attention' ? (label) => renameHeroMetric(m.id, label) : undefined}
+              >
+                <MetricCard label={m.label} value={m.value} icon={m.icon} color={m.color} />
+              </DraggableWidget>
+            ))}
+          </div>
+        </SortableGrid>
       )}
 
       {/* Workspace KPI Grid */}
@@ -387,30 +562,71 @@ export default function Dashboard() {
           <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
             Workspace Overview
           </h2>
-          <div className="grid gap-4 mb-8 responsive-metric-grid" style={{ gridTemplateColumns: `repeat(${Math.min(visibleWorkspaces.length, 5)}, minmax(0, 1fr))` }}>
-            {visibleWorkspaces.map(([key, mod]) => (
-              <button
-                key={key}
-                onClick={() => navigate(MODULE_PATHS[key])}
-                className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-sm transition-all"
-                style={{ borderLeftWidth: 4, borderLeftColor: DEPT_COLORS[key] }}
-              >
-                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: DEPT_COLORS[key] }}>
-                  {MODULE_LABELS[key]}
-                </div>
-                {mod.stats.map((stat, i) => (
-                  <div key={i} className="text-sm text-dark-text leading-relaxed">
-                    {stat}
-                  </div>
-                ))}
-              </button>
-            ))}
-          </div>
+          <SortableGrid
+            items={allWorkspaces.map(c => c.module)}
+            onReorder={reorderWorkspaceCards}
+            disabled={!isCustomizing}
+          >
+            <div className="grid gap-4 mb-8 responsive-metric-grid" style={{ gridTemplateColumns: `repeat(${Math.min(visibleWorkspaces.length, 5)}, minmax(0, 1fr))` }}>
+              {visibleWorkspaces.map((ws) => (
+                <DraggableWidget
+                  key={ws.module}
+                  id={ws.module}
+                  isCustomizing={isCustomizing}
+                  visible={ws.visible}
+                  onToggleVisible={() => toggleWorkspaceCard(ws.module)}
+                >
+                  <button
+                    onClick={() => !isCustomizing && navigate(MODULE_PATHS[ws.module])}
+                    className="w-full bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-sm transition-all"
+                    style={{ borderLeftWidth: 4, borderLeftColor: DEPT_COLORS[ws.module] }}
+                    disabled={isCustomizing}
+                  >
+                    <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: DEPT_COLORS[ws.module] }}>
+                      {MODULE_LABELS[ws.module]}
+                    </div>
+                    {ws.kpis.stats.map((stat, i) => (
+                      <div key={i} className="text-sm text-dark-text leading-relaxed">
+                        {stat}
+                      </div>
+                    ))}
+                  </button>
+                </DraggableWidget>
+              ))}
+            </div>
+          </SortableGrid>
         </>
       )}
 
+      {/* Section toggles (customize mode) */}
+      {isCustomizing && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+          <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-3">Section Visibility</h3>
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 text-sm text-dark-text cursor-pointer">
+              <input
+                type="checkbox"
+                checked={activeSections.needsAttention?.visible !== false}
+                onChange={() => toggleSection('needsAttention')}
+                className="rounded border-gray-300 text-aa-blue focus:ring-aa-blue"
+              />
+              Needs Attention
+            </label>
+            <label className="flex items-center gap-2 text-sm text-dark-text cursor-pointer">
+              <input
+                type="checkbox"
+                checked={activeSections.agentActivity?.visible !== false}
+                onChange={() => toggleSection('agentActivity')}
+                className="rounded border-gray-300 text-aa-blue focus:ring-aa-blue"
+              />
+              Agent Activity
+            </label>
+          </div>
+        </div>
+      )}
+
       {/* Bottom section — Activity + Attention */}
-      {(showActivity || showAttention) && (
+      {(showActivity || showAttention) && !isCustomizing && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           {/* Left column — Recent Agent Activity */}
           {showActivity && (

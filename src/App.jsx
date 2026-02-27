@@ -310,7 +310,7 @@ export default function App() {
                     <Route
                       path="/admin/dashboard-settings"
                       element={
-                        <ProtectedRoute adminOnly>
+                        <ProtectedRoute superAdminOnly>
                           <DashboardSettings />
                         </ProtectedRoute>
                       }
