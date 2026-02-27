@@ -27,6 +27,7 @@ import TBITracker from './pages/sales/TBITracker';
 import QBUBuilder from './pages/tools/QBUBuilder';
 import SalesDeckBuilder from './pages/tools/SalesDeckBuilder';
 import AgentManagement from './pages/admin/AgentManagement';
+import KnowledgePage from './pages/admin/KnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
 import UserManagement from './pages/admin/UserManagement';
 import LoginPage from './pages/auth/LoginPage';
@@ -227,6 +228,15 @@ export default function App() {
                       element={
                         <ProtectedRoute adminOnly>
                           <UserManagement />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="/admin/knowledge"
+                      element={
+                        <ProtectedRoute adminOnly>
+                          <KnowledgePage />
                         </ProtectedRoute>
                       }
                     />

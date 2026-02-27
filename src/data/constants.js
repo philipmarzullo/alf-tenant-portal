@@ -67,6 +67,7 @@ export const NAV_ITEMS = [
     group: 'ADMIN',
     items: [
       { label: 'User Management', path: '/admin/users', icon: 'UserCog', moduleKey: 'admin' },
+      { label: 'Knowledge Base', path: '/admin/knowledge', icon: 'BookOpen', moduleKey: 'admin' },
       { label: 'Agent Management', path: '/admin/agents', icon: 'Bot', moduleKey: 'superAdmin' },
       { label: 'Settings', path: '/admin/settings', icon: 'Settings', moduleKey: 'superAdmin' },
     ],
