@@ -3,6 +3,11 @@ import { getFreshToken } from '../lib/supabase';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
+// Module-level tenant context — set once by BrandingProvider, used as
+// default fallback so no call site needs to pass tenantContext explicitly.
+let _tenantContext = null;
+export function setTenantContext(ctx) { _tenantContext = ctx; }
+
 /**
  * Resolve the tenant_id for API calls from the VITE_TENANT_ID env var.
  * Each tenant deploy has its own TENANT_ID set at build/deploy time.
@@ -21,8 +26,9 @@ function getTenantId() {
  * @returns {Promise<string>} - The assistant's response text
  */
 export async function callAgent(agentKey, actionKey, data, tenantContext) {
-  const agent = getAgent(agentKey, tenantContext);
-  const action = getAgentAction(agentKey, actionKey, tenantContext);
+  const ctx = tenantContext || _tenantContext;
+  const agent = getAgent(agentKey, ctx);
+  const action = getAgentAction(agentKey, actionKey, ctx);
 
   if (!agent || !action) {
     throw new Error(`Agent or action not found: ${agentKey}/${actionKey}`);
@@ -33,7 +39,7 @@ export async function callAgent(agentKey, actionKey, data, tenantContext) {
 
   // No session or no backend — fall back to mock responses
   if (!token) {
-    return getMockResponse(agentKey, actionKey, data, tenantContext);
+    return getMockResponse(agentKey, actionKey, data, ctx);
   }
 
   const tenantId = getTenantId();
@@ -67,7 +73,8 @@ export async function callAgent(agentKey, actionKey, data, tenantContext) {
  * Chat with an agent (multi-turn) through the backend proxy.
  */
 export async function chatWithAgent(agentKey, messages, tenantContext) {
-  const agent = getAgent(agentKey, tenantContext);
+  const ctx = tenantContext || _tenantContext;
+  const agent = getAgent(agentKey, ctx);
   if (!agent) throw new Error(`Agent not found: ${agentKey}`);
 
   const token = await getFreshToken();
@@ -205,7 +212,7 @@ I hope you're doing well. I'm reaching out as a reminder that we still need the 
 We understand life gets busy, and we're here to help if you have any questions or need assistance obtaining these documents. Please submit them at your earliest convenience to ensure continued coverage.
 
 You can submit documents via:
-- Email: hr@aaefs.com
+- Email: hr@yourcompany.com
 - E-Hub upload portal
 - In person to the HR office
 
@@ -312,7 +319,7 @@ This analysis covers inspection compliance across the operations team. Key findi
 1. Safety inspection rates range from 86.3% to 94.2% — company average is approximately 89.3%
 2. Commercial inspection rates range from 88.7% to 96.1% — company average is approximately 91.8%
 3. VPs below the 90% safety target need immediate inspection catch-up plans
-4. Best performer for combined compliance: Edita Gargovic (94.2% safety, 96.1% commercial)
+4. Best performer for combined compliance: Elena Grant (94.2% safety, 96.1% commercial)
 
 Recommended actions:
 • Schedule weekly inspection cadence reviews for VPs below target
@@ -508,7 +515,7 @@ Service Type: ${data.serviceType || '[N/A]'}
 ${data.apcPriorYear && data.apcAnnual ? `Year-over-Year Variance: ${(((Number(String(data.apcAnnual).replace(/[^0-9]/g, '')) - Number(String(data.apcPriorYear).replace(/[^0-9]/g, ''))) / Number(String(data.apcPriorYear).replace(/[^0-9]/g, ''))) * 100).toFixed(1)}%` : '[PLACEHOLDER: need both years for calculation]'}
 
 LIKELY DRIVERS
-• Union wage increases (32BJ, SEIU schedules applied annually)
+• Union wage increases (SEIU, IUOE schedules applied annually)
 • CPI-based escalation clauses in the contract
 • Scope adjustments from prior-period change orders
 • Benefits cost pass-through increases
@@ -609,7 +616,7 @@ SLIDE 5: PEOPLE FIRST™ & ESOP
 • People First™ is our operating philosophy — employee dignity drives service quality
 • SYNC task-based model: 5 specialist roles for clarity and accountability
 • 25+ years managing union workforces seamlessly
-${data.specialRequirements && data.specialRequirements.toLowerCase().includes('union') ? '• Direct experience with 32BJ, SEIU, and other major building service unions in the market' : ''}
+${data.specialRequirements && data.specialRequirements.toLowerCase().includes('union') ? '• Direct experience with SEIU, IUOE, and other major building service unions in the market' : ''}
 
 Presenter Notes: People First™ is not a slogan — it's how we operate. Give a concrete example: "When our team members feel respected and valued, they take ownership of your facility. That's why our frontline retention is among the highest in the industry."
 

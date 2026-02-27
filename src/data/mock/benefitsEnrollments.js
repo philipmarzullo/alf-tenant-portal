@@ -14,7 +14,7 @@ export const benefitsEnrollments = [
   },
   {
     id: 2,
-    name: 'Maria Santos',
+    name: 'Nina Kowalski',
     hireDate: 'Jan 15, 2026',
     daysRemaining: 21,
     status: 'open',
@@ -31,7 +31,7 @@ export const benefitsEnrollments = [
   },
   {
     id: 3,
-    name: 'Aisha Patel',
+    name: 'Priya Sharma',
     hireDate: 'Dec 20, 2025',
     daysRemaining: 6,
     status: 'open',
@@ -49,7 +49,7 @@ export const benefitsEnrollments = [
   },
   {
     id: 4,
-    name: 'Tomás Rivera',
+    name: 'Marco Delgado',
     hireDate: 'Jan 5, 2026',
     daysRemaining: 12,
     status: 'open',

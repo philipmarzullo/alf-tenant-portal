@@ -11,10 +11,10 @@ const METRICS = [
 ];
 
 const TASKS = [
-  { id: 1, priority: '🔴', task: 'FMLA certification overdue', employee: 'James Rodriguez', type: 'Medical Leave', dueDate: 'Feb 20', status: 'overdue', action: 'Follow Up' },
-  { id: 2, priority: '🟡', task: 'Benefits enrollment closing', employee: 'Aisha Patel', type: 'Benefits', dueDate: 'Mar 1', status: 'pending', action: 'Review' },
+  { id: 1, priority: '🔴', task: 'FMLA certification overdue', employee: 'Jason Blake', type: 'Medical Leave', dueDate: 'Feb 20', status: 'overdue', action: 'Follow Up' },
+  { id: 2, priority: '🟡', task: 'Benefits enrollment closing', employee: 'Priya Sharma', type: 'Benefits', dueDate: 'Mar 1', status: 'pending', action: 'Review' },
   { id: 3, priority: '🟢', task: 'Return-to-work check-in', employee: 'Carlos Mendez', type: 'Personal Leave', dueDate: 'Mar 10', status: 'inProgress', action: 'View' },
-  { id: 4, priority: '🟡', task: 'Union rate change pending — 32BJ Bronx Residential', employee: '(batch)', type: 'Pay Rate', dueDate: 'Mar 15', status: 'pending', action: 'Process' },
+  { id: 4, priority: '🟡', task: 'Union rate change pending — Local 100 North Residential', employee: '(batch)', type: 'Pay Rate', dueDate: 'Mar 15', status: 'pending', action: 'Process' },
   { id: 5, priority: '🔴', task: 'Pay rate VP approval stale — 5 days', employee: 'David Kim', type: 'Pay Rate', dueDate: 'Feb 19', status: 'overdue', action: 'Escalate' },
 ];
 

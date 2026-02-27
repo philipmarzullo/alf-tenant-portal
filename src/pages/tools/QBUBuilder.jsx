@@ -437,7 +437,7 @@ export default function QBUBuilder() {
             </div>
             <div><Label>Date</Label><Input value={form.cover.date} onChange={(v) => updateSection('cover', { date: v })} placeholder="e.g., March 2026" /></div>
             <div><Label>Job Number</Label><Input value={form.cover.jobNumber} onChange={(v) => updateSection('cover', { jobNumber: v })} placeholder="e.g., J-2045" /></div>
-            <div><Label>Region VP</Label><Input value={form.cover.regionVP} onChange={(v) => updateSection('cover', { regionVP: v })} placeholder="e.g., Eric Wheeler" /></div>
+            <div><Label>Region VP</Label><Input value={form.cover.regionVP} onChange={(v) => updateSection('cover', { regionVP: v })} placeholder="e.g., Emily Walsh" /></div>
           </div>
 
           <SectionHeading>A&A Team Attendees</SectionHeading>

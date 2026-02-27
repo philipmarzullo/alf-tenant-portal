@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { setTenantContext } from '../agents/api';
 
 const BrandingContext = createContext(null);
 
@@ -58,6 +59,14 @@ export function BrandingProvider({ children }) {
         });
       });
   }, []);
+
+  // Keep the agent API layer in sync with the tenant's company name so
+  // every callAgent / chatWithAgent automatically uses the right context.
+  useEffect(() => {
+    if (brand.companyName) {
+      setTenantContext({ companyName: brand.companyName });
+    }
+  }, [brand.companyName]);
 
   return (
     <BrandingContext.Provider value={brand}>

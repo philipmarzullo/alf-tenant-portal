@@ -311,7 +311,7 @@ export default function UserManagement() {
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
-              placeholder="email@aaefs.com"
+              placeholder="email@yourcompany.com"
               disabled={!!editingUser}
             />
           </div>

@@ -1,7 +1,7 @@
 export const vpSummary = [
   {
     id: 'CR',
-    vp: 'Carlos Rivera',
+    vp: 'Chris Reynolds',
     initials: 'CR',
     jobCount: 156,
     revenueInspectedSafety: 89.9,
@@ -16,7 +16,7 @@ export const vpSummary = [
   },
   {
     id: 'EG',
-    vp: 'Edita Gargovic',
+    vp: 'Elena Grant',
     initials: 'EG',
     jobCount: 15,
     revenueInspectedSafety: 94.2,
@@ -31,7 +31,7 @@ export const vpSummary = [
   },
   {
     id: 'EQ',
-    vp: 'Elgar Quijandria',
+    vp: 'Eduardo Quinn',
     initials: 'EQ',
     jobCount: 51,
     revenueInspectedSafety: 91.5,
@@ -46,7 +46,7 @@ export const vpSummary = [
   },
   {
     id: 'EW',
-    vp: 'Eric Wheeler',
+    vp: 'Emily Walsh',
     initials: 'EW',
     jobCount: 204,
     revenueInspectedSafety: 86.3,
@@ -61,7 +61,7 @@ export const vpSummary = [
   },
   {
     id: 'JR',
-    vp: 'Jaimie Restrepo',
+    vp: 'Jordan Reeves',
     initials: 'JR',
     jobCount: 152,
     revenueInspectedSafety: 92.8,

@@ -86,9 +86,9 @@ const EMPHASIS_OPTIONS = [
 ];
 
 const RECENT = [
-  { id: 1, prospect: 'Columbia University', industry: 'Education — Higher Ed', created: 'Feb 10, 2026', status: 'complete' },
-  { id: 2, prospect: 'Brookfield Properties', industry: 'Commercial Office', created: 'Jan 22, 2026', status: 'complete' },
-  { id: 3, prospect: 'Mount Sinai Health System', industry: 'Healthcare — Hospital', created: 'Jan 8, 2026', status: 'complete' },
+  { id: 1, prospect: 'Commonwealth University', industry: 'Education — Higher Ed', created: 'Feb 10, 2026', status: 'complete' },
+  { id: 2, prospect: 'Sterling Property Group', industry: 'Commercial Office', created: 'Jan 22, 2026', status: 'complete' },
+  { id: 3, prospect: 'Metro General Health System', industry: 'Healthcare — Hospital', created: 'Jan 8, 2026', status: 'complete' },
 ];
 
 function CollapsibleSection({ title, subtitle, defaultOpen = false, children }) {
@@ -223,7 +223,7 @@ export default function SalesDeckBuilder() {
                   type="text"
                   value={form.companyName}
                   onChange={(e) => updateField('companyName', e.target.value)}
-                  placeholder="e.g., Columbia University"
+                  placeholder="e.g., Greenfield University"
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
                 />
               </div>
@@ -233,7 +233,7 @@ export default function SalesDeckBuilder() {
                   type="text"
                   value={form.siteName}
                   onChange={(e) => updateField('siteName', e.target.value)}
-                  placeholder="e.g., Morningside Heights Campus"
+                  placeholder="e.g., Main Campus"
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
                 />
               </div>
@@ -422,7 +422,7 @@ export default function SalesDeckBuilder() {
                 <textarea
                   value={form.specialRequirements}
                   onChange={(e) => updateField('specialRequirements', e.target.value)}
-                  placeholder="e.g., Union environment (32BJ), LEED-certified building, 24/7 operations, security clearance required, specific compliance needs..."
+                  placeholder="e.g., Union environment, LEED-certified building, 24/7 operations, security clearance required, specific compliance needs..."
                   rows={3}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue resize-none"
                 />
