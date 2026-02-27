@@ -68,6 +68,7 @@ export const NAV_ITEMS = [
     items: [
       { label: 'User Management', path: '/admin/users', icon: 'UserCog', moduleKey: 'admin' },
       { label: 'Knowledge Base', path: '/admin/knowledge', icon: 'BookOpen', moduleKey: 'admin' },
+      { label: 'Automation Insights', path: '/admin/automation', icon: 'Zap', moduleKey: 'automation' },
       { label: 'Agent Management', path: '/admin/agents', icon: 'Bot', moduleKey: 'superAdmin' },
       { label: 'Settings', path: '/admin/settings', icon: 'Settings', moduleKey: 'superAdmin' },
     ],

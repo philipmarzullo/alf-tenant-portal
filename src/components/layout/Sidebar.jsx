@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
-  BookOpen, ChevronLeft, ChevronRight, LogOut,
+  BookOpen, Zap, ChevronLeft, ChevronRight, LogOut,
 } from 'lucide-react';
 import { NAV_ITEMS } from '../../data/constants';
 import { useUser } from '../../contexts/UserContext';
@@ -12,7 +12,7 @@ import { useTenantConfig } from '../../contexts/TenantConfigContext';
 const ICON_MAP = {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
-  BookOpen,
+  BookOpen, Zap,
 };
 
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {

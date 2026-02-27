@@ -31,6 +31,7 @@ import AgentManagement from './pages/admin/AgentManagement';
 import KnowledgePage from './pages/admin/KnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
 import UserManagement from './pages/admin/UserManagement';
+import AutomationInsightsPage from './pages/admin/AutomationInsightsPage';
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
@@ -240,6 +241,15 @@ export default function App() {
                       element={
                         <ProtectedRoute adminOnly>
                           <KnowledgePage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="/admin/automation"
+                      element={
+                        <ProtectedRoute moduleKey="automation">
+                          <AutomationInsightsPage />
                         </ProtectedRoute>
                       }
                     />
