@@ -1,17 +1,25 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Bot } from 'lucide-react';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
+import { useTenantConfig } from '../../contexts/TenantConfigContext';
+import { MODULE_REGISTRY } from '../../data/moduleRegistry';
 
-const TABS = [
-  { label: 'Overview', path: '/sales' },
-  { label: 'Contracts', path: '/sales/contracts' },
-  { label: 'APC Tracker', path: '/sales/apc' },
-  { label: 'TBI Tracker', path: '/sales/tbi' },
-];
+const ALL_TABS = MODULE_REGISTRY.sales.pages.map((p) => ({
+  key: p.key,
+  label: p.label,
+  path: p.path,
+}));
 
 export default function SalesLayout() {
   const [chatOpen, setChatOpen] = useState(false);
+  const { getEnabledPages } = useTenantConfig();
+
+  const tabs = useMemo(() => {
+    const enabledKeys = getEnabledPages('sales');
+    if (!enabledKeys) return ALL_TABS;
+    return ALL_TABS.filter((t) => enabledKeys.includes(t.key));
+  }, [getEnabledPages]);
 
   return (
     <div>
@@ -28,7 +36,7 @@ export default function SalesLayout() {
 
       {/* Tab nav */}
       <div className="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <NavLink
             key={tab.path}
             to={tab.path}

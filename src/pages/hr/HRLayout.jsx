@@ -1,19 +1,26 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Bot } from 'lucide-react';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
+import { useTenantConfig } from '../../contexts/TenantConfigContext';
+import { MODULE_REGISTRY } from '../../data/moduleRegistry';
 
-const TABS = [
-  { label: 'Overview', path: '/hr' },
-  { label: 'Benefits', path: '/hr/benefits' },
-  { label: 'Pay Rate Changes', path: '/hr/pay-rates' },
-  { label: 'Leave Management', path: '/hr/leave' },
-  { label: 'Unemployment', path: '/hr/unemployment' },
-  { label: 'Union Calendar', path: '/hr/union-calendar' },
-];
+const ALL_TABS = MODULE_REGISTRY.hr.pages.map((p) => ({
+  key: p.key,
+  label: p.label,
+  path: p.path,
+}));
 
 export default function HRLayout() {
   const [chatOpen, setChatOpen] = useState(false);
+  const { getEnabledPages } = useTenantConfig();
+
+  const tabs = useMemo(() => {
+    const enabledKeys = getEnabledPages('hr');
+    // null = no config loaded, show all (backwards compat)
+    if (!enabledKeys) return ALL_TABS;
+    return ALL_TABS.filter((t) => enabledKeys.includes(t.key));
+  }, [getEnabledPages]);
 
   return (
     <div>
@@ -30,7 +37,7 @@ export default function HRLayout() {
 
       {/* Tab nav */}
       <div className="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <NavLink
             key={tab.path}
             to={tab.path}
@@ -46,10 +53,6 @@ export default function HRLayout() {
             {tab.label}
           </NavLink>
         ))}
-        {/* Extensibility hint */}
-        <div className="px-3 py-2.5 text-sm text-gray-300 border-b-2 border-transparent -mb-px">
-          + More
-        </div>
       </div>
 
       <Outlet />

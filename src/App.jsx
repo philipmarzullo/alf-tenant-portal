@@ -7,6 +7,7 @@ import PageWrapper from './components/layout/PageWrapper';
 import useMediaQuery from './hooks/useMediaQuery';
 import { useUser } from './contexts/UserContext';
 import { useAuth } from './contexts/AuthContext';
+import { useTenantConfig } from './contexts/TenantConfigContext';
 
 import Dashboard from './pages/Dashboard';
 import HRLayout from './pages/hr/HRLayout';
@@ -105,11 +106,13 @@ function AuthGate({ children }) {
   return children;
 }
 
-function ProtectedRoute({ moduleKey, adminOnly, superAdminOnly, children }) {
+function ProtectedRoute({ moduleKey, pageKey, adminOnly, superAdminOnly, children }) {
   const { hasModule, isAdmin, isSuperAdmin } = useUser();
+  const { hasPage } = useTenantConfig();
   if (superAdminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
   if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/" replace />;
+  if (moduleKey && pageKey && !hasPage(moduleKey, pageKey)) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -157,11 +160,11 @@ export default function App() {
                       }
                     >
                       <Route index element={<HROverview />} />
-                      <Route path="benefits" element={<Benefits />} />
-                      <Route path="pay-rates" element={<PayRateChanges />} />
-                      <Route path="leave" element={<LeaveManagement />} />
-                      <Route path="unemployment" element={<Unemployment />} />
-                      <Route path="union-calendar" element={<UnionCalendar />} />
+                      <Route path="benefits" element={<ProtectedRoute moduleKey="hr" pageKey="benefits"><Benefits /></ProtectedRoute>} />
+                      <Route path="pay-rates" element={<ProtectedRoute moduleKey="hr" pageKey="pay-rates"><PayRateChanges /></ProtectedRoute>} />
+                      <Route path="leave" element={<ProtectedRoute moduleKey="hr" pageKey="leave"><LeaveManagement /></ProtectedRoute>} />
+                      <Route path="unemployment" element={<ProtectedRoute moduleKey="hr" pageKey="unemployment"><Unemployment /></ProtectedRoute>} />
+                      <Route path="union-calendar" element={<ProtectedRoute moduleKey="hr" pageKey="union-calendar"><UnionCalendar /></ProtectedRoute>} />
                     </Route>
 
                     <Route
@@ -200,9 +203,9 @@ export default function App() {
                       }
                     >
                       <Route index element={<SalesOverview />} />
-                      <Route path="contracts" element={<SalesContracts />} />
-                      <Route path="apc" element={<APCTracker />} />
-                      <Route path="tbi" element={<TBITracker />} />
+                      <Route path="contracts" element={<ProtectedRoute moduleKey="sales" pageKey="contracts"><SalesContracts /></ProtectedRoute>} />
+                      <Route path="apc" element={<ProtectedRoute moduleKey="sales" pageKey="apc"><APCTracker /></ProtectedRoute>} />
+                      <Route path="tbi" element={<ProtectedRoute moduleKey="sales" pageKey="tbi"><TBITracker /></ProtectedRoute>} />
                     </Route>
 
                     <Route
