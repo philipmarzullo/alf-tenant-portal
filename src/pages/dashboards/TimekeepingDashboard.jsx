@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Loader2, CheckCircle, AlertTriangle, Edit3, Clock } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import useDashboardData from '../../hooks/useDashboardData';
+import useDashboardConfig from '../../hooks/useDashboardConfig';
 import DashboardFilters from '../../components/dashboards/DashboardFilters';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 import KPICard from '../../components/dashboards/KPICard';
@@ -13,9 +14,15 @@ const STATUS_COLORS = {
   exception: '#E12F2C',
 };
 
+const ICON_MAP = { CheckCircle, Clock, Edit3, AlertTriangle };
+
 export default function TimekeepingDashboard() {
   const [filters, setFilters] = useState({ dateFrom: '2025-01-01', dateTo: '2025-12-31', jobIds: null });
   const { data, loading, error } = useDashboardData('timekeeping', filters);
+  const { kpis, charts } = useDashboardConfig('timekeeping');
+
+  const chartLabel = (id) => charts.find(c => c.id === id)?.label ?? id;
+  const chartVisible = (id) => charts.find(c => c.id === id)?.visible !== false;
 
   const metrics = useMemo(() => {
     if (!data?.timekeeping?.length) return null;
@@ -89,66 +96,100 @@ export default function TimekeepingDashboard() {
   }
   if (!metrics) return <DashboardEmptyState domain="timekeeping" />;
 
+  const kpiCards = {
+    punch_acceptance: {
+      value: `${metrics.acceptancePct}%`,
+      icon: CheckCircle,
+      trend: Number(metrics.acceptancePct) >= 90 ? 'up' : 'down',
+      trendLabel: Number(metrics.acceptancePct) >= 90 ? 'On target' : 'Below target',
+    },
+    incomplete: { value: metrics.statuses.incomplete.toLocaleString(), icon: Clock },
+    manual_edits: { value: metrics.statuses.manual_edit.toLocaleString(), icon: Edit3 },
+    exceptions: {
+      value: metrics.statuses.exception.toLocaleString(),
+      icon: AlertTriangle,
+      trend: metrics.statuses.exception > 50 ? 'down' : 'up',
+      trendLabel: `${((metrics.statuses.exception / metrics.total) * 100).toFixed(1)}% of punches`,
+    },
+  };
+
+  const visibleKpis = kpis.filter(k => k.visible !== false && kpiCards[k.id]);
+
   return (
     <div className="space-y-6">
       <DashboardFilters filters={filters} onChange={setFilters} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard label="Punch Acceptance" value={`${metrics.acceptancePct}%`} icon={CheckCircle} trend={Number(metrics.acceptancePct) >= 90 ? 'up' : 'down'} trendLabel={Number(metrics.acceptancePct) >= 90 ? 'On target' : 'Below target'} />
-        <KPICard label="Incomplete" value={metrics.statuses.incomplete.toLocaleString()} icon={Clock} />
-        <KPICard label="Manual Edits" value={metrics.statuses.manual_edit.toLocaleString()} icon={Edit3} />
-        <KPICard label="Exceptions" value={metrics.statuses.exception.toLocaleString()} icon={AlertTriangle} trend={metrics.statuses.exception > 50 ? 'down' : 'up'} trendLabel={`${((metrics.statuses.exception / metrics.total) * 100).toFixed(1)}% of punches`} />
+        {visibleKpis.map(k => {
+          const card = kpiCards[k.id];
+          return (
+            <KPICard
+              key={k.id}
+              label={k.label}
+              value={card.value}
+              icon={ICON_MAP[k.icon] || card.icon}
+              trend={card.trend}
+              trendLabel={card.trendLabel}
+            />
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-dark-text mb-4">Acceptance Rate Trend</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={metrics.trendChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} domain={[80, 100]} tickFormatter={(v) => `${v}%`} />
-              <Tooltip formatter={(v) => `${v}%`} />
-              <Line type="monotone" dataKey="acceptance" stroke="#009ADE" strokeWidth={2} name="Acceptance %" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        {chartVisible('acceptance_rate_trend') && (
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('acceptance_rate_trend')}</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={metrics.trendChart}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} domain={[80, 100]} tickFormatter={(v) => `${v}%`} />
+                <Tooltip formatter={(v) => `${v}%`} />
+                <Line type="monotone" dataKey="acceptance" stroke="#009ADE" strokeWidth={2} name="Acceptance %" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
+        {chartVisible('exceptions_by_site') && (
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('exceptions_by_site')}</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={metrics.exceptionChart}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="exceptions" fill="#E12F2C" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {chartVisible('punch_status_breakdown') && (
         <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-dark-text mb-4">Exceptions by Site</h3>
+          <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('punch_status_breakdown')}</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={metrics.exceptionChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
+            <PieChart>
+              <Pie
+                data={metrics.statusPieChart}
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                dataKey="value"
+                nameKey="name"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {metrics.statusPieChart.map((entry, i) => (
+                  <Cell key={i} fill={entry.fill} />
+                ))}
+              </Pie>
               <Tooltip />
-              <Bar dataKey="exceptions" fill="#E12F2C" radius={[4, 4, 0, 0]} />
-            </BarChart>
+            </PieChart>
           </ResponsiveContainer>
         </div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-dark-text mb-4">Punch Status Breakdown</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <PieChart>
-            <Pie
-              data={metrics.statusPieChart}
-              cx="50%"
-              cy="50%"
-              outerRadius={100}
-              dataKey="value"
-              nameKey="name"
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-            >
-              {metrics.statusPieChart.map((entry, i) => (
-                <Cell key={i} fill={entry.fill} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import TaskCard from '../components/shared/TaskCard';
 import AgentChatPanel from '../components/shared/AgentChatPanel';
 import { DEPT_COLORS } from '../data/constants';
 import { useUser } from '../contexts/UserContext';
+import { useHomeConfig } from '../hooks/useDashboardConfig';
 
 // Data sources
 import { contracts, getSalesMetrics, daysUntilExpiry } from '../data/mock/salesMocks';
@@ -16,6 +17,9 @@ import { leaveCases } from '../data/mock/leaveCases';
 import { payRateChanges } from '../data/mock/payRateChanges';
 import { unionCalendar } from '../data/mock/unionCalendar';
 import { vpSummary, getOpsSummaryMetrics } from '../data/mock/operationsMocks';
+
+// --- Icon map for config-driven rendering ---
+const ICON_MAP = { DollarSign, HardHat, Clock, FileText, TrendingUp, AlertTriangle };
 
 // --- Helpers ---
 
@@ -228,15 +232,11 @@ function computeDashboard() {
   const priorityOrder = { high: 0, medium: 1, low: 2 };
   attentionItems.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 
-  // Count total urgent items (high priority + medium)
-  const needsAttentionCount = attentionItems.length;
-
   return {
     salesMetrics,
     opsMetrics,
     arTotal,
-    attentionItems: attentionItems.slice(0, 12),
-    needsAttentionCount,
+    attentionItems,
     // Workspace KPI summaries
     workspaceKPIs: {
       hr: {
@@ -312,19 +312,36 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
   const { hasModule, isAdmin } = useUser();
+  const { heroMetrics: heroConfig, workspaceCards, sections } = useHomeConfig();
   const data = computeDashboard();
 
-  // Filter everything by module access
-  const allMetrics = [
-    { label: 'Total Annual APC', value: fmtDollar(data.salesMetrics.totalApcAnnual), icon: DollarSign, module: 'sales' },
-    { label: 'Total Job Count', value: String(data.opsMetrics.totalJobs), icon: HardHat, module: 'ops' },
-    { label: 'Outstanding AR', value: fmtDollar(data.arTotal), icon: Clock, module: 'finance' },
-    { label: 'Contracts Expiring (90d)', value: String(data.salesMetrics.expiringSoonCount), icon: FileText, color: data.salesMetrics.expiringSoonCount > 0 ? '#DC2626' : undefined, module: 'sales' },
-  ];
-  const metrics = allMetrics.filter((m) => hasModule(m.module));
+  // Hero metric value map — keyed by registry IDs
+  const heroValues = {
+    total_apc:          { value: fmtDollar(data.salesMetrics.totalApcAnnual), icon: DollarSign },
+    total_jobs:         { value: String(data.opsMetrics.totalJobs), icon: HardHat },
+    outstanding_ar:     { value: fmtDollar(data.arTotal), icon: Clock },
+    contracts_expiring: { value: String(data.salesMetrics.expiringSoonCount), icon: FileText, color: data.salesMetrics.expiringSoonCount > 0 ? '#DC2626' : undefined },
+  };
 
-  const visibleWorkspaces = Object.entries(data.workspaceKPIs).filter(([key]) => hasModule(key));
-  const visibleAttention = data.attentionItems.filter((item) => hasModule(item.dept));
+  // Build visible hero metrics from config, filtered by module access
+  const metrics = heroConfig
+    .filter(m => m.visible !== false && (!m.module || hasModule(m.module)) && heroValues[m.id])
+    .map(m => ({
+      label: m.label,
+      value: heroValues[m.id].value,
+      icon: ICON_MAP[m.icon] || heroValues[m.id].icon,
+      color: heroValues[m.id].color,
+      module: m.module,
+    }));
+
+  // Build visible workspace cards from config, filtered by module access
+  const visibleWorkspaces = workspaceCards
+    .filter(c => c.visible !== false && hasModule(c.module) && data.workspaceKPIs[c.module])
+    .map(c => [c.module, data.workspaceKPIs[c.module]]);
+
+  // Attention items and activity filtered by module access
+  const maxAttention = sections.needsAttention?.maxItems ?? 12;
+  const visibleAttention = data.attentionItems.filter((item) => hasModule(item.dept)).slice(0, maxAttention);
   const visibleActivity = ACTIVITY.filter((item) => hasModule(item.module));
 
   // Add Needs Attention card (count based on filtered items)
@@ -336,6 +353,9 @@ export default function Dashboard() {
       color: '#DC2626',
     });
   }
+
+  const showAttention = sections.needsAttention?.visible !== false && visibleAttention.length > 0;
+  const showActivity = sections.agentActivity?.visible !== false && visibleActivity.length > 0;
 
   return (
     <div>
@@ -390,11 +410,11 @@ export default function Dashboard() {
       )}
 
       {/* Bottom section — Activity + Attention */}
-      {(visibleActivity.length > 0 || visibleAttention.length > 0) && (
+      {(showActivity || showAttention) && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           {/* Left column — Recent Agent Activity */}
-          {visibleActivity.length > 0 && (
-            <div className={visibleAttention.length > 0 ? 'md:col-span-3' : 'md:col-span-5'}>
+          {showActivity && (
+            <div className={showAttention ? 'md:col-span-3' : 'md:col-span-5'}>
               <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
                 Recent Agent Activity
               </h2>
@@ -415,8 +435,8 @@ export default function Dashboard() {
           )}
 
           {/* Right column — Needs Attention (compact) */}
-          {visibleAttention.length > 0 && (
-            <div className={visibleActivity.length > 0 ? 'md:col-span-2' : 'md:col-span-5'}>
+          {showAttention && (
+            <div className={showActivity ? 'md:col-span-2' : 'md:col-span-5'}>
               <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
                 Needs Attention
               </h2>

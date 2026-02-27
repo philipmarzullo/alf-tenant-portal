@@ -1,16 +1,22 @@
 import { useState, useMemo } from 'react';
-import { Loader2, DollarSign, Clock, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Loader2, DollarSign, Clock, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import useDashboardData from '../../hooks/useDashboardData';
+import useDashboardConfig from '../../hooks/useDashboardConfig';
 import DashboardFilters from '../../components/dashboards/DashboardFilters';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 import KPICard from '../../components/dashboards/KPICard';
 
 const COLORS = ['#009ADE', '#E12F2C', '#5A5D62', '#16A34A'];
+const ICON_MAP = { DollarSign, AlertTriangle, Clock };
 
 export default function LaborDashboard() {
   const [filters, setFilters] = useState({ dateFrom: '2025-01-01', dateTo: '2025-12-31', jobIds: null });
   const { data, loading, error } = useDashboardData('labor', filters);
+  const { kpis, charts } = useDashboardConfig('labor');
+
+  const chartLabel = (id) => charts.find(c => c.id === id)?.label ?? id;
+  const chartVisible = (id) => charts.find(c => c.id === id)?.visible !== false;
 
   const metrics = useMemo(() => {
     if (!data?.labor?.length) return null;
@@ -98,68 +104,93 @@ export default function LaborDashboard() {
 
   const varianceTrend = Number(metrics.variancePct) > 0 ? 'down' : 'up';
 
+  // Build visible KPI cards in config order
+  const kpiCards = {
+    budget: { value: `$${(metrics.totalBudget / 1000).toFixed(0)}K`, icon: DollarSign },
+    actual: { value: `$${(metrics.totalActual / 1000).toFixed(0)}K`, icon: DollarSign },
+    variance: { value: `${metrics.variancePct}%`, icon: AlertTriangle, trend: varianceTrend, trendLabel: Number(metrics.variancePct) > 0 ? 'Over budget' : 'Under budget' },
+    ot_hours: { value: metrics.totalOTHours.toLocaleString(), icon: Clock, trendLabel: `${metrics.otPct}% of total hours` },
+  };
+
+  const visibleKpis = kpis.filter(k => k.visible !== false && kpiCards[k.id]);
+
   return (
     <div className="space-y-6">
       <DashboardFilters filters={filters} onChange={setFilters} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard label="Budget" value={`$${(metrics.totalBudget / 1000).toFixed(0)}K`} icon={DollarSign} />
-        <KPICard label="Actual" value={`$${(metrics.totalActual / 1000).toFixed(0)}K`} icon={DollarSign} />
-        <KPICard label="Variance" value={`${metrics.variancePct}%`} icon={AlertTriangle} trend={varianceTrend} trendLabel={Number(metrics.variancePct) > 0 ? 'Over budget' : 'Under budget'} />
-        <KPICard label="OT Hours" value={metrics.totalOTHours.toLocaleString()} icon={Clock} trendLabel={`${metrics.otPct}% of total hours`} />
+        {visibleKpis.map(k => {
+          const card = kpiCards[k.id];
+          return (
+            <KPICard
+              key={k.id}
+              label={k.label}
+              value={card.value}
+              icon={ICON_MAP[k.icon] || card.icon}
+              trend={card.trend}
+              trendLabel={card.trendLabel}
+            />
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {chartVisible('budget_vs_actual_by_site') && (
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('budget_vs_actual_by_site')}</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={metrics.siteChart}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
+                <Tooltip formatter={(v) => `$${v.toLocaleString()}`} />
+                <Legend />
+                <Bar dataKey="budget" fill="#009ADE" name="Budget" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="actual" fill="#5A5D62" name="Actual" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {chartVisible('variance_trend') && (
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('variance_trend')}</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={metrics.trendChart}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}%`} />
+                <Tooltip formatter={(v) => `${v}%`} />
+                <Line type="monotone" dataKey="variance" stroke="#E12F2C" strokeWidth={2} name="Variance %" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {chartVisible('ot_spend_by_site') && (
         <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-dark-text mb-4">Budget vs Actual by Site</h3>
+          <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('ot_spend_by_site')}</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={metrics.siteChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
+            <PieChart>
+              <Pie
+                data={metrics.otBreakdown}
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                dataKey="value"
+                nameKey="name"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {metrics.otBreakdown.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
               <Tooltip formatter={(v) => `$${v.toLocaleString()}`} />
-              <Legend />
-              <Bar dataKey="budget" fill="#009ADE" name="Budget" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="actual" fill="#5A5D62" name="Actual" radius={[4, 4, 0, 0]} />
-            </BarChart>
+            </PieChart>
           </ResponsiveContainer>
         </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-dark-text mb-4">Variance Trend (%)</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={metrics.trendChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}%`} />
-              <Tooltip formatter={(v) => `${v}%`} />
-              <Line type="monotone" dataKey="variance" stroke="#E12F2C" strokeWidth={2} name="Variance %" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-dark-text mb-4">OT Spend by Site</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <PieChart>
-            <Pie
-              data={metrics.otBreakdown}
-              cx="50%"
-              cy="50%"
-              outerRadius={100}
-              dataKey="value"
-              nameKey="name"
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-            >
-              {metrics.otBreakdown.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip formatter={(v) => `$${v.toLocaleString()}`} />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
+      )}
     </div>
   );
 }

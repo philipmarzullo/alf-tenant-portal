@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
-  BookOpen, Zap, BarChart3, ChevronLeft, ChevronRight, LogOut,
+  BookOpen, Zap, BarChart3, SlidersHorizontal, ChevronLeft, ChevronRight, LogOut,
 } from 'lucide-react';
 import { NAV_ITEMS } from '../../data/constants';
 import { useUser } from '../../contexts/UserContext';
@@ -13,7 +13,7 @@ import { useBranding } from '../../contexts/BrandingContext';
 const ICON_MAP = {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
-  BookOpen, Zap, BarChart3,
+  BookOpen, Zap, BarChart3, SlidersHorizontal,
 };
 
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {

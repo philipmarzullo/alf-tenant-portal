@@ -2,13 +2,20 @@ import { useState, useMemo } from 'react';
 import { Loader2, ShieldAlert, Activity, ThumbsUp, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import useDashboardData from '../../hooks/useDashboardData';
+import useDashboardConfig from '../../hooks/useDashboardConfig';
 import DashboardFilters from '../../components/dashboards/DashboardFilters';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 import KPICard from '../../components/dashboards/KPICard';
 
+const ICON_MAP = { ShieldAlert, Activity, ThumbsUp, AlertTriangle };
+
 export default function SafetyDashboard() {
   const [filters, setFilters] = useState({ dateFrom: '2025-01-01', dateTo: '2025-12-31', jobIds: null });
   const { data, loading, error } = useDashboardData('safety', filters);
+  const { kpis, charts } = useDashboardConfig('safety');
+
+  const chartLabel = (id) => charts.find(c => c.id === id)?.label ?? id;
+  const chartVisible = (id) => charts.find(c => c.id === id)?.visible !== false;
 
   const metrics = useMemo(() => {
     if (!data?.safety?.length) return null;
@@ -39,7 +46,7 @@ export default function SafetyDashboard() {
 
       const month = r.date_key?.slice(0, 7);
       if (month && r.trir) {
-        if (!trirByMonth[month]) trirByMonth[month] = { values: [], sum: 0, count: 0 };
+        if (!trirByMonth[month]) trirByMonth[month] = { sum: 0, count: 0 };
         trirByMonth[month].sum += Number(r.trir);
         trirByMonth[month].count++;
       }
@@ -52,7 +59,6 @@ export default function SafetyDashboard() {
       ? (trirValues.reduce((a, b) => a + b, 0) / trirValues.length).toFixed(3)
       : 'N/A';
 
-    // Recordables by site/quarter (grouped bar)
     const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
     const siteNames = [...new Set(Object.values(bySiteQuarter).map((v) => v.site))];
     const recordablesChart = quarters.map((q) => {
@@ -64,7 +70,6 @@ export default function SafetyDashboard() {
       return row;
     });
 
-    // TRIR trend
     const trirChart = Object.entries(trirByMonth)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, v]) => ({
@@ -72,7 +77,6 @@ export default function SafetyDashboard() {
         trir: (v.sum / v.count).toFixed(3),
       }));
 
-    // Good saves bar
     const goodSavesChart = Object.entries(goodSavesBySite).map(([name, value]) => ({ name, goodSaves: value }));
 
     return { totalRecordables, avgTRIR, totalGoodSaves, totalNearMisses, recordablesChart, trirChart, goodSavesChart, siteNames };
@@ -99,60 +103,89 @@ export default function SafetyDashboard() {
 
   const SITE_COLORS = ['#009ADE', '#E12F2C', '#5A5D62'];
 
+  const kpiCards = {
+    total_recordables: {
+      value: metrics.totalRecordables,
+      icon: ShieldAlert,
+      trend: metrics.totalRecordables > 10 ? 'down' : 'up',
+      trendLabel: metrics.totalRecordables > 10 ? 'Above threshold' : 'Within target',
+    },
+    avg_trir: { value: metrics.avgTRIR, icon: Activity },
+    good_saves: { value: metrics.totalGoodSaves, icon: ThumbsUp, trend: 'up', trendLabel: 'Recognition events' },
+    near_misses: { value: metrics.totalNearMisses, icon: AlertTriangle },
+  };
+
+  const visibleKpis = kpis.filter(k => k.visible !== false && kpiCards[k.id]);
+
   return (
     <div className="space-y-6">
       <DashboardFilters filters={filters} onChange={setFilters} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard label="Total Recordables" value={metrics.totalRecordables} icon={ShieldAlert} trend={metrics.totalRecordables > 10 ? 'down' : 'up'} trendLabel={metrics.totalRecordables > 10 ? 'Above threshold' : 'Within target'} />
-        <KPICard label="Avg TRIR" value={metrics.avgTRIR} icon={Activity} />
-        <KPICard label="Good Saves" value={metrics.totalGoodSaves} icon={ThumbsUp} trend="up" trendLabel="Recognition events" />
-        <KPICard label="Near Misses" value={metrics.totalNearMisses} icon={AlertTriangle} />
+        {visibleKpis.map(k => {
+          const card = kpiCards[k.id];
+          return (
+            <KPICard
+              key={k.id}
+              label={k.label}
+              value={card.value}
+              icon={ICON_MAP[k.icon] || card.icon}
+              trend={card.trend}
+              trendLabel={card.trendLabel}
+            />
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {chartVisible('recordables_by_site_quarter') && (
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('recordables_by_site_quarter')}</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={metrics.recordablesChart}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="quarter" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                {metrics.siteNames.map((site, i) => (
+                  <Bar key={site} dataKey={site} fill={SITE_COLORS[i % SITE_COLORS.length]} radius={[4, 4, 0, 0]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {chartVisible('trir_trend') && (
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('trir_trend')}</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={metrics.trirChart}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="trir" stroke="#E12F2C" strokeWidth={2} name="TRIR" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {chartVisible('good_saves_by_site') && (
         <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-dark-text mb-4">Recordables by Site & Quarter</h3>
+          <h3 className="text-sm font-semibold text-dark-text mb-4">{chartLabel('good_saves_by_site')}</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={metrics.recordablesChart}>
+            <BarChart data={metrics.goodSavesChart}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="quarter" tick={{ fontSize: 12 }} />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
               <Tooltip />
-              <Legend />
-              {metrics.siteNames.map((site, i) => (
-                <Bar key={site} dataKey={site} fill={SITE_COLORS[i % SITE_COLORS.length]} radius={[4, 4, 0, 0]} />
-              ))}
+              <Bar dataKey="goodSaves" fill="#16A34A" name="Good Saves" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-dark-text mb-4">TRIR Trend</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={metrics.trirChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="trir" stroke="#E12F2C" strokeWidth={2} name="TRIR" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-dark-text mb-4">Good Saves by Site</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={metrics.goodSavesChart}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-            <Tooltip />
-            <Bar dataKey="goodSaves" fill="#16A34A" name="Good Saves" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      )}
     </div>
   );
 }

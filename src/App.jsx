@@ -31,6 +31,7 @@ import SalesDeckBuilder from './pages/tools/SalesDeckBuilder';
 import AgentManagement from './pages/admin/AgentManagement';
 import KnowledgePage from './pages/admin/KnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
+import DashboardSettings from './pages/admin/DashboardSettings';
 import UserManagement from './pages/admin/UserManagement';
 import AutomationInsightsPage from './pages/admin/AutomationInsightsPage';
 import DashboardsLayout from './pages/dashboards/DashboardsLayout';
@@ -302,6 +303,15 @@ export default function App() {
                       element={
                         <ProtectedRoute superAdminOnly>
                           <SettingsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="/admin/dashboard-settings"
+                      element={
+                        <ProtectedRoute adminOnly>
+                          <DashboardSettings />
                         </ProtectedRoute>
                       }
                     />
