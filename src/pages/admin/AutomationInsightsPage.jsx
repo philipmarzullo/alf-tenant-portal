@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Loader2, Zap, ChevronRight, FileText, Bot, User, Clock, Filter, MessageSquare } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Loader2, Zap, ChevronRight, FileText, Bot, User, Clock, Filter, MessageSquare, CheckCircle, Play } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { getFreshToken } from '../../lib/supabase';
 import { DEPT_COLORS } from '../../data/constants';
 import MetricCard from '../../components/shared/MetricCard';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
+import { useTenantConfig } from '../../contexts/TenantConfigContext';
+import { useUser } from '../../contexts/UserContext';
 
 const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const DEPARTMENTS = [
   { key: 'hr', label: 'HR' },
@@ -51,23 +55,50 @@ const TABS = [
   { key: 'all', label: 'All Actions' },
 ];
 
+// ─── Backend API helper ─────────────────────────────────────────────────────
+
+async function sopAnalysisFetch(path, body) {
+  const token = await getFreshToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const res = await fetch(`${BACKEND_URL}/api/sop-analysis${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
+
 export default function AutomationInsightsPage() {
+  const { hasAction } = useTenantConfig();
+  const { isAdmin } = useUser();
+  const canSelfService = isAdmin && hasAction('automation', 'selfServicePipeline');
+
   const [analyses, setAnalyses] = useState([]);
   const [roadmaps, setRoadmaps] = useState([]);
   const [actions, setActions] = useState([]);
+  const [sopDocs, setSopDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedDept, setExpandedDept] = useState(null);
   const [filterDept, setFilterDept] = useState('all');
   const [chatAgent, setChatAgent] = useState(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Pipeline operation state
+  const [pipelineBusy, setPipelineBusy] = useState(null); // string key of what's running
+  const [pipelineError, setPipelineError] = useState(null);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    const [{ data: a }, { data: r }, { data: act }] = await Promise.all([
+    const promises = [
       supabase
         .from('sop_analyses')
         .select('*')
@@ -85,12 +116,34 @@ export default function AutomationInsightsPage() {
         .select('*')
         .eq('tenant_id', TENANT_ID)
         .order('created_at', { ascending: true }),
-    ]);
-    setAnalyses(a || []);
-    setRoadmaps(r || []);
-    setActions(act || []);
+    ];
+
+    // Load SOP docs when self-service is enabled
+    if (canSelfService) {
+      promises.push(
+        supabase
+          .from('tenant_documents')
+          .select('id, file_name, department, doc_type, status')
+          .eq('tenant_id', TENANT_ID)
+          .eq('doc_type', 'sop')
+          .eq('status', 'extracted')
+          .order('department'),
+      );
+    }
+
+    const results = await Promise.all(promises);
+    setAnalyses(results[0].data || []);
+    setRoadmaps(results[1].data || []);
+    setActions(results[2].data || []);
+    if (canSelfService && results[3]) {
+      setSopDocs(results[3].data || []);
+    }
     setLoading(false);
-  }
+  }, [canSelfService]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   async function handleUpdateNotes(actionId, notes) {
     await supabase
@@ -100,7 +153,105 @@ export default function AutomationInsightsPage() {
     await loadData();
   }
 
-  // Derived data
+  // ─── Self-service pipeline handlers ─────────────────────────────────────
+
+  async function handleAnalyze(documentIds) {
+    setPipelineBusy('analyze');
+    setPipelineError(null);
+    try {
+      await sopAnalysisFetch('/analyze', { document_ids: documentIds });
+      await loadData();
+    } catch (err) {
+      setPipelineError(err.message);
+    } finally {
+      setPipelineBusy(null);
+    }
+  }
+
+  async function handleGenerateRoadmap(department) {
+    setPipelineBusy(`roadmap-${department}`);
+    setPipelineError(null);
+    try {
+      await sopAnalysisFetch('/roadmap', { department });
+      await loadData();
+    } catch (err) {
+      setPipelineError(err.message);
+    } finally {
+      setPipelineBusy(null);
+    }
+  }
+
+  async function handleConvertToActions(roadmapId) {
+    setPipelineBusy(`actions-${roadmapId}`);
+    setPipelineError(null);
+    try {
+      await sopAnalysisFetch('/convert-to-actions', { roadmap_id: roadmapId });
+      await loadData();
+    } catch (err) {
+      setPipelineError(err.message);
+    } finally {
+      setPipelineBusy(null);
+    }
+  }
+
+  async function handleGenerateSkill(actionId) {
+    setPipelineBusy(`skill-${actionId}`);
+    setPipelineError(null);
+    try {
+      await sopAnalysisFetch('/generate-skill', { action_id: actionId });
+      await loadData();
+    } catch (err) {
+      setPipelineError(err.message);
+    } finally {
+      setPipelineBusy(null);
+    }
+  }
+
+  async function handleActivateSkill(actionId) {
+    setPipelineBusy(`activate-${actionId}`);
+    setPipelineError(null);
+    try {
+      await sopAnalysisFetch('/activate-skill', { action_id: actionId });
+      await loadData();
+    } catch (err) {
+      setPipelineError(err.message);
+    } finally {
+      setPipelineBusy(null);
+    }
+  }
+
+  async function handleBatchGenerateSkills(actionIds) {
+    setPipelineBusy('batch-skills');
+    setPipelineError(null);
+    try {
+      for (const id of actionIds) {
+        await sopAnalysisFetch('/generate-skill', { action_id: id });
+      }
+      await loadData();
+    } catch (err) {
+      setPipelineError(err.message);
+    } finally {
+      setPipelineBusy(null);
+    }
+  }
+
+  async function handleBatchActivateSkills(actionIds) {
+    setPipelineBusy('batch-activate');
+    setPipelineError(null);
+    try {
+      for (const id of actionIds) {
+        await sopAnalysisFetch('/activate-skill', { action_id: id });
+      }
+      await loadData();
+    } catch (err) {
+      setPipelineError(err.message);
+    } finally {
+      setPipelineBusy(null);
+    }
+  }
+
+  // ─── Derived data ───────────────────────────────────────────────────────
+
   const activeActions = actions.filter(a => a.status === 'active');
   const readyActions = actions.filter(a => a.status === 'ready_for_review');
   const manualActions = actions.filter(a => a.status === 'manual' || (a.assignee_type === 'human'));
@@ -123,10 +274,24 @@ export default function AutomationInsightsPage() {
   for (const r of roadmaps) {
     roadmapByDept[r.department] = r;
   }
-  const activeDepts = DEPARTMENTS.filter(d => byDept[d.key]?.length > 0);
 
-  const hasActions = actions.length > 0;
+  // Group SOP docs by department (for self-service)
+  const sopDocsByDept = {};
+  for (const doc of sopDocs) {
+    if (!sopDocsByDept[doc.department]) sopDocsByDept[doc.department] = [];
+    sopDocsByDept[doc.department].push(doc);
+  }
+
+  // Departments that have analyses OR unanalyzed SOPs
+  const deptKeys = new Set([
+    ...Object.keys(byDept),
+    ...(canSelfService ? Object.keys(sopDocsByDept) : []),
+  ]);
+  const activeDepts = DEPARTMENTS.filter(d => deptKeys.has(d.key));
+
+  const hasActionsData = actions.length > 0;
   const hasAnalyses = analyses.length > 0;
+  const hasSopDocs = sopDocs.length > 0;
 
   if (loading) {
     return (
@@ -136,7 +301,7 @@ export default function AutomationInsightsPage() {
     );
   }
 
-  if (!hasAnalyses && !hasActions) {
+  if (!hasAnalyses && !hasActionsData && !hasSopDocs) {
     return (
       <div>
         <div className="mb-6">
@@ -146,7 +311,11 @@ export default function AutomationInsightsPage() {
         <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
           <Zap size={32} className="text-gray-300 mx-auto mb-3" />
           <div className="text-sm text-secondary-text">No automation data available yet.</div>
-          <div className="text-xs text-secondary-text mt-1">Your platform administrator can run SOP analyses to generate automation insights and actions.</div>
+          <div className="text-xs text-secondary-text mt-1">
+            {canSelfService
+              ? 'Upload SOPs in Knowledge Base, then analyze them here.'
+              : 'Your platform administrator can run SOP analyses to generate automation insights and actions.'}
+          </div>
         </div>
       </div>
     );
@@ -159,6 +328,14 @@ export default function AutomationInsightsPage() {
         <h1 className="text-2xl font-light text-dark-text mb-1">Automation Workboard</h1>
         <p className="text-sm text-secondary-text">Track automations, agent skills, and responsibilities across your operations.</p>
       </div>
+
+      {/* Pipeline Error */}
+      {pipelineError && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+          <div className="text-sm text-red-800 flex-1">{pipelineError}</div>
+          <button onClick={() => setPipelineError(null)} className="text-red-400 hover:text-red-600 text-xs">dismiss</button>
+        </div>
+      )}
 
       {/* Summary Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -220,15 +397,29 @@ export default function AutomationInsightsPage() {
           activeDepts={activeDepts}
           byDept={byDept}
           roadmapByDept={roadmapByDept}
+          sopDocsByDept={sopDocsByDept}
           expandedDept={expandedDept}
           setExpandedDept={setExpandedDept}
+          canSelfService={canSelfService}
+          pipelineBusy={pipelineBusy}
+          onAnalyze={handleAnalyze}
+          onGenerateRoadmap={handleGenerateRoadmap}
+          onConvertToActions={handleConvertToActions}
+          actions={actions}
         />
       )}
 
       {activeTab === 'skills' && (
         <AgentSkillsTab
           actions={[...activeActions, ...readyActions]}
+          plannedActions={plannedActions}
           onRunWithAgent={(agentKey) => setChatAgent(agentKey)}
+          canSelfService={canSelfService}
+          pipelineBusy={pipelineBusy}
+          onGenerateSkill={handleGenerateSkill}
+          onActivateSkill={handleActivateSkill}
+          onBatchGenerateSkills={handleBatchGenerateSkills}
+          onBatchActivateSkills={handleBatchActivateSkills}
         />
       )}
 
@@ -260,24 +451,48 @@ export default function AutomationInsightsPage() {
   );
 }
 
-/* ─── Overview Tab (existing roadmap view) ─── */
+/* ─── Overview Tab ─── */
 
-function OverviewTab({ activeDepts, byDept, roadmapByDept, expandedDept, setExpandedDept }) {
-  const totalAnalyses = Object.values(byDept).flat().length;
-  const avgScore = totalAnalyses
-    ? Math.round(Object.values(byDept).flat().reduce((s, a) => s + (a.analysis?.automation_score || 0), 0) / totalAnalyses)
-    : 0;
-
+function OverviewTab({
+  activeDepts, byDept, roadmapByDept, sopDocsByDept, expandedDept, setExpandedDept,
+  canSelfService, pipelineBusy, onAnalyze, onGenerateRoadmap, onConvertToActions, actions,
+}) {
   return (
     <div className="space-y-4">
+      {/* Self-service: batch analyze all SOPs */}
+      {canSelfService && Object.keys(sopDocsByDept).length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
+          <div className="text-sm text-blue-800">
+            {Object.values(sopDocsByDept).flat().length} SOP document{Object.values(sopDocsByDept).flat().length !== 1 ? 's' : ''} available for analysis.
+          </div>
+          <button
+            onClick={() => onAnalyze(Object.values(sopDocsByDept).flat().map(d => d.id))}
+            disabled={!!pipelineBusy}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-aa-blue text-white hover:bg-aa-blue/90 transition-colors disabled:opacity-50 flex items-center gap-1"
+          >
+            {pipelineBusy === 'analyze' ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+            Analyze All
+          </button>
+        </div>
+      )}
+
       {activeDepts.map(dept => {
         const deptAnalyses = byDept[dept.key] || [];
         const roadmap = roadmapByDept[dept.key];
         const isExpanded = expandedDept === dept.key;
-        const deptAvgScore = Math.round(
-          deptAnalyses.reduce((s, a) => s + (a.analysis?.automation_score || 0), 0) / deptAnalyses.length
-        );
+        const deptSopDocs = sopDocsByDept[dept.key] || [];
         const deptColor = DEPT_COLORS[dept.key] || '#6B7280';
+
+        // Find unanalyzed SOPs (docs not yet in analyses)
+        const analyzedDocIds = new Set(deptAnalyses.map(a => a.document_id));
+        const unanalyzedDocs = deptSopDocs.filter(d => !analyzedDocIds.has(d.id));
+
+        // Check if this dept has actions already
+        const deptActions = actions.filter(a => a.department === dept.key);
+
+        const deptAvgScore = deptAnalyses.length
+          ? Math.round(deptAnalyses.reduce((s, a) => s + (a.analysis?.automation_score || 0), 0) / deptAnalyses.length)
+          : 0;
 
         return (
           <div key={dept.key} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -289,20 +504,27 @@ function OverviewTab({ activeDepts, byDept, roadmapByDept, expandedDept, setExpa
               <div className="flex-1">
                 <div className="text-base font-medium text-dark-text">{dept.label}</div>
                 <div className="flex items-center gap-4 mt-1 text-xs text-secondary-text">
-                  <span>{deptAnalyses.length} SOP{deptAnalyses.length !== 1 ? 's' : ''} analyzed</span>
-                  <span>Score: {deptAvgScore}/100</span>
+                  {deptAnalyses.length > 0 && (
+                    <span>{deptAnalyses.length} SOP{deptAnalyses.length !== 1 ? 's' : ''} analyzed</span>
+                  )}
+                  {deptAvgScore > 0 && <span>Score: {deptAvgScore}/100</span>}
+                  {canSelfService && unanalyzedDocs.length > 0 && (
+                    <span className="text-aa-blue">{unanalyzedDocs.length} awaiting analysis</span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${deptAvgScore}%`,
-                      backgroundColor: deptAvgScore >= 60 ? '#16A34A' : deptAvgScore >= 30 ? '#EAB308' : '#DC2626',
-                    }}
-                  />
-                </div>
+                {deptAvgScore > 0 && (
+                  <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${deptAvgScore}%`,
+                        backgroundColor: deptAvgScore >= 60 ? '#16A34A' : deptAvgScore >= 30 ? '#EAB308' : '#DC2626',
+                      }}
+                    />
+                  </div>
+                )}
                 <ChevronRight
                   size={16}
                   className={`text-secondary-text transition-transform ${isExpanded ? 'rotate-90' : ''}`}
@@ -312,19 +534,92 @@ function OverviewTab({ activeDepts, byDept, roadmapByDept, expandedDept, setExpa
 
             {isExpanded && (
               <div className="border-t border-gray-100">
+                {/* Self-service: Analyze unanalyzed SOPs */}
+                {canSelfService && unanalyzedDocs.length > 0 && (
+                  <div className="px-5 py-3 bg-blue-50/50 border-b border-gray-100">
+                    <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-2">
+                      SOPs Awaiting Analysis
+                    </div>
+                    <div className="space-y-1.5">
+                      {unanalyzedDocs.map(doc => (
+                        <div key={doc.id} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 text-dark-text">
+                            <FileText size={12} className="text-secondary-text" />
+                            {doc.file_name}
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onAnalyze([doc.id]); }}
+                            disabled={!!pipelineBusy}
+                            className="px-2 py-1 text-xs font-medium rounded bg-aa-blue text-white hover:bg-aa-blue/90 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {pipelineBusy === 'analyze' ? <Loader2 size={10} className="animate-spin" /> : <Zap size={10} />}
+                            Analyze
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {unanalyzedDocs.length > 1 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onAnalyze(unanalyzedDocs.map(d => d.id)); }}
+                        disabled={!!pipelineBusy}
+                        className="mt-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-aa-blue/30 text-aa-blue hover:bg-aa-blue/5 disabled:opacity-50"
+                      >
+                        Analyze All ({unanalyzedDocs.length})
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Self-service: Generate roadmap button */}
+                {canSelfService && deptAnalyses.length > 0 && !roadmap && (
+                  <div className="px-5 py-3 bg-amber-50/50 border-b border-gray-100 flex items-center justify-between">
+                    <div className="text-xs text-amber-800">
+                      {deptAnalyses.length} analysis{deptAnalyses.length !== 1 ? 'es' : ''} ready — generate a roadmap to plan your automation strategy.
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onGenerateRoadmap(dept.key); }}
+                      disabled={!!pipelineBusy}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {pipelineBusy === `roadmap-${dept.key}` ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                      Generate Roadmap
+                    </button>
+                  </div>
+                )}
+
                 {roadmap?.roadmap && (
                   <RoadmapSection roadmap={roadmap.roadmap} />
                 )}
-                <div className="px-5 py-4">
-                  <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-3">
-                    Individual SOP Analyses
+
+                {/* Self-service: Convert to actions button */}
+                {canSelfService && roadmap && deptActions.length === 0 && (
+                  <div className="px-5 py-3 bg-green-50/50 border-b border-gray-100 flex items-center justify-between">
+                    <div className="text-xs text-green-800">
+                      Roadmap ready — convert to trackable actions and agent skills.
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onConvertToActions(roadmap.id); }}
+                      disabled={!!pipelineBusy}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {pipelineBusy === `actions-${roadmap.id}` ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                      Convert to Actions
+                    </button>
                   </div>
-                  <div className="space-y-3">
-                    {deptAnalyses.map(a => (
-                      <SOPAnalysisCard key={a.id} analysis={a} />
-                    ))}
+                )}
+
+                {deptAnalyses.length > 0 && (
+                  <div className="px-5 py-4">
+                    <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-3">
+                      Individual SOP Analyses
+                    </div>
+                    <div className="space-y-3">
+                      {deptAnalyses.map(a => (
+                        <SOPAnalysisCard key={a.id} analysis={a} />
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
@@ -336,13 +631,27 @@ function OverviewTab({ activeDepts, byDept, roadmapByDept, expandedDept, setExpa
 
 /* ─── Agent Skills Tab ─── */
 
-function AgentSkillsTab({ actions, onRunWithAgent }) {
-  if (actions.length === 0) {
+function AgentSkillsTab({
+  actions, plannedActions, onRunWithAgent,
+  canSelfService, pipelineBusy, onGenerateSkill, onActivateSkill,
+  onBatchGenerateSkills, onBatchActivateSkills,
+}) {
+  // Planned actions that can have skills generated (agent or hybrid)
+  const skillableActions = (plannedActions || []).filter(
+    a => a.assignee_type === 'agent' || a.assignee_type === 'hybrid'
+  );
+  const readyForActivation = actions.filter(a => a.status === 'ready_for_review');
+
+  if (actions.length === 0 && skillableActions.length === 0) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
         <Bot size={32} className="text-gray-300 mx-auto mb-3" />
         <div className="text-sm text-secondary-text">No agent skills available yet.</div>
-        <div className="text-xs text-secondary-text mt-1">Skills are generated from your SOP analysis and activated by your platform administrator.</div>
+        <div className="text-xs text-secondary-text mt-1">
+          {canSelfService
+            ? 'Generate skills from planned actions on the Overview tab.'
+            : 'Skills are generated from your SOP analysis and activated by your platform administrator.'}
+        </div>
       </div>
     );
   }
@@ -357,6 +666,74 @@ function AgentSkillsTab({ actions, onRunWithAgent }) {
 
   return (
     <div className="space-y-4">
+      {/* Self-service batch buttons */}
+      {canSelfService && (skillableActions.length > 0 || readyForActivation.length > 0) && (
+        <div className="flex flex-wrap gap-2">
+          {skillableActions.length > 0 && (
+            <button
+              onClick={() => onBatchGenerateSkills(skillableActions.map(a => a.id))}
+              disabled={!!pipelineBusy}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 disabled:opacity-50 flex items-center gap-1"
+            >
+              {pipelineBusy === 'batch-skills' ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+              Generate All Skills ({skillableActions.length})
+            </button>
+          )}
+          {readyForActivation.length > 0 && (
+            <button
+              onClick={() => onBatchActivateSkills(readyForActivation.map(a => a.id))}
+              disabled={!!pipelineBusy}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50 flex items-center gap-1"
+            >
+              {pipelineBusy === 'batch-activate' ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+              Activate All ({readyForActivation.length})
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Planned actions needing skill generation (self-service only) */}
+      {canSelfService && skillableActions.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+            <Zap size={16} className="text-amber-500" />
+            <span className="text-sm font-medium text-dark-text">
+              Planned Actions ({skillableActions.length})
+            </span>
+            <span className="text-xs text-secondary-text">Ready for skill generation</span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {skillableActions.map(action => (
+              <div key={action.id} className="px-4 py-3 flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full mt-1.5 shrink-0 bg-amber-400" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-dark-text">{action.title}</div>
+                  <div className="text-xs text-secondary-text mt-0.5">{action.description}</div>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded ${
+                      action.assignee_type === 'agent' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
+                    }`}>
+                      {action.assignee_type}
+                    </span>
+                    {action.agent_key && (
+                      <span className="text-[11px] text-secondary-text">{AGENT_NAMES[action.agent_key] || action.agent_key}</span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => onGenerateSkill(action.id)}
+                  disabled={!!pipelineBusy}
+                  className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 disabled:opacity-50 flex items-center gap-1 shrink-0"
+                >
+                  {pipelineBusy === `skill-${action.id}` ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                  Generate Skill
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {Object.entries(byAgent).map(([agentKey, agentActions]) => (
         <div key={agentKey} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -403,15 +780,27 @@ function AgentSkillsTab({ actions, onRunWithAgent }) {
                     )}
                   </div>
                 </div>
-                {action.status === 'active' && (
-                  <button
-                    onClick={() => onRunWithAgent(agentKey)}
-                    className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-aa-blue/30 text-aa-blue hover:bg-aa-blue/5 transition-colors flex items-center gap-1 shrink-0"
-                  >
-                    <Bot size={12} />
-                    Run
-                  </button>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  {canSelfService && action.status === 'ready_for_review' && (
+                    <button
+                      onClick={() => onActivateSkill(action.id)}
+                      disabled={!!pipelineBusy}
+                      className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {pipelineBusy === `activate-${action.id}` ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                      Activate
+                    </button>
+                  )}
+                  {action.status === 'active' && (
+                    <button
+                      onClick={() => onRunWithAgent(agentKey)}
+                      className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-aa-blue/30 text-aa-blue hover:bg-aa-blue/5 transition-colors flex items-center gap-1"
+                    >
+                      <Bot size={12} />
+                      Run
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
