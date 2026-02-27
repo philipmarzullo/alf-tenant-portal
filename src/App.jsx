@@ -58,7 +58,11 @@ function SetupScreen() {
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <img src={brand.logoUrl || '/logo-white.png'} alt={brand.companyName || 'Company'} className="h-10" />
+          {brand.logoUrl ? (
+            <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-10" />
+          ) : (
+            <div className="text-white text-xl font-light tracking-wide">{brand.companyName || 'Operations Portal'}</div>
+          )}
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h1 className="text-xl font-semibold text-dark-text mb-2">Setup Required</h1>
@@ -85,7 +89,11 @@ function DeactivatedScreen() {
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <img src={brand.logoUrl || '/logo-white.png'} alt={brand.companyName || 'Company'} className="h-10" />
+          {brand.logoUrl ? (
+            <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-10" />
+          ) : (
+            <div className="text-white text-xl font-light tracking-wide">{brand.companyName || 'Operations Portal'}</div>
+          )}
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8 text-center">
           <h1 className="text-xl font-semibold text-dark-text mb-2">Account Deactivated</h1>

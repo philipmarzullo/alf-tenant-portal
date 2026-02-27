@@ -23,12 +23,14 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
+        {/* Logo / Company Name */}
         <div className="flex flex-col items-center mb-8">
           {brand.logoUrl ? (
             <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-12 mb-2" />
           ) : (
-            <img src="/logo-white.png" alt={brand.companyName || 'Company'} className="h-12 mb-2" />
+            <div className="text-white text-xl font-light tracking-wide mb-2">
+              {brand.companyName || 'Operations Portal'}
+            </div>
           )}
         </div>
 

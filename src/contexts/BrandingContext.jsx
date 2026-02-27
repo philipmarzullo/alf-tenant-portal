@@ -30,9 +30,14 @@ export function BrandingProvider({ children }) {
         }
 
         const row = data[0];
-        const displayName = row.brand_display_name || 'Operations Portal';
+        const companyName = row.company_name || null;
+        // Derive display name: explicit brand name > "CompanyName Portal" > "Operations Portal"
+        const displayName = row.brand_display_name
+          || (companyName ? `${companyName} Portal` : 'Operations Portal');
         const primaryColor = row.brand_primary_color || null;
         const sidebarBg = row.brand_sidebar_bg || null;
+        // Logo: explicit brand URL > null (components decide their own fallback)
+        const logoUrl = row.brand_logo_url || null;
 
         // Override CSS custom properties so all existing aa-blue / dark-nav
         // class references automatically pick up the tenant's brand color.
@@ -44,9 +49,9 @@ export function BrandingProvider({ children }) {
         }
 
         setBrand({
-          companyName: row.company_name || null,
+          companyName,
           displayName,
-          logoUrl: row.brand_logo_url || null,
+          logoUrl,
           primaryColor,
           sidebarBg,
           brandLoading: false,
