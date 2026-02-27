@@ -134,6 +134,7 @@ export default function KnowledgePage() {
       .from('tenant_documents')
       .select('id, file_name, file_type, file_size, department, doc_type, char_count, page_count, status, title, description, created_at')
       .eq('tenant_id', TENANT_ID)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (err) {
@@ -227,26 +228,12 @@ export default function KnowledgePage() {
     setError(null);
 
     try {
-      const { data: doc, error: fetchErr } = await supabase
+      const { error: updateErr } = await supabase
         .from('tenant_documents')
-        .select('storage_path')
-        .eq('id', docId)
-        .single();
-
-      if (fetchErr) throw fetchErr;
-
-      const { error: storageErr } = await supabase.storage
-        .from('tenant-documents')
-        .remove([doc.storage_path]);
-
-      if (storageErr) throw storageErr;
-
-      const { error: deleteErr } = await supabase
-        .from('tenant_documents')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', docId);
 
-      if (deleteErr) throw deleteErr;
+      if (updateErr) throw updateErr;
 
       setDocuments((prev) => prev.filter((d) => d.id !== docId));
       setSuccess('Document deleted');
