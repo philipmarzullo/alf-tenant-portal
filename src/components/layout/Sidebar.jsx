@@ -7,6 +7,7 @@ import {
 import { NAV_ITEMS } from '../../data/constants';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenantConfig } from '../../contexts/TenantConfigContext';
 
 const ICON_MAP = {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
@@ -18,13 +19,14 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   const location = useLocation();
   const { currentUser, isSuperAdmin, isAdmin } = useUser();
   const { signOut } = useAuth();
+  const { tenantHasModule } = useTenantConfig();
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
 
-  // Filter nav items by current user's permissions
+  // Filter nav items by tenant config + user permissions
   const filteredNav = NAV_ITEMS
     .map((group) => ({
       ...group,
@@ -32,6 +34,8 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
         if (!item.moduleKey) return true;
         if (item.moduleKey === 'superAdmin') return isSuperAdmin;
         if (item.moduleKey === 'admin') return isAdmin;
+        // Tenant-level gate: if Alf disabled this module, hide it for everyone
+        if (!tenantHasModule(item.moduleKey)) return false;
         if (isAdmin) return true;
         return currentUser?.modules?.includes(item.moduleKey);
       }),
