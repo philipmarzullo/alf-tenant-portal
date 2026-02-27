@@ -64,6 +64,12 @@ export const NAV_ITEMS = [
     ],
   },
   {
+    group: 'ANALYTICS',
+    items: [
+      { label: 'Dashboards', path: '/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
+    ],
+  },
+  {
     group: 'ADMIN',
     items: [
       { label: 'User Management', path: '/admin/users', icon: 'UserCog', moduleKey: 'admin' },
