@@ -1,8 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
-  FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
-  BookOpen, Zap, BarChart3, SlidersHorizontal, ChevronLeft, ChevronRight, LogOut,
+  FileBarChart, Presentation, Settings, UserCog, Briefcase,
+  BookOpen, Zap, BarChart3, ChevronLeft, ChevronRight, LogOut,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
   Wrench, ClipboardList, FileText, Package, Star, MessageSquare, Cable,
 } from 'lucide-react';
@@ -15,8 +15,8 @@ import { useCustomTools } from '../../contexts/CustomToolsContext';
 
 const ICON_MAP = {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
-  FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
-  BookOpen, Zap, BarChart3, SlidersHorizontal,
+  FileBarChart, Presentation, Settings, UserCog, Briefcase,
+  BookOpen, Zap, BarChart3,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
   Wrench, ClipboardList, FileText, Package, Star, MessageSquare, Cable,
 };

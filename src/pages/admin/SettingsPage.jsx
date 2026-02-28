@@ -1,70 +1,35 @@
-import { useState, useEffect } from 'react';
-import { Key, Shield, Bell, Database, CheckCircle, XCircle, Loader } from 'lucide-react';
-
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
+import { Building2, Bell, Shield, LifeBuoy } from 'lucide-react';
+import { useBranding } from '../../contexts/BrandingContext';
 
 export default function SettingsPage() {
-  const [backendStatus, setBackendStatus] = useState({ loading: true, data: null, error: null });
-
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/health`)
-      .then(r => r.json())
-      .then(data => setBackendStatus({ loading: false, data, error: null }))
-      .catch(() => setBackendStatus({ loading: false, data: null, error: 'Backend unreachable' }));
-  }, []);
-
-  const { loading, data: health, error: healthError } = backendStatus;
+  const brand = useBranding();
 
   return (
     <div>
       <h1 className="text-2xl font-light text-dark-text mb-2">Settings</h1>
-      <p className="text-sm text-secondary-text mb-6">Portal configuration and AI agent settings.</p>
+      <p className="text-sm text-secondary-text mb-6">Portal configuration and account information.</p>
 
       <div className="space-y-6 max-w-2xl">
-        {/* AI Backend Status */}
+        {/* Company */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Key size={16} className="text-aa-blue" />
-            <h2 className="text-sm font-semibold text-dark-text">AI Backend</h2>
+            <Building2 size={16} className="text-aa-blue" />
+            <h2 className="text-sm font-semibold text-dark-text">Company</h2>
           </div>
-          <p className="text-xs text-secondary-text mb-3">
-            Agent calls are routed through a secure backend proxy. The Anthropic API key is stored server-side and never exposed to the browser.
-          </p>
-
-          {loading ? (
-            <div className="flex items-center gap-2 text-xs text-secondary-text">
-              <Loader size={14} className="animate-spin" />
-              Checking backend connection...
-            </div>
-          ) : healthError ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <XCircle size={14} className="text-red-500" />
-                <span className="text-xs text-red-600 font-medium">Backend unreachable</span>
-              </div>
-              <p className="text-[11px] text-secondary-text">
-                The backend proxy at <code className="text-xs bg-gray-100 px-1 rounded">{BACKEND_URL}</code> is not responding.
-                Agents will return demo mock responses until the connection is restored.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle size={14} className="text-green-500" />
-                <span className="text-xs text-green-700 font-medium">Backend connected</span>
-                <span className="text-[10px] text-secondary-text">v{health.version}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <StatusRow label="Anthropic API Key" ok={health.anthropic_configured} />
-                <StatusRow label="Supabase" ok={health.supabase_configured} />
-              </div>
-              {!health.anthropic_configured && (
-                <p className="text-[11px] text-amber-600 mt-1">
-                  Anthropic API key is not configured on the server. Set ANTHROPIC_API_KEY in the backend environment.
-                </p>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center gap-3">
+              {brand.logoUrl && (
+                <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-8 bg-gray-900 rounded px-2 py-1" />
               )}
+              <span className="text-dark-text font-medium">{brand.companyName || 'Not configured'}</span>
             </div>
-          )}
+            {brand.contactEmail && (
+              <div>
+                <span className="text-secondary-text">Contact:</span>{' '}
+                <span className="text-dark-text">{brand.contactEmail}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Notifications */}
@@ -91,49 +56,23 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2 text-sm text-secondary-text">
             <p>Agent conversations are not persisted between sessions.</p>
-            <p>API calls are routed through a secure backend proxy — the API key never reaches the browser.</p>
-            <p>All requests are authenticated via Supabase JWT and rate-limited per tenant.</p>
+            <p>All data is encrypted in transit and at rest.</p>
+            <p>All requests are authenticated and rate-limited per tenant.</p>
           </div>
         </div>
 
-        {/* System Info */}
+        {/* Support */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Database size={16} className="text-aa-blue" />
-            <h2 className="text-sm font-semibold text-dark-text">System</h2>
+            <LifeBuoy size={16} className="text-aa-blue" />
+            <h2 className="text-sm font-semibold text-dark-text">Support</h2>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="text-secondary-text">Version:</span>{' '}
-              <span className="text-dark-text font-medium">0.2.0</span>
-            </div>
-            <div>
-              <span className="text-secondary-text">Model:</span>{' '}
-              <span className="text-dark-text font-medium">Claude Sonnet 4</span>
-            </div>
-            <div>
-              <span className="text-secondary-text">Agents:</span>{' '}
-              <span className="text-dark-text font-medium">8 configured</span>
-            </div>
-            <div>
-              <span className="text-secondary-text">API Routing:</span>{' '}
-              <span className="text-dark-text font-medium">Backend Proxy</span>
-            </div>
+          <div className="space-y-2 text-sm text-secondary-text">
+            <p>For platform issues, contact your account administrator.</p>
+            <p>For urgent technical support, reach out to your dedicated support channel.</p>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatusRow({ label, ok }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-green-500' : 'bg-amber-500'}`} />
-      <span className="text-[11px] text-secondary-text">{label}</span>
-      <span className={`text-[11px] font-medium ${ok ? 'text-green-700' : 'text-amber-600'}`}>
-        {ok ? 'Ready' : 'Not configured'}
-      </span>
     </div>
   );
 }

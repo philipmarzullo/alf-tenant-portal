@@ -31,10 +31,8 @@ import SalesDeckBuilder from './pages/tools/SalesDeckBuilder';
 import ToolPage from './pages/tools/ToolPage';
 import CustomToolBuilder from './pages/tools/CustomToolBuilder';
 import CustomToolPage from './pages/tools/CustomToolPage';
-import AgentManagement from './pages/admin/AgentManagement';
 import KnowledgePage from './pages/admin/KnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
-import DashboardSettings from './pages/admin/DashboardSettings';
 import RoleTemplates from './pages/admin/RoleTemplates';
 import UserManagement from './pages/admin/UserManagement';
 import AutomationInsightsPage from './pages/admin/AutomationInsightsPage';
@@ -311,7 +309,7 @@ export default function App() {
                     <Route
                       path="/tools/custom/builder"
                       element={
-                        <ProtectedRoute moduleKey="tools" adminOnly>
+                        <ProtectedRoute adminOnly>
                           <CustomToolBuilder />
                         </ProtectedRoute>
                       }
@@ -371,28 +369,10 @@ export default function App() {
                     />
 
                     <Route
-                      path="/admin/agents"
-                      element={
-                        <ProtectedRoute superAdminOnly>
-                          <AgentManagement />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    <Route
                       path="/admin/settings"
                       element={
                         <ProtectedRoute superAdminOnly>
                           <SettingsPage />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    <Route
-                      path="/admin/dashboard-settings"
-                      element={
-                        <ProtectedRoute superAdminOnly>
-                          <DashboardSettings />
                         </ProtectedRoute>
                       }
                     />

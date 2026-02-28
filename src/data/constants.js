@@ -79,7 +79,6 @@ export const NAV_ITEMS = [
       { label: 'Budget Builder', path: '/tools/budget', icon: 'Calculator', moduleKey: 'tools', pageKey: 'budget' },
       { label: 'Incident Report', path: '/tools/incident-report', icon: 'ShieldAlert', moduleKey: 'tools', pageKey: 'incident-report' },
       { label: 'Training Plan', path: '/tools/training-plan', icon: 'GraduationCap', moduleKey: 'tools', pageKey: 'training-plan' },
-      { label: 'Tool Builder', path: '/tools/custom/builder', icon: 'Wrench', moduleKey: 'tools', adminOnly: true },
     ],
   },
   {
@@ -89,9 +88,8 @@ export const NAV_ITEMS = [
       { label: 'Knowledge Base', path: '/admin/knowledge', icon: 'BookOpen', moduleKey: 'knowledge' },
       { label: 'Automation Insights', path: '/admin/automation', icon: 'Zap', moduleKey: 'automation' },
       { label: 'Role Templates', path: '/admin/role-templates', icon: 'ShieldCheck', moduleKey: 'admin' },
+      { label: 'Tool Builder', path: '/tools/custom/builder', icon: 'Wrench', moduleKey: 'admin' },
       { label: 'Connections', path: '/admin/connections', icon: 'Cable', moduleKey: 'superAdmin' },
-      { label: 'Dashboard Defaults', path: '/admin/dashboard-settings', icon: 'SlidersHorizontal', moduleKey: 'superAdmin' },
-      { label: 'Agent Management', path: '/admin/agents', icon: 'Bot', moduleKey: 'superAdmin' },
       { label: 'Settings', path: '/admin/settings', icon: 'Settings', moduleKey: 'superAdmin' },
     ],
   },
