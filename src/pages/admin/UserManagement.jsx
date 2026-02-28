@@ -113,6 +113,29 @@ export default function UserManagement() {
     setSaving(true);
     setSaveError(null);
 
+    // Defense in depth: block role escalation beyond caller's rank
+    const saveRoleRank = ROLE_RANK[form.role] ?? 0;
+    if (saveRoleRank > myRank) {
+      setSaveError('You cannot assign a role higher than your own.');
+      setSaving(false);
+      return;
+    }
+
+    // Block deactivation of users at or above caller's rank (unless super-admin)
+    if (editingUser && !form.active && editingUser.active) {
+      const editTargetRank = ROLE_RANK[editingUser.role] ?? 0;
+      if (editingUser.id === currentUser.id) {
+        setSaveError('You cannot deactivate yourself.');
+        setSaving(false);
+        return;
+      }
+      if (currentUser.role !== 'super-admin' && editTargetRank >= myRank) {
+        setSaveError('You cannot deactivate users at or above your role.');
+        setSaving(false);
+        return;
+      }
+    }
+
     const modules = (form.role === 'admin' || form.role === 'super-admin')
       ? MODULE_DEFINITIONS.map((m) => m.key)
       : form.modules;
@@ -238,6 +261,24 @@ export default function UserManagement() {
 
   const isSelf = editingUser?.id === currentUser?.id;
   const isNonAdminRole = form.role !== 'admin' && form.role !== 'super-admin';
+
+  // Role hierarchy for permission checks
+  const ROLE_RANK = { user: 0, manager: 1, admin: 2, 'super-admin': 3 };
+  const myRank = ROLE_RANK[currentUser?.role] ?? 0;
+
+  // Roles the current user can assign (up to and including their own)
+  const assignableRoles = ['user', 'manager', 'admin', 'super-admin'].filter(r => ROLE_RANK[r] <= myRank);
+
+  // Can this user edit the target's role?
+  const targetRank = ROLE_RANK[editingUser?.role] ?? 0;
+  const canEditRole = !isSelf && targetRank <= myRank;
+
+  // Can this user toggle the target's active status?
+  const canToggleActive = !isSelf && (
+    currentUser?.role === 'super-admin'
+      ? true // super-admin can deactivate anyone except self
+      : targetRank < myRank // admin can only deactivate users/managers below them
+  );
 
   // Filter to this tenant's users (exclude platform_owner accounts)
   const tenantId = import.meta.env.VITE_TENANT_ID;
@@ -455,15 +496,20 @@ export default function UserManagement() {
             <select
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
-              disabled={isSelf}
+              disabled={editingUser ? !canEditRole : false}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="user">User</option>
-              <option value="manager">Manager</option>
-              <option value="admin">Admin</option>
+              {assignableRoles.map((r) => (
+                <option key={r} value={r}>
+                  {r === 'super-admin' ? 'Super Admin' : r.charAt(0).toUpperCase() + r.slice(1)}
+                </option>
+              ))}
             </select>
             {isSelf && (
               <p className="text-xs text-secondary-text mt-1">You cannot change your own role.</p>
+            )}
+            {editingUser && !isSelf && !canEditRole && (
+              <p className="text-xs text-secondary-text mt-1">This user has a higher role than yours.</p>
             )}
           </div>
 
@@ -607,11 +653,11 @@ export default function UserManagement() {
                 <span className="text-sm font-medium text-dark-text">Active</span>
                 <button
                   type="button"
-                  onClick={() => !isSelf && setForm({ ...form, active: !form.active })}
-                  disabled={isSelf}
+                  onClick={() => canToggleActive && setForm({ ...form, active: !form.active })}
+                  disabled={!canToggleActive}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     form.active ? 'bg-aa-blue' : 'bg-gray-300'
-                  } ${isSelf ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  } ${!canToggleActive ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -622,6 +668,9 @@ export default function UserManagement() {
               </label>
               {isSelf && (
                 <p className="text-xs text-secondary-text mt-1">You cannot deactivate yourself.</p>
+              )}
+              {!isSelf && !canToggleActive && (
+                <p className="text-xs text-secondary-text mt-1">You cannot deactivate users at or above your role.</p>
               )}
             </div>
           )}
