@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot, User, Copy, Check } from 'lucide-react';
 import { chatWithAgent } from '../../agents/api';
 
-export default function AgentChatPanel({ open, onClose, agentKey, agentName, context }) {
+export default function AgentChatPanel({ open, onClose, agentKey, agentName, context, systemPromptSuffix }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,7 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
         .slice(1) // skip the initial greeting
         .map((m) => ({ role: m.role, content: m.content }));
 
-      const response = await chatWithAgent(agentKey, apiMessages, null);
+      const response = await chatWithAgent(agentKey, apiMessages, null, { systemPromptSuffix });
       setMessages((prev) => [...prev, { role: 'assistant', content: response }]);
     } catch (err) {
       setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);

@@ -71,8 +71,13 @@ export async function callAgent(agentKey, actionKey, data, tenantContext) {
 
 /**
  * Chat with an agent (multi-turn) through the backend proxy.
+ *
+ * @param {string} agentKey
+ * @param {Array} messages
+ * @param {object} [tenantContext]
+ * @param {{ systemPromptSuffix?: string }} [options]
  */
-export async function chatWithAgent(agentKey, messages, tenantContext) {
+export async function chatWithAgent(agentKey, messages, tenantContext, options = {}) {
   const ctx = tenantContext || _tenantContext;
   const agent = getAgent(agentKey, ctx);
   if (!agent) throw new Error(`Agent not found: ${agentKey}`);
@@ -84,6 +89,9 @@ export async function chatWithAgent(agentKey, messages, tenantContext) {
   }
 
   const tenantId = getTenantId();
+  const systemPrompt = options.systemPromptSuffix
+    ? `${agent.systemPrompt}\n\n${options.systemPromptSuffix}`
+    : agent.systemPrompt;
 
   const response = await fetch(`${BACKEND_URL}/api/claude`, {
     method: 'POST',
@@ -93,8 +101,8 @@ export async function chatWithAgent(agentKey, messages, tenantContext) {
     },
     body: JSON.stringify({
       model: agent.model,
-      max_tokens: 1024,
-      system: agent.systemPrompt,
+      max_tokens: 2048,
+      system: systemPrompt,
       messages,
       agent_key: agentKey,
       tenant_id: tenantId,

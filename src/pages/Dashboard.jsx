@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, Bot, DollarSign, TrendingUp, Clock, HardHat,
@@ -115,6 +115,38 @@ export default function Dashboard() {
   const { data: opsIntel, loading: opsLoading } = useOpsIntelligence();
 
   const pageTitle = brand.companyName ? `${brand.companyName} Command Center` : 'Command Center';
+
+  // Build data context for analytics agent
+  const analyticsContext = useCallback(() => {
+    if (!summary) return '';
+    const { metricTier: tier, allowedDomains: domains } = { metricTier, allowedDomains: Object.keys(summary.domains || {}) };
+    const parts = ['Current view: Command Center', '', 'Dashboard Data Summary:'];
+    const hero = summary.hero;
+    if (hero && typeof hero === 'object') {
+      parts.push('\nOverall Metrics:');
+      Object.entries(hero).forEach(([key, val]) => {
+        if (val != null) parts.push(`  ${key}: ${typeof val === 'object' ? JSON.stringify(val) : val}`);
+      });
+    }
+    const doms = summary.domains || {};
+    Object.entries(doms).forEach(([domain, data]) => {
+      if (!canSeeDomain(domain)) return;
+      parts.push(`\n${domain.charAt(0).toUpperCase() + domain.slice(1)} Domain:`);
+      if (data && typeof data === 'object') {
+        Object.entries(data).forEach(([k, v]) => {
+          if (v != null) parts.push(`  ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`);
+        });
+      }
+    });
+    if (summary.attentionItems?.length) {
+      parts.push('\nAttention Items:');
+      summary.attentionItems.forEach((item) => {
+        parts.push(`  - [${item.severity || 'info'}] ${item.title}: ${item.detail || ''}`);
+      });
+    }
+    parts.push(`\nUser's metric access tier: ${metricTier}`);
+    return parts.join('\n');
+  }, [summary, metricTier, canSeeDomain]);
 
   // --- Loading / Error ---
   if (loading || rbacLoading) {
@@ -388,7 +420,8 @@ export default function Dashboard() {
           onClose={() => setAnalyticsChatOpen(false)}
           agentKey="analytics"
           agentName="Analytics Agent"
-          context="Operational data analysis — Operations, Labor, Quality, Timekeeping, and Safety metrics"
+          context="Operational data analysis — Command Center overview"
+          systemPromptSuffix={analyticsContext()}
         />
       )}
     </div>
