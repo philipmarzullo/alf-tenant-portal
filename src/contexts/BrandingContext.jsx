@@ -51,6 +51,22 @@ export function BrandingProvider({ children }) {
           document.documentElement.style.setProperty('--color-dark-nav', sidebarBg);
         }
 
+        // Set favicon to tenant logo
+        if (logoUrl) {
+          let link = document.querySelector("link[rel~='icon']");
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+          }
+          link.href = logoUrl;
+        }
+
+        // Set page title to tenant display name
+        const title = row.brand_display_name
+          || (companyName ? `${companyName} Portal` : null);
+        if (title) document.title = title;
+
         setBrand({
           companyName,
           displayName,
