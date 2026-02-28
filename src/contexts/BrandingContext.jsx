@@ -13,6 +13,7 @@ export function BrandingProvider({ children }) {
     logoUrl: null,
     primaryColor: null,
     sidebarBg: null,
+    websiteUrl: null,
     brandLoading: true,
   });
 
@@ -39,6 +40,7 @@ export function BrandingProvider({ children }) {
         const sidebarBg = row.brand_sidebar_bg || null;
         // Logo: explicit brand URL > null (components decide their own fallback)
         const logoUrl = row.brand_logo_url || null;
+        const websiteUrl = row.brand_website_url || null;
 
         // Override CSS custom properties so all existing aa-blue / dark-nav
         // class references automatically pick up the tenant's brand color.
@@ -55,6 +57,7 @@ export function BrandingProvider({ children }) {
           logoUrl,
           primaryColor,
           sidebarBg,
+          websiteUrl,
           brandLoading: false,
         });
       });

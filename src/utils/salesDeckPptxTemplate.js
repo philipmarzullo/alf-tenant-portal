@@ -379,6 +379,8 @@ export async function generateSalesDeckPptx(form, agentOutput, branding) {
     : '';
   const aaTeamStr = (form.aaTeam || []).filter(p => p.name).map(p => `${p.name}${p.title ? `, ${p.title}` : ''}`).join('  |  ');
 
+  const websiteUrl = branding?.websiteUrl || '';
+
   // Slide 1: Cover — clean tagline only (no "Sales Presentation —" prefix)
   const tagline = getNarrativeText(narratives, 'COVER:TAGLINE') || 'The Performance-Focused Choice';
   addDarkCoverSlide(pptx, {
@@ -387,6 +389,7 @@ export async function generateSalesDeckPptx(form, agentOutput, branding) {
     dateLine: dateStr ? `Date: ${dateStr}` : null,
     teamLine: aaTeamStr ? `A&A Team: ${aaTeamStr}` : null,
     logoWhite,
+    websiteUrl,
   });
 
   // Slide 2: Why Performance Matters — hero metric cards
@@ -449,6 +452,7 @@ export async function generateSalesDeckPptx(form, agentOutput, branding) {
   addDarkThankYouSlide(pptx, {
     closingMessage: `We appreciate the opportunity to present to ${prospect}.\nWe look forward to building a performance-driven partnership.`,
     logoWhite,
+    websiteUrl,
   });
 
   // Generate filename and trigger download

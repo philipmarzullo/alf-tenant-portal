@@ -45,6 +45,7 @@ import QualityDashboard from './pages/dashboards/QualityDashboard';
 import TimekeepingDashboard from './pages/dashboards/TimekeepingDashboard';
 import SafetyDashboard from './pages/dashboards/SafetyDashboard';
 import ActionPlansPage from './pages/dashboards/ActionPlansPage';
+import AnalyticsChatPage from './pages/analytics/AnalyticsChatPage';
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
@@ -247,6 +248,15 @@ export default function App() {
                       <Route path="safety" element={<SafetyDashboard />} />
                       <Route path="action-plans" element={<ProtectedRoute moduleKey="actionPlans"><ActionPlansPage /></ProtectedRoute>} />
                     </Route>
+
+                    <Route
+                      path="/analytics/chat"
+                      element={
+                        <ProtectedRoute moduleKey="analytics">
+                          <AnalyticsChatPage />
+                        </ProtectedRoute>
+                      }
+                    />
 
                     {/* Tools — gated by "tools" module + per-tool pageKey */}
                     <Route

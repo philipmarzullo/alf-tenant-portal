@@ -67,6 +67,7 @@ export const NAV_ITEMS = [
     items: [
       { label: 'Dashboards', path: '/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
       { label: 'Action Plans', path: '/dashboards/action-plans', icon: 'ListChecks', moduleKey: 'actionPlans' },
+      { label: 'Analytics Chat', path: '/analytics/chat', icon: 'MessageSquare', moduleKey: 'analytics' },
     ],
   },
   {

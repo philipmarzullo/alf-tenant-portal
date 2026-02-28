@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { FileBarChart, Plus, Trash2, Upload, X, Image, ChevronLeft, ChevronRight, Download, Clock, RotateCcw, FileText, ChevronDown, ChevronUp, FileSpreadsheet, AlertTriangle, Bot } from 'lucide-react';
+import { FileBarChart, Plus, Trash2, Upload, X, Image, ChevronLeft, ChevronRight, Download, Clock, RotateCcw, FileText, ChevronDown, ChevronUp, FileSpreadsheet, AlertTriangle, Bot, Database } from 'lucide-react';
 import { extractText } from '../../utils/docExtractor';
 import { parseQBUExcel } from '../../utils/qbuExcelParser';
 import AgentActionButton from '../../components/shared/AgentActionButton';
@@ -10,6 +10,7 @@ import { getQBUHistory, saveQBU, getQBUById, deleteQBU } from '../../data/qbuHis
 import { generateQBUPptx } from '../../utils/qbuPptxTemplate';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useBranding } from '../../contexts/BrandingContext';
+import { useTenantConfig } from '../../contexts/TenantConfigContext';
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -244,7 +245,9 @@ export default function QBUBuilder() {
     getQBUHistory().then(setHistory);
   }, []);
   const [generating, setGenerating] = useState(false);
-  const [mode, setMode] = useState('upload');
+  const { hasAction } = useTenantConfig();
+  const hasCustomIntake = hasAction('tools', 'qbu-custom-intake');
+  const [mode, setMode] = useState(hasCustomIntake ? 'upload' : 'manual');
   const [excelFile, setExcelFile] = useState(null);
   const [excelParsed, setExcelParsed] = useState(false);
   const [parseWarnings, setParseWarnings] = useState([]);
@@ -1044,31 +1047,37 @@ export default function QBUBuilder() {
           >
             <Bot size={12} /> Ask Review Agent
           </button>
-          <a
-            href="/qbu-intake-template.xlsx"
-            download
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-aa-blue border border-aa-blue/30 rounded-md hover:bg-aa-blue/5 transition-colors"
-          >
-            <Download size={12} /> Download QBU Template
-          </a>
+          {hasCustomIntake && (
+            <a
+              href="/qbu-intake-template.xlsx"
+              download
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-aa-blue border border-aa-blue/30 rounded-md hover:bg-aa-blue/5 transition-colors"
+            >
+              <Download size={12} /> Download QBU Template
+            </a>
+          )}
         </div>
       </div>
       <p className="text-sm text-secondary-text mb-4">
         {mode === 'upload'
           ? 'Upload your completed Excel intake template, attach supporting docs, and generate.'
+          : mode === 'fromData'
+          ? 'Generate a quarterly review directly from your connected operational data sources.'
           : 'Complete the intake form below. The AI agent will compile all sections into a branded review deck.'}
       </p>
 
       {/* Mode toggle */}
       <div className="inline-flex items-center bg-gray-100 rounded-lg p-1 mb-6">
-        <button
-          onClick={() => setMode('upload')}
-          className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-            mode === 'upload' ? 'bg-white text-dark-text shadow-sm' : 'text-secondary-text hover:text-dark-text'
-          }`}
-        >
-          <Upload size={14} /> Upload
-        </button>
+        {hasCustomIntake && (
+          <button
+            onClick={() => setMode('upload')}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              mode === 'upload' ? 'bg-white text-dark-text shadow-sm' : 'text-secondary-text hover:text-dark-text'
+            }`}
+          >
+            <Upload size={14} /> Upload
+          </button>
+        )}
         <button
           onClick={() => setMode('manual')}
           className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -1076,6 +1085,14 @@ export default function QBUBuilder() {
           }`}
         >
           <FileBarChart size={14} /> Manual
+        </button>
+        <button
+          onClick={() => setMode('fromData')}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            mode === 'fromData' ? 'bg-white text-dark-text shadow-sm' : 'text-secondary-text hover:text-dark-text'
+          }`}
+        >
+          <Database size={14} /> From Data
         </button>
       </div>
 
@@ -1397,6 +1414,20 @@ export default function QBUBuilder() {
             )}
           </div>
         </>
+      )}
+
+      {mode === 'fromData' && (
+        <div className="bg-white rounded-lg border border-gray-200 p-8 mb-8 text-center">
+          <Database size={32} className="mx-auto text-gray-300 mb-3" />
+          <h3 className="text-sm font-semibold text-dark-text mb-2">Generate from Operational Data</h3>
+          <p className="text-sm text-secondary-text max-w-md mx-auto mb-4">
+            Automatically populate your quarterly review from connected data sources — work tickets, inspections, incidents, and financial metrics.
+          </p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-secondary-text">
+            <Database size={14} />
+            Data integration coming soon
+          </div>
+        </div>
       )}
 
       {/* Generated result */}

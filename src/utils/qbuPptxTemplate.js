@@ -13,12 +13,13 @@ import {
 
 // ── Cover Slide (thin wrapper) ───────────────────────────
 
-function addCoverSlide(pptx, form, logoWhite) {
+function addCoverSlide(pptx, form, logoWhite, websiteUrl) {
   const qLine = `Quarterly Business Update  |${form.cover.quarter || 'Q#'}|  ${form.cover.date || ''}`;
   addDarkCoverSlide(pptx, {
     primaryText: form.cover.clientName || 'Client Name',
     subtitleText: qLine,
     logoWhite,
+    websiteUrl,
   });
 }
 
@@ -1374,10 +1375,11 @@ function addRoadmapSlide(pptx, form, logoColor, narratives) {
 
 // ── Slide 16: Thank You (thin wrapper) ──────────────────
 
-function addThankYouSlide(pptx, form, logoWhite) {
+function addThankYouSlide(pptx, form, logoWhite, websiteUrl) {
   addDarkThankYouSlide(pptx, {
     closingMessage: 'We look forward to further collaboration and\ndelivering greater operational efficiencies.',
     logoWhite,
+    websiteUrl,
   });
 }
 
@@ -1401,8 +1403,10 @@ export async function generateQBUPptx(form, agentOutput, branding) {
   // Parse agent narrative blocks (gracefully returns {} if none found)
   const narratives = parseAgentNarratives(agentOutput);
 
+  const websiteUrl = branding?.websiteUrl || '';
+
   // Build slides in section order matching the QBU skill template
-  addCoverSlide(pptx, form, logoWhite);                              // 1  — Title
+  addCoverSlide(pptx, form, logoWhite, websiteUrl);                  // 1  — Title
   addIntroductionsSlide(pptx, form, logoColor);                      // 2  — Introductions
   addSafetyMomentSlide(pptx, form, logoColor, narratives);           // 3  — A.1
   addSafetyComplianceSlide(pptx, form, logoColor);                  // 4  — A.2
@@ -1418,7 +1422,7 @@ export async function generateQBUPptx(form, agentOutput, branding) {
   addInnovationSlide(pptx, form, logoColor, narratives);            // 14 — G.1
   await addInnovationPhotoSlides(pptx, form, logoColor);            //      G.1a
   addRoadmapSlide(pptx, form, logoColor, narratives);               // 15 — G.2
-  addThankYouSlide(pptx, form, logoWhite);                           // 16 — Thank You
+  addThankYouSlide(pptx, form, logoWhite, websiteUrl);               // 16 — Thank You
 
   // Generate filename and trigger download
   const client = (form.cover.clientName || 'QBU').replace(/[^a-zA-Z0-9]/g, '-');
