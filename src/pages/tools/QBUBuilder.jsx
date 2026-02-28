@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FileBarChart, Plus, Trash2, Upload, X, Image, ChevronLeft, ChevronRight, Download, Clock, RotateCcw, FileText, ChevronDown, ChevronUp, FileSpreadsheet, AlertTriangle, Bot } from 'lucide-react';
 import { extractText } from '../../utils/docExtractor';
 import { parseQBUExcel } from '../../utils/qbuExcelParser';
@@ -238,7 +238,11 @@ export default function QBUBuilder() {
   const [form, setForm] = useState(INITIAL);
   const [result, setResult] = useState(null);
   const [showResult, setShowResult] = useState(false);
-  const [history, setHistory] = useState(() => getQBUHistory());
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    getQBUHistory().then(setHistory);
+  }, []);
   const [generating, setGenerating] = useState(false);
   const [mode, setMode] = useState('upload');
   const [excelFile, setExcelFile] = useState(null);
@@ -440,7 +444,7 @@ export default function QBUBuilder() {
             <div><Label>Region VP</Label><Input value={form.cover.regionVP} onChange={(v) => updateSection('cover', { regionVP: v })} placeholder="e.g., Emily Walsh" /></div>
           </div>
 
-          <SectionHeading>A&A Team Attendees</SectionHeading>
+          <SectionHeading>Company Team Attendees</SectionHeading>
           <div className="space-y-2">
             {form.cover.aaTeam.map((row, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -679,7 +683,7 @@ export default function QBUBuilder() {
           </div>
 
           {/* Photo Upload */}
-          <SectionHeading description="Upload photos to include in the QBU deck. Add captions and locations.">Project Photos (Optional)</SectionHeading>
+          <SectionHeading description="Upload photos to include in the review deck. Add captions and locations.">Project Photos (Optional)</SectionHeading>
           <div>
             <input
               ref={photoInputRef}
@@ -868,7 +872,7 @@ export default function QBUBuilder() {
                 </div>
                 <div>
                   <Label>Innovation / Technology</Label>
-                  <Input value={row.innovation} onChange={(v) => updateArrayRow('roadmap', 'highlights', i, { innovation: v })} placeholder="e.g., Autonomous floor scrubber, AA360 QA module" />
+                  <Input value={row.innovation} onChange={(v) => updateArrayRow('roadmap', 'highlights', i, { innovation: v })} placeholder="e.g., Autonomous floor scrubber, QA analytics module" />
                 </div>
                 <div>
                   <Label>Description & Results</Label>
@@ -966,29 +970,29 @@ export default function QBUBuilder() {
       const output = await callAgent('qbu', 'generateQBU', form);
       setResult(output);
       setShowResult(true);
-      saveQBU({
+      await saveQBU({
         client: form.cover.clientName,
         quarter: form.cover.quarter,
         jobName: form.cover.jobName || '',
         formData: form,
         agentOutput: output,
       });
-      setHistory(getQBUHistory());
-      toast('QBU generated and saved');
+      getQBUHistory().then(setHistory);
+      toast('Review generated and saved');
     } finally {
       setGenerating(false);
     }
   };
 
   const handleDownload = async () => {
-    if (!result) { toast('Generate QBU first', 'error'); return; }
+    if (!result) { toast('Generate review first', 'error'); return; }
     toast('Building PowerPoint...');
     await generateQBUPptx(form, result, brand);
     toast('PPTX downloaded');
   };
 
-  const handleLoadQBU = (id) => {
-    const entry = getQBUById(id);
+  const handleLoadQBU = async (id) => {
+    const entry = await getQBUById(id);
     if (!entry) return;
     setForm({ ...INITIAL, ...entry.formData, projects: { ...entry.formData.projects, photos: entry.formData.projects?.photos || [] }, roadmap: { ...entry.formData.roadmap, photos: entry.formData.roadmap?.photos || [] } });
     setResult(entry.agentOutput);
@@ -998,18 +1002,18 @@ export default function QBUBuilder() {
   };
 
   const handleRedownload = async (id) => {
-    const entry = getQBUById(id);
+    const entry = await getQBUById(id);
     if (!entry) return;
     toast('Building PowerPoint...');
     await generateQBUPptx(entry.formData, entry.agentOutput, brand);
     toast('PPTX downloaded');
   };
 
-  const handleDeleteQBU = (id, client) => {
-    if (!confirm(`Delete QBU for ${client}?`)) return;
-    deleteQBU(id);
-    setHistory(getQBUHistory());
-    toast('QBU deleted');
+  const handleDeleteQBU = async (id, client) => {
+    if (!confirm(`Delete review for ${client}?`)) return;
+    await deleteQBU(id);
+    getQBUHistory().then(setHistory);
+    toast('Review deleted');
   };
 
   // ── Render ───────────────────────
@@ -1017,7 +1021,7 @@ export default function QBUBuilder() {
   return (
     <div>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2">
-        <h1 className="text-2xl font-light text-dark-text">QBU Builder</h1>
+        <h1 className="text-2xl font-light text-dark-text">Quarterly Review Builder</h1>
         <div className="flex items-center gap-2">
           {excelParsed && (
             <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded">
@@ -1038,7 +1042,7 @@ export default function QBUBuilder() {
             onClick={() => setChatOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-md hover:bg-aa-blue/10 transition-colors"
           >
-            <Bot size={12} /> Ask QBU Agent
+            <Bot size={12} /> Ask Review Agent
           </button>
           <a
             href="/qbu-intake-template.xlsx"
@@ -1052,7 +1056,7 @@ export default function QBUBuilder() {
       <p className="text-sm text-secondary-text mb-4">
         {mode === 'upload'
           ? 'Upload your completed Excel intake template, attach supporting docs, and generate.'
-          : 'Complete the intake form below. The AI agent will compile all sections into a branded QBU deck.'}
+          : 'Complete the intake form below. The AI agent will compile all sections into a branded review deck.'}
       </p>
 
       {/* Mode toggle */}
@@ -1228,7 +1232,7 @@ export default function QBUBuilder() {
 
           {/* Section 3: Project Photos */}
           <div className="border-t border-gray-200 pt-6 mt-6">
-            <SectionHeading description="Upload photos to include in the QBU deck. Add captions, locations, and before/after tags.">
+            <SectionHeading description="Upload photos to include in the review deck. Add captions, locations, and before/after tags.">
               Project Photos (Optional)
             </SectionHeading>
             <input
@@ -1342,7 +1346,7 @@ export default function QBUBuilder() {
 
           {/* Generate button */}
           <div className="border-t border-gray-200 pt-6 mt-6 flex justify-end">
-            <AgentActionButton label="Generate QBU" variant="primary" onClick={handleGenerate} />
+            <AgentActionButton label="Generate Review" variant="primary" onClick={handleGenerate} />
           </div>
         </div>
       )}
@@ -1389,7 +1393,7 @@ export default function QBUBuilder() {
                 {TABS[tabIndex + 1].label} <ChevronRight size={16} />
               </button>
             ) : (
-              <AgentActionButton label="Generate QBU" variant="primary" onClick={handleGenerate} />
+              <AgentActionButton label="Generate Review" variant="primary" onClick={handleGenerate} />
             )}
           </div>
         </>
@@ -1399,7 +1403,7 @@ export default function QBUBuilder() {
       {showResult && result && (
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Generated QBU Content</div>
+            <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Generated Review Content</div>
             <div className="flex items-center gap-3">
               <button onClick={handleDownload} className="inline-flex items-center gap-1 text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors">
                 <Download size={12} /> Download PPTX
@@ -1413,13 +1417,13 @@ export default function QBUBuilder() {
         </div>
       )}
 
-      {/* Recent QBUs */}
-      <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent QBUs</h2>
+      {/* Recent Reviews */}
+      <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent Reviews</h2>
       <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         {history.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-secondary-text">
             <Clock size={20} className="mx-auto mb-2 text-gray-300" />
-            No QBUs generated yet
+            No reviews generated yet
           </div>
         ) : (
           <table className="w-full text-sm min-w-[600px]">
@@ -1445,7 +1449,7 @@ export default function QBUBuilder() {
                   <td className="px-4 py-3 cursor-pointer" onClick={() => handleLoadQBU(r.id)}><StatusBadge status={r.status} /></td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => handleLoadQBU(r.id)} title="Load QBU" className="p-1.5 text-gray-400 hover:text-aa-blue transition-colors rounded">
+                      <button onClick={() => handleLoadQBU(r.id)} title="Load Review" className="p-1.5 text-gray-400 hover:text-aa-blue transition-colors rounded">
                         <RotateCcw size={14} />
                       </button>
                       <button onClick={() => handleRedownload(r.id)} title="Download PPTX" className="p-1.5 text-gray-400 hover:text-aa-blue transition-colors rounded">
@@ -1468,8 +1472,8 @@ export default function QBUBuilder() {
         open={chatOpen}
         onClose={() => setChatOpen(false)}
         agentKey="qbu"
-        agentName="QBU Agent"
-        context="Quarterly Business Updates — formatting, content, client data, and A&A service metrics"
+        agentName="Review Agent"
+        context="Quarterly Business Updates — formatting, content, client data, and service metrics"
       />
     </div>
   );

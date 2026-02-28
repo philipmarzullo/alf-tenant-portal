@@ -102,14 +102,14 @@ export default function PayRateChanges() {
                   toast('Union compliance check complete');
                 }} />
               )}
-              <AgentActionButton label="Generate WinTeam Update" onClick={async () => {
-                const result = await callAgent('hr', 'generateWinTeamUpdate', {
+              <AgentActionButton label="Generate System Update" onClick={async () => {
+                const result = await callAgent('hr', 'generateSystemUpdate', {
                   employeeName: selected.employee,
                   description: `Pay rate change: ${selected.currentRate} → ${selected.proposedRate}`,
                   effectiveDate: selected.effectiveDate,
                 });
                 setAgentResult(result);
-                toast('WinTeam update generated');
+                toast('System update generated');
               }} />
             </div>
 

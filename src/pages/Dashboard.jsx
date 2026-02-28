@@ -12,6 +12,7 @@ import DashboardEmptyState from '../components/dashboards/DashboardEmptyState';
 import { useUser } from '../contexts/UserContext';
 import { useBranding } from '../contexts/BrandingContext';
 import { useRBAC } from '../contexts/RBACContext';
+import { useTenantConfig } from '../contexts/TenantConfigContext';
 import useHomeSummary from '../hooks/useHomeSummary';
 import useOpsIntelligence from '../hooks/useOpsIntelligence';
 import { HEALTH_THRESHOLDS, computeHealth } from '../data/healthThresholds';
@@ -104,7 +105,9 @@ function formatHealthValue(value, format) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
+  const [analyticsChatOpen, setAnalyticsChatOpen] = useState(false);
   const { isAdmin } = useUser();
+  const { tenantHasModule } = useTenantConfig();
   const brand = useBranding();
   const { metricTier, rbacLoading, canSeeDomain } = useRBAC();
   const { data: summary, loading, error } = useHomeSummary();
@@ -186,15 +189,26 @@ export default function Dashboard() {
     <div>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">{pageTitle}</h1>
-        {isAdmin && (
-          <button
-            onClick={() => setChatOpen(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
-          >
-            <Bot size={16} />
-            Ask Admin Agent
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {tenantHasModule('analytics') && (
+            <button
+              onClick={() => setAnalyticsChatOpen(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+            >
+              <Bot size={16} />
+              Ask Analytics Agent
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => setChatOpen(true)}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+            >
+              <Bot size={16} />
+              Ask Admin Agent
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ─── Section 1: Company KPIs ─── */}
@@ -362,6 +376,17 @@ export default function Dashboard() {
           agentKey="admin"
           agentName="Admin Agent"
           context="Cross-department executive insights — Operations, Labor, Quality, Timekeeping, and Safety"
+        />
+      )}
+
+      {/* Analytics Agent Chat Panel */}
+      {tenantHasModule('analytics') && (
+        <AgentChatPanel
+          open={analyticsChatOpen}
+          onClose={() => setAnalyticsChatOpen(false)}
+          agentKey="analytics"
+          agentName="Analytics Agent"
+          context="Operational data analysis — Operations, Labor, Quality, Timekeeping, and Safety metrics"
         />
       )}
     </div>

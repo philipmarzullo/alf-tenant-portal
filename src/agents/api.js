@@ -133,9 +133,9 @@ If you have questions about plan options or need help navigating the portal, ple
 
 Best regards,
 ${coTeam}`,
-      generateWinTeamUpdate: `WinTeam Update Instructions — ${data.employeeName || 'Employee'}
+      generateSystemUpdate: `HR System Update Instructions — ${data.employeeName || 'Employee'}
 
-1. Open WinTeam → Employee Master File
+1. Open the HR system → Employee Master File
 2. Search for employee: ${data.employeeName || '[Employee Name]'}
 3. Navigate to: ${data.description?.includes('leave') ? 'Status tab → Employment Status' : 'Compensation tab → Pay Rate'}
 4. Update the following fields:
@@ -160,7 +160,7 @@ Verified against:
 
 Next Steps:
 1. Proceed with VP approval
-2. Enter in WinTeam with effective date
+2. Enter in the HR system with effective date
 3. Confirm on next payroll preview`,
       notifyOperations: `Operations Notification — Leave of Absence
 
@@ -344,7 +344,7 @@ CROSS-DEPARTMENT RISKS
 OPPORTUNITIES
 • TBI pending amounts represent immediate invoicing opportunity ($286K+ across portfolio)
 • Strong compliment and good save numbers — use in QBU presentations and renewal meetings
-• Glide Path shared-savings positioning for renewal discussions
+• Shared-savings positioning for renewal discussions
 
 RECOMMENDED EXECUTIVE ACTIONS
 1. Schedule VP operations review for territories below inspection targets
@@ -486,22 +486,22 @@ RELATIONSHIP SUMMARY
 This is a valued client with a strong service history. Annual APC of ${data.apcAnnual || '[N/A]'} positions this as a significant account. ${data.apcPriorYear ? `Prior year APC was ${data.apcPriorYear}, reflecting steady growth in the partnership.` : ''}
 
 PERFORMANCE HIGHLIGHTS TO LEAD WITH
-• 98%+ client retention rate — our track record speaks for itself
+• Strong client retention rate — our track record speaks for itself
 • Consistent SLA compliance across all service areas
 • Dedicated account management with proactive communication
-• People First™ approach driving frontline quality
+• Employee-focused culture driving frontline quality
 
 PRICING CONSIDERATIONS
 ${data.apcPriorYear && data.apcAnnual ? `Year-over-year change: ${(((Number(String(data.apcAnnual).replace(/[^0-9]/g, '')) - Number(String(data.apcPriorYear).replace(/[^0-9]/g, ''))) / Number(String(data.apcPriorYear).replace(/[^0-9]/g, ''))) * 100).toFixed(1)}%. This aligns with typical CPI and wage adjustments.` : '[PLACEHOLDER: need prior year data for variance]'}
 • Review union rate change impacts for the upcoming period
-• Consider Glide Path shared-savings as a retention incentive
+• Consider shared-savings programs as a retention incentive
 
 TBI UPSELL OPPORTUNITY
 ${data.tbiYtd ? `TBI YTD of ${data.tbiYtd} shows consistent demand for extra/tag work. Consider rolling recurring TBI items into the base contract scope to simplify billing and lock in revenue.` : 'Review TBI history for upsell opportunities.'}
 
 RECOMMENDED NEXT STEPS
 1. Schedule renewal meeting ${data.daysRemaining && Number(data.daysRemaining) < 60 ? '— URGENT, less than 60 days remaining' : 'within the next 2 weeks'}
-2. Prepare performance summary from AA360 data
+2. Prepare performance summary from operational data
 3. Draft renewal proposal with updated pricing
 4. Identify scope expansion opportunities from TBI patterns
 5. Confirm account manager availability for client presentation`,
@@ -553,11 +553,11 @@ In Renewal: ${data.inRenewalCount || '[N/A]'}
 TBI Pending: ${data.totalTbiPending || '[N/A]'}
 
 PIPELINE HEALTH: GOOD
-Our 98%+ retention rate means the renewal pipeline is primarily a timing and execution exercise, not a risk exercise. However, attention is needed on upcoming expirations.
+Our strong retention rate means the renewal pipeline is primarily a timing and execution exercise, not a risk exercise. However, attention is needed on upcoming expirations.
 
 PRIORITY ACTIONS (NEXT 30 DAYS)
 1. Schedule renewal meetings for all contracts expiring within 60 days
-2. Prepare performance packages (AA360 data, QBU summaries) for each renewal
+2. Prepare performance packages (operational data, QBU summaries) for each renewal
 3. Invoice all pending TBI before renewal conversations begin
 4. Brief account managers on pricing strategy for each renewal
 
@@ -588,11 +588,11 @@ ${data.presentationDate ? `Date: ${data.presentationDate}` : ''}
 Presenter Notes: Open with a warm, confident introduction. Reference any prior conversations or site visits. Set the tone: "We're here to show you why performance matters more than scale."
 
 SLIDE 2: WHY PERFORMANCE MATTERS
-• 98%+ client retention rate — our clients stay because we deliver
-• 99%+ SLA compliance across all accounts
-• 7+ year average client relationship duration
+• Industry-leading client retention rate — our clients stay because we deliver
+• Consistent SLA compliance across all accounts
+• Long-term client relationships built on trust and results
 • Cost efficiency consistently below industry benchmarks
-• 53 years of continuous operations under stable leadership
+• Stable leadership and continuous operations
 
 Presenter Notes: This is our strongest opening. Let the numbers speak. Pause after retention rate — it's our most differentiating metric. If asked about comparison to ${data.currentProvider || 'their current provider'}, stay positive: "We focus on what we deliver, not what others don't."
 
@@ -611,41 +611,41 @@ SLIDE 4: OUR APPROACH — ${(data.industry || 'YOUR INDUSTRY').toUpperCase()}
 
 Presenter Notes: This is where we connect our capabilities to their specific environment. Reference similar clients in ${data.industry || 'their industry'} (check with sales team for approved references).
 
-SLIDE 5: PEOPLE FIRST™ & ESOP
-• Employee-owned (ESOP) — every team member has a stake in your facility's success
-• People First™ is our operating philosophy — employee dignity drives service quality
-• SYNC task-based model: 5 specialist roles for clarity and accountability
-• 25+ years managing union workforces seamlessly
-${data.specialRequirements && data.specialRequirements.toLowerCase().includes('union') ? '• Direct experience with SEIU, IUOE, and other major building service unions in the market' : ''}
+SLIDE 5: PEOPLE & CULTURE
+• Our team members have a direct stake in your facility's success
+• Employee-focused culture — dignity and respect drive service quality
+• Structured service model with specialist roles for clarity and accountability
+• Experienced in managing union workforces seamlessly
+${data.specialRequirements && data.specialRequirements.toLowerCase().includes('union') ? '• Direct experience with major building service unions in the market' : ''}
 
-Presenter Notes: People First™ is not a slogan — it's how we operate. Give a concrete example: "When our team members feel respected and valued, they take ownership of your facility. That's why our frontline retention is among the highest in the industry."
+Presenter Notes: Our people-first approach is not a slogan — it's how we operate. Give a concrete example: "When our team members feel respected and valued, they take ownership of your facility. That's why our frontline retention is among the highest in the industry."
 
 SLIDE 6: TECHNOLOGY & INNOVATION
-• AA360 platform: QA tracking, multilingual training, AI-powered validation
-• Lighthouse: real-time task completion tracking — full visibility into daily operations
-• Predictive maintenance via TMA/CMMS integration
+• Company technology platform: QA tracking, training, AI-powered validation
+• Real-time task completion tracking — full visibility into daily operations
+• Predictive maintenance via CMMS integration
 • Transparent reporting dashboards — no surprises, no black boxes
 • Robotics and autonomous equipment where they improve outcomes, not replace people
 
-Presenter Notes: Don't lead with tech — lead with what it solves. "You mentioned ${data.concerns ? 'visibility into daily operations' : 'wanting better reporting'} — here's exactly how we deliver that." Demo AA360 if possible.
+Presenter Notes: Don't lead with tech — lead with what it solves. "You mentioned ${data.concerns ? 'visibility into daily operations' : 'wanting better reporting'} — here's exactly how we deliver that." Offer to demo the platform if possible.
 
 SLIDE 7: PARTNERSHIP MODEL
-• Glide Path shared-savings program — verified efficiency gains returned to you
+• Shared-savings program — verified efficiency gains returned to you
 • Dedicated account management team with regional VP oversight
-• Regular QBU (Quarterly Business Update) presentations with actionable metrics
+• Regular Quarterly Business Update presentations with actionable metrics
 • Continuous improvement built into the contract structure
 • Transition plan: 90-day onboarding with milestone checkpoints
 
-Presenter Notes: Glide Path is a powerful differentiator. Frame it as aligned incentives: "We only save money when we find real efficiencies — and we share those savings with you. That's alignment you won't find with other providers."
+Presenter Notes: The shared-savings model is a powerful differentiator. Frame it as aligned incentives: "We only save money when we find real efficiencies — and we share those savings with you. That's alignment you won't find with other providers."
 
 SLIDE 8: WHY US
 • Performance-focused, not scale-focused — we choose partnerships carefully
-• 2,000+ employee-owners invested in your success
-• 41 years of leadership stability under one CEO
+• Our team is invested in your success
+• Leadership stability and operational continuity
 • ${data.emphasisAreas || 'Enterprise capabilities with relationship-driven service'}
 • References available from similar ${data.industry || '[industry]'} accounts
 
-Presenter Notes: Close strong. "We're not the biggest — we're the best fit. And our 98%+ retention rate proves that our clients agree." Make eye contact with the decision maker.
+Presenter Notes: Close strong. "We're not the biggest — we're the best fit. And our retention rate proves that our clients agree." Make eye contact with the decision maker.
 
 SLIDE 9: NEXT STEPS
 • Facility walkthrough and detailed needs assessment
@@ -663,11 +663,11 @@ The Performance-Focused Choice
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S2:BULLETS -->
-98%+ client retention rate — our clients stay because we deliver
-99%+ SLA compliance across all managed accounts
-7+ year average client relationship duration
+Industry-leading client retention rate — our clients stay because we deliver
+Consistent SLA compliance across all managed accounts
+Long-term client relationships built on trust and results
 Cost efficiency consistently below industry benchmarks
-53 years of continuous operations under stable leadership
+Stable leadership and continuous operations
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S2:NOTES -->
@@ -689,7 +689,7 @@ Deep experience in ${data.industry || 'facility'} environments — we understand
 ${data.facilityType ? `Specialized protocols for ${data.facilityType} operations` : 'Facility-specific protocols tailored to your environment'}
 Manager-heavy model ensures daily on-site accountability and oversight
 Single-point accountability across ${data.servicesRequested || 'janitorial, grounds, and MEP'}
-SYNC task-based service model with 5 specialist roles for clarity
+Structured service model with specialist roles for clarity
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S4:NOTES -->
@@ -697,51 +697,51 @@ This is where we connect our capabilities to their specific environment. Referen
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S5:BULLETS -->
-Employee-owned (ESOP) — every team member has a stake in your facility's success
-People First™ is our operating philosophy — employee dignity drives service quality
-SYNC task-based model: 5 specialist roles for clarity and accountability
-25+ years managing union workforces seamlessly
-Industry-leading frontline retention driven by ownership culture
+Our team members have a direct stake in your facility's success
+Employee-focused culture — dignity and respect drive service quality
+Structured service model with specialist roles for clarity and accountability
+Experienced in managing union workforces seamlessly
+Industry-leading frontline retention driven by our culture
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S5:NOTES -->
-People First™ is not a slogan — it's how we operate. Give a concrete example: "When our team members feel respected and valued, they take ownership of your facility. That's why our frontline retention is among the highest in the industry."
+Our people-first approach is not a slogan — it's how we operate. Give a concrete example: "When our team members feel respected and valued, they take ownership of your facility. That's why our frontline retention is among the highest in the industry."
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S6:BULLETS -->
-AA360 platform: QA tracking, multilingual training, AI-powered validation
-Lighthouse: real-time task completion tracking — full visibility into daily operations
-Predictive maintenance via TMA/CMMS integration
+Company technology platform: QA tracking, training, AI-powered validation
+Real-time task completion tracking — full visibility into daily operations
+Predictive maintenance via CMMS integration
 Transparent reporting dashboards — no surprises, no black boxes
 Robotics and autonomous equipment where they improve outcomes, not replace people
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S6:NOTES -->
-Don't lead with tech — lead with what it solves. "You mentioned wanting better visibility into daily operations — here's exactly how we deliver that." Offer to demo AA360 if possible.
+Don't lead with tech — lead with what it solves. "You mentioned wanting better visibility into daily operations — here's exactly how we deliver that." Offer to demo the platform if possible.
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S7:BULLETS -->
-Glide Path shared-savings program — verified efficiency gains returned to you
+Shared-savings program — verified efficiency gains returned to you
 Dedicated account management team with regional VP oversight
-Regular QBU (Quarterly Business Update) presentations with actionable metrics
+Regular Quarterly Business Update presentations with actionable metrics
 Continuous improvement built into the contract structure
 90-day transition plan with milestone checkpoints
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S7:NOTES -->
-Glide Path is a powerful differentiator. Frame it as aligned incentives: "We only save money when we find real efficiencies — and we share those savings with you. That's alignment you won't find with other providers."
+The shared-savings model is a powerful differentiator. Frame it as aligned incentives: "We only save money when we find real efficiencies — and we share those savings with you. That's alignment you won't find with other providers."
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S8:BULLETS -->
 Performance-focused, not scale-focused — we choose partnerships carefully
-2,000+ employee-owners invested in your success
-41 years of leadership stability under one CEO
+Our team is invested in your success
+Leadership stability and operational continuity
 Enterprise capabilities with relationship-driven service
 References available from similar ${data.industry || 'industry'} accounts
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S8:NOTES -->
-Close strong. "We're not the biggest — we're the best fit. And our 98%+ retention rate proves that our clients agree." Make eye contact with the decision maker. This is the slide where confidence matters most.
+Close strong. "We're not the biggest — we're the best fit. And our retention rate proves that our clients agree." Make eye contact with the decision maker. This is the slide where confidence matters most.
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:S9:BULLETS -->

@@ -74,7 +74,7 @@ const MODULES = [
   { title: 'Inspection Detail Tracking', description: 'Individual inspection records, photos, compliance scoring by site' },
   { title: 'Incident & Deficiency Management', description: 'Incident reporting workflows, deficiency resolution tracking, root cause analysis' },
   { title: 'Client Quality Scorecards', description: 'Per-client quality scores, trend analysis, SLA compliance reporting' },
-  { title: 'WinTeam Integration Dashboard', description: 'Live WinTeam data feeds, automated KPI refresh, real-time VP dashboards' },
+  { title: 'ERP Integration Dashboard', description: 'Live ERP data feeds, automated KPI refresh, real-time VP dashboards' },
 ];
 
 export default function OpsOverview() {

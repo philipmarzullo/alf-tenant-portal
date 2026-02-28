@@ -116,9 +116,9 @@ export default function LeaveManagement() {
                           await callAgent('hr', 'sendReminder', { employeeName: lc.employee, type: lc.type });
                           toast(`Reminder sent for ${lc.employee}`);
                         }} />
-                        <AgentActionButton label="Generate WinTeam Update" onClick={async () => {
-                          await callAgent('hr', 'generateWinTeamUpdate', { employeeName: lc.employee, description: `${lc.type} — ${lc.stepLabel}` });
-                          toast('WinTeam update generated');
+                        <AgentActionButton label="Generate System Update" onClick={async () => {
+                          await callAgent('hr', 'generateSystemUpdate', { employeeName: lc.employee, description: `${lc.type} — ${lc.stepLabel}` });
+                          toast('System update generated');
                         }} />
                         <AgentActionButton label="Notify Operations" onClick={async () => {
                           await callAgent('hr', 'notifyOperations', { employeeName: lc.employee, type: lc.type, dates: lc.dates });

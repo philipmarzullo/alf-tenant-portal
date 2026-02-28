@@ -294,7 +294,7 @@ export function getNarrativeText(narratives, key) {
  * @param {string} [opts.teamLine] - Optional second team line
  * @param {string|null} opts.logoWhite - Base64 white logo
  */
-export function addDarkCoverSlide(pptx, { primaryText, subtitleText, dateLine, teamLine, logoWhite }) {
+export function addDarkCoverSlide(pptx, { primaryText, subtitleText, dateLine, teamLine, logoWhite, websiteUrl }) {
   const slide = pptx.addSlide();
   slide.background = { fill: NEAR_BLACK };
 
@@ -351,8 +351,8 @@ export function addDarkCoverSlide(pptx, { primaryText, subtitleText, dateLine, t
     slide.addImage({ data: logoWhite, x: MARGIN, y: 4.7, w: 1.1, h: 0.39 });
   }
 
-  // aaefs.com bottom-right
-  slide.addText('aaefs.com', {
+  // Website URL bottom-right
+  slide.addText(websiteUrl || '', {
     x: 8.0, y: 5.1, w: 1.5, h: 0.3,
     fontSize: 10, fontFace: FONT, color: MED_GREY, align: 'right',
   });
@@ -369,7 +369,7 @@ export function addDarkCoverSlide(pptx, { primaryText, subtitleText, dateLine, t
  * @param {string} [opts.closingMessage] - Closing text in MED_GREY
  * @param {string|null} opts.logoWhite - Base64 white logo
  */
-export function addDarkThankYouSlide(pptx, { closingMessage, logoWhite }) {
+export function addDarkThankYouSlide(pptx, { closingMessage, logoWhite, websiteUrl }) {
   const slide = pptx.addSlide();
   slide.background = { fill: NEAR_BLACK };
 
@@ -414,8 +414,8 @@ export function addDarkThankYouSlide(pptx, { closingMessage, logoWhite }) {
     fill: { color: AA_RED },
   });
 
-  // aaefs.com bottom-right
-  slide.addText('aaefs.com', {
+  // Website URL bottom-right
+  slide.addText(websiteUrl || '', {
     x: 8.0, y: 4.85, w: 1.5, h: 0.3,
     fontSize: 10, fontFace: FONT, color: MED_GREY, align: 'right',
   });

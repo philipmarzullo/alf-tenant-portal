@@ -53,6 +53,24 @@ export const NAV_ITEMS = [
     ],
   },
   {
+    group: 'ANALYTICS',
+    items: [
+      { label: 'Dashboards', path: '/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
+      { label: 'Action Plans', path: '/dashboards/action-plans', icon: 'ListChecks', moduleKey: 'actionPlans' },
+    ],
+  },
+  {
+    group: 'TOOLS',
+    items: [
+      { label: 'Quarterly Review Builder', path: '/tools/qbu', icon: 'FileBarChart', moduleKey: 'tools' },
+      { label: 'Proposal Builder', path: '/tools/sales-deck', icon: 'Presentation', moduleKey: 'tools' },
+      { label: 'Transition Plan Builder', path: '/tools/transition-plan', icon: 'ArrowRightLeft', moduleKey: 'tools' },
+      { label: 'Budget Builder', path: '/tools/budget', icon: 'Calculator', moduleKey: 'tools' },
+      { label: 'Incident Report', path: '/tools/incident-report', icon: 'ShieldAlert', moduleKey: 'tools' },
+      { label: 'Training Plan', path: '/tools/training-plan', icon: 'GraduationCap', moduleKey: 'tools' },
+    ],
+  },
+  {
     group: 'WORKSPACES',
     items: [
       { label: 'HR', path: '/hr', icon: 'Users', moduleKey: 'hr' },
@@ -63,23 +81,10 @@ export const NAV_ITEMS = [
     ],
   },
   {
-    group: 'TOOLS',
-    items: [
-      { label: 'QBU Builder', path: '/tools/qbu', icon: 'FileBarChart', moduleKey: 'qbu' },
-      { label: 'Sales Deck Builder', path: '/tools/sales-deck', icon: 'Presentation', moduleKey: 'salesDeck' },
-    ],
-  },
-  {
-    group: 'ANALYTICS',
-    items: [
-      { label: 'Dashboards', path: '/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
-    ],
-  },
-  {
     group: 'ADMIN',
     items: [
       { label: 'User Management', path: '/admin/users', icon: 'UserCog', moduleKey: 'admin' },
-      { label: 'Knowledge Base', path: '/admin/knowledge', icon: 'BookOpen', moduleKey: 'admin' },
+      { label: 'Knowledge Base', path: '/admin/knowledge', icon: 'BookOpen', moduleKey: 'knowledge' },
       { label: 'Automation Insights', path: '/admin/automation', icon: 'Zap', moduleKey: 'automation' },
       { label: 'Role Templates', path: '/admin/role-templates', icon: 'ShieldCheck', moduleKey: 'admin' },
       { label: 'Dashboard Defaults', path: '/admin/dashboard-settings', icon: 'SlidersHorizontal', moduleKey: 'superAdmin' },

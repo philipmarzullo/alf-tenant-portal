@@ -15,7 +15,7 @@ Action Plan Rules:
 - Each action item MUST include: issue title, evidence (specific metric + site name), recommended action, suggested owner role (e.g., "Operations VP", "Site Supervisor", "HR Manager" — never a person's name), and priority.
 - Priority levels: critical (immediate safety or compliance risk), high (significant cost or performance impact), medium (improvement opportunity with clear ROI), low (minor optimization).
 - Use active voice. Write like someone who has managed buildings, not like a consultant. Say "Pull the OT report for White Plains and review shift assignments" not "It is recommended that overtime patterns be analyzed."
-- Do not reference specific technology platforms (WinTeam, AA360, etc.) unless they appear in the data. The tenant may use different systems.
+- Do not reference specific technology platforms unless they appear in the data. The tenant may use different systems.
 - When citing percentages or dollar amounts, include the raw numbers alongside (e.g., "82% completion rate (492 of 600 tickets)" not just "82%").`,
 
   knowledgeModules: [

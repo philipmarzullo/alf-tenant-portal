@@ -18,7 +18,7 @@ const NOTIF_COLORS = {
 };
 
 const NOTIFICATIONS = [
-  { id: 1, type: 'agent', text: 'QBU Builder generated quarterly deck', time: '10m ago', unread: true },
+  { id: 1, type: 'agent', text: 'Review Builder generated quarterly deck', time: '10m ago', unread: true },
   { id: 2, type: 'alert', text: 'Contract expiring in 18 days', time: '25m ago', unread: true },
   { id: 3, type: 'agent', text: 'Sales Agent flagged 4 contracts expiring within 90 days', time: '1h ago', unread: true },
   { id: 4, type: 'alert', text: 'Medical/FMLA certification overdue', time: '2h ago', unread: false },
@@ -36,16 +36,25 @@ const BREADCRUMB_MAP = {
   '/hr/union-calendar': ['Workspaces', 'HR', 'Union Calendar'],
   '/finance': ['Workspaces', 'Finance'],
   '/purchasing': ['Workspaces', 'Purchasing'],
-  '/tools/qbu': ['Tools', 'QBU Builder'],
-  '/tools/sales-deck': ['Tools', 'Sales Deck Builder'],
+  '/tools/qbu': ['Tools', 'Quarterly Review Builder'],
+  '/tools/sales-deck': ['Tools', 'Proposal Builder'],
+  '/tools/transition-plan': ['Tools', 'Transition Plan Builder'],
+  '/tools/budget': ['Tools', 'Budget Builder'],
+  '/tools/incident-report': ['Tools', 'Incident Report'],
+  '/tools/training-plan': ['Tools', 'Training Plan'],
   '/sales': ['Workspaces', 'Sales'],
   '/sales/contracts': ['Workspaces', 'Sales', 'Contracts'],
   '/sales/apc': ['Workspaces', 'Sales', 'APC Tracker'],
   '/sales/tbi': ['Workspaces', 'Sales', 'TBI Tracker'],
   '/ops': ['Workspaces', 'Operations'],
+  '/dashboards/action-plans': ['Analytics', 'Action Plans'],
   '/admin/users': ['Admin', 'User Management'],
+  '/admin/knowledge': ['Admin', 'Knowledge Base'],
   '/admin/agents': ['Admin', 'Agent Management'],
   '/admin/settings': ['Admin', 'Settings'],
+  '/admin/role-templates': ['Admin', 'Role Templates'],
+  '/admin/dashboard-settings': ['Admin', 'Dashboard Defaults'],
+  '/admin/automation': ['Admin', 'Automation Insights'],
 };
 
 export default function TopBar({ isMobile, onMenuToggle }) {

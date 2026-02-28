@@ -28,6 +28,7 @@ import APCTracker from './pages/sales/APCTracker';
 import TBITracker from './pages/sales/TBITracker';
 import QBUBuilder from './pages/tools/QBUBuilder';
 import SalesDeckBuilder from './pages/tools/SalesDeckBuilder';
+import ToolPage from './pages/tools/ToolPage';
 import AgentManagement from './pages/admin/AgentManagement';
 import KnowledgePage from './pages/admin/KnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
@@ -242,23 +243,55 @@ export default function App() {
                       <Route path="quality" element={<QualityDashboard />} />
                       <Route path="timekeeping" element={<TimekeepingDashboard />} />
                       <Route path="safety" element={<SafetyDashboard />} />
-                      <Route path="action-plans" element={<ActionPlansPage />} />
+                      <Route path="action-plans" element={<ProtectedRoute moduleKey="actionPlans"><ActionPlansPage /></ProtectedRoute>} />
                     </Route>
 
+                    {/* Tools — all gated by "tools" module */}
                     <Route
                       path="/tools/qbu"
                       element={
-                        <ProtectedRoute moduleKey="qbu">
+                        <ProtectedRoute moduleKey="tools">
                           <QBUBuilder />
                         </ProtectedRoute>
                       }
                     />
-
                     <Route
                       path="/tools/sales-deck"
                       element={
-                        <ProtectedRoute moduleKey="salesDeck">
+                        <ProtectedRoute moduleKey="tools">
                           <SalesDeckBuilder />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/tools/transition-plan"
+                      element={
+                        <ProtectedRoute moduleKey="tools">
+                          <ToolPage toolKey="transitionPlan" />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/tools/budget"
+                      element={
+                        <ProtectedRoute moduleKey="tools">
+                          <ToolPage toolKey="budget" />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/tools/incident-report"
+                      element={
+                        <ProtectedRoute moduleKey="tools">
+                          <ToolPage toolKey="incidentReport" />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/tools/training-plan"
+                      element={
+                        <ProtectedRoute moduleKey="tools">
+                          <ToolPage toolKey="trainingPlan" />
                         </ProtectedRoute>
                       }
                     />
@@ -275,7 +308,7 @@ export default function App() {
                     <Route
                       path="/admin/knowledge"
                       element={
-                        <ProtectedRoute adminOnly>
+                        <ProtectedRoute moduleKey="knowledge" adminOnly>
                           <KnowledgePage />
                         </ProtectedRoute>
                       }

@@ -77,19 +77,15 @@ const EMPTY_FORM = {
 const EMPHASIS_OPTIONS = [
   { key: 'retention', label: '98%+ Client Retention' },
   { key: 'esop', label: 'Employee-Owned (ESOP)' },
-  { key: 'peoplefirst', label: 'People First Philosophy' },
-  { key: 'technology', label: 'AA360 Technology Platform' },
-  { key: 'glidepath', label: 'Glide Path Shared Savings' },
+  { key: 'peoplefirst', label: 'Core Operating Philosophy' },
+  { key: 'technology', label: 'Technology Platform' },
+  { key: 'glidepath', label: 'Shared Savings Model' },
   { key: 'union', label: 'Union Workforce Expertise' },
   { key: 'complex', label: 'Complex Environment Experience' },
   { key: 'manager', label: 'Manager-Heavy Model' },
 ];
 
-const RECENT = [
-  { id: 1, prospect: 'Commonwealth University', industry: 'Education — Higher Ed', created: 'Feb 10, 2026', status: 'complete' },
-  { id: 2, prospect: 'Sterling Property Group', industry: 'Commercial Office', created: 'Jan 22, 2026', status: 'complete' },
-  { id: 3, prospect: 'Metro General Health System', industry: 'Healthcare — Hospital', created: 'Jan 8, 2026', status: 'complete' },
-];
+const RECENT = [];
 
 function CollapsibleSection({ title, subtitle, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -180,7 +176,7 @@ export default function SalesDeckBuilder() {
       emphasisAreas: emphasisLabels.join(', '),
     });
     setResult(output);
-    toast('Sales deck content generated');
+    toast('Proposal content generated');
   };
 
   const handleReset = () => {
@@ -198,13 +194,13 @@ export default function SalesDeckBuilder() {
   return (
     <div>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2">
-        <h1 className="text-2xl font-light text-dark-text">Sales Deck Builder</h1>
+        <h1 className="text-2xl font-light text-dark-text">Proposal Builder</h1>
         <button
           onClick={() => setChatOpen(true)}
           className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
         >
           <Bot size={16} />
-          Ask Sales Deck Agent
+          Ask Proposal Agent
         </button>
       </div>
       <p className="text-sm text-secondary-text mb-6">
@@ -321,7 +317,7 @@ export default function SalesDeckBuilder() {
           </CollapsibleSection>
 
           {/* Section 3: A&A Team */}
-          <CollapsibleSection title="A&A Presenting Team" subtitle="Who from A&A is presenting?">
+          <CollapsibleSection title="Presenting Team" subtitle="Who is presenting?">
             <div className="space-y-3">
               {form.aaTeam.map((person, i) => (
                 <div key={i} className="flex items-start gap-2">
@@ -431,7 +427,7 @@ export default function SalesDeckBuilder() {
           </CollapsibleSection>
 
           {/* Section 6: Emphasis Areas */}
-          <CollapsibleSection title="Differentiators to Emphasize" subtitle="Which A&A strengths should the deck highlight?">
+          <CollapsibleSection title="Differentiators to Emphasize" subtitle="Which company strengths should the proposal highlight?">
             <div className="grid grid-cols-2 gap-2">
               {EMPHASIS_OPTIONS.map((opt) => (
                 <label key={opt.key} className="flex items-center gap-2.5 cursor-pointer group">
@@ -449,7 +445,7 @@ export default function SalesDeckBuilder() {
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <AgentActionButton label="Generate Sales Deck" variant="primary" onClick={handleGenerate} />
+            <AgentActionButton label="Generate Proposal" variant="primary" onClick={handleGenerate} />
             <button
               onClick={handleReset}
               className="px-4 py-2 text-sm font-medium text-secondary-text border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -487,16 +483,16 @@ export default function SalesDeckBuilder() {
           ) : (
             <div className="bg-white rounded-lg border-2 border-dashed border-gray-200 p-8 text-center">
               <Presentation size={32} className="text-gray-300 mx-auto mb-3" />
-              <div className="text-sm font-medium text-dark-text mb-1">No deck generated yet</div>
+              <div className="text-sm font-medium text-dark-text mb-1">No proposal generated yet</div>
               <div className="text-xs text-secondary-text">
-                Fill in the intake form and click "Generate Sales Deck" to create prospect-specific presentation content.
+                Fill in the intake form and click "Generate Proposal" to create prospect-specific presentation content.
               </div>
             </div>
           )}
 
           {/* Recent decks */}
           <div>
-            <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent Decks</h2>
+            <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent Proposals</h2>
             <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
               <table className="w-full text-sm min-w-[400px]">
                 <thead>
@@ -527,8 +523,8 @@ export default function SalesDeckBuilder() {
         open={chatOpen}
         onClose={() => setChatOpen(false)}
         agentKey="salesDeck"
-        agentName="Sales Deck Agent"
-        context="Sales presentation strategy, competitive positioning, prospect messaging, and A&A differentiators"
+        agentName="Proposal Agent"
+        context="Sales presentation strategy, competitive positioning, prospect messaging, and company differentiators"
       />
     </div>
   );
