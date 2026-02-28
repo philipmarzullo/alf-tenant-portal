@@ -81,23 +81,30 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
           : showCollapsed ? 'w-16' : 'w-60'
       }`}
     >
-      {/* Logo / Company Name */}
-      <div className="flex items-center gap-2 px-4 h-16 border-b border-white/10 shrink-0">
+      {/* Logo + tagline */}
+      <div className="flex items-center px-4 h-16 border-b border-white/10 shrink-0">
         {brand.logoUrl ? (
-          <img
-            src={brand.logoUrl}
-            alt={brand.companyName || 'Company'}
-            className={`transition-all duration-200 ${showCollapsed ? 'h-6' : 'h-7'}`}
-          />
+          <div className="flex flex-col">
+            <img
+              src={brand.logoUrl}
+              alt={brand.companyName || 'Company'}
+              className={`transition-all duration-200 ${showCollapsed ? 'h-6' : 'h-7'}`}
+            />
+            {!showCollapsed && (
+              <span className="text-[9px] font-light tracking-[3px] text-white/30 mt-1.5 uppercase">Operations Intelligence</span>
+            )}
+          </div>
         ) : (
           !showCollapsed && (
-            <span className="text-white text-sm font-medium truncate">
-              {brand.companyName || 'Portal'}
-            </span>
+            <div className="flex flex-col">
+              <span className="text-white text-sm font-medium truncate">
+                {brand.companyName || 'Operations Intelligence'}
+              </span>
+              {brand.companyName && (
+                <span className="text-[9px] font-light tracking-[3px] text-white/30 mt-1 uppercase">Operations Intelligence</span>
+              )}
+            </div>
           )
-        )}
-        {!showCollapsed && brand.logoUrl && (
-          <span className="text-white/70 text-xs leading-tight mt-1">Portal</span>
         )}
       </div>
 

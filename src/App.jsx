@@ -67,7 +67,7 @@ function SetupScreen() {
           {brand.logoUrl ? (
             <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-10" />
           ) : (
-            <div className="text-white text-xl font-light tracking-wide">{brand.companyName || 'Operations Portal'}</div>
+            <div className="text-white text-xl font-light tracking-wide">{brand.companyName || 'Operations Intelligence'}</div>
           )}
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8">
@@ -98,7 +98,7 @@ function DeactivatedScreen() {
           {brand.logoUrl ? (
             <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-10" />
           ) : (
-            <div className="text-white text-xl font-light tracking-wide">{brand.companyName || 'Operations Portal'}</div>
+            <div className="text-white text-xl font-light tracking-wide">{brand.companyName || 'Operations Intelligence'}</div>
           )}
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8 text-center">

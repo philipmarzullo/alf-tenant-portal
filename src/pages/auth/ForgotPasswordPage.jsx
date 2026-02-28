@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
             <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-12 mb-2" />
           ) : (
             <div className="text-white text-xl font-light tracking-wide mb-2">
-              {brand.companyName || 'Operations Portal'}
+              {brand.companyName || 'Operations Intelligence'}
             </div>
           )}
         </div>

@@ -45,7 +45,7 @@ export default function ResetPasswordPage() {
             <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-12 mb-2" />
           ) : (
             <div className="text-white text-xl font-light tracking-wide mb-2">
-              {brand.companyName || 'Operations Portal'}
+              {brand.companyName || 'Operations Intelligence'}
             </div>
           )}
         </div>
@@ -56,7 +56,7 @@ export default function ResetPasswordPage() {
             <div className="text-center py-4">
               <CheckCircle size={40} className="text-green-500 mx-auto mb-3" />
               <h1 className="text-xl font-semibold text-dark-text mb-2">Password updated</h1>
-              <p className="text-sm text-secondary-text">Redirecting to the portal...</p>
+              <p className="text-sm text-secondary-text">Redirecting...</p>
             </div>
           ) : (
             <>

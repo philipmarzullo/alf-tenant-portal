@@ -9,7 +9,7 @@ const TENANT_ID = import.meta.env.VITE_TENANT_ID || null;
 export function BrandingProvider({ children }) {
   const [brand, setBrand] = useState({
     companyName: null,
-    displayName: 'Operations Portal',
+    displayName: 'Operations Intelligence',
     logoUrl: null,
     primaryColor: null,
     sidebarBg: null,
@@ -33,9 +33,8 @@ export function BrandingProvider({ children }) {
 
         const row = data[0];
         const companyName = row.company_name || null;
-        // Derive display name: explicit brand name > "CompanyName Portal" > "Operations Portal"
-        const displayName = row.brand_display_name
-          || (companyName ? `${companyName} Portal` : 'Operations Portal');
+        // Derive display name: "CompanyName" > "Operations Intelligence"
+        const displayName = companyName || 'Operations Intelligence';
         const primaryColor = row.brand_primary_color || null;
         const sidebarBg = row.brand_sidebar_bg || null;
         // Logo: explicit brand URL > null (components decide their own fallback)
@@ -62,10 +61,10 @@ export function BrandingProvider({ children }) {
           link.href = logoUrl;
         }
 
-        // Set page title to tenant display name
-        const title = row.brand_display_name
-          || (companyName ? `${companyName} Portal` : null);
-        if (title) document.title = title;
+        // Set page title: "CompanyName | Operations Intelligence"
+        if (companyName) {
+          document.title = `${companyName} | Operations Intelligence`;
+        }
 
         setBrand({
           companyName,
