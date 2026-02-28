@@ -27,7 +27,7 @@ const NOTIFICATIONS = [
 ];
 
 const BREADCRUMB_MAP = {
-  '/': ['Dashboard'],
+  '/': ['Overview'],
   '/hr': ['Workspaces', 'HR'],
   '/hr/benefits': ['Workspaces', 'HR', 'Benefits'],
   '/hr/pay-rates': ['Workspaces', 'HR', 'Pay Rate Changes'],

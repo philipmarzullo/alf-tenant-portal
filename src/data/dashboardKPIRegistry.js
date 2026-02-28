@@ -10,17 +10,17 @@
 
 export const HOME_REGISTRY = {
   heroMetrics: [
-    { id: 'total_apc',           defaultLabel: 'Total Annual APC',       icon: 'DollarSign',    module: 'sales',   format: 'currency' },
-    { id: 'total_jobs',          defaultLabel: 'Total Job Count',        icon: 'HardHat',       module: 'ops',     format: 'number' },
-    { id: 'outstanding_ar',      defaultLabel: 'Outstanding AR',         icon: 'Clock',         module: 'finance', format: 'currency' },
-    { id: 'contracts_expiring',  defaultLabel: 'Contracts Expiring (90d)', icon: 'FileText',    module: 'sales',   format: 'number' },
+    { id: 'total_properties',    defaultLabel: 'Properties',           icon: 'HardHat',       format: 'number' },
+    { id: 'open_tickets',        defaultLabel: 'Open Tickets',         icon: 'ClipboardList', format: 'number' },
+    { id: 'completion_rate',     defaultLabel: 'Ticket Completion',    icon: 'CheckCircle',   format: 'percent' },
+    { id: 'labor_variance',      defaultLabel: 'Labor Variance',       icon: 'DollarSign',    format: 'percent' },
   ],
   workspaceCards: [
-    { module: 'hr' },
-    { module: 'finance' },
-    { module: 'purchasing' },
-    { module: 'sales' },
-    { module: 'ops' },
+    { module: 'operations' },
+    { module: 'labor' },
+    { module: 'quality' },
+    { module: 'timekeeping' },
+    { module: 'safety' },
   ],
   sections: {
     needsAttention: { visible: true, maxItems: 12 },

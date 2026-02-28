@@ -16,6 +16,12 @@ export const DEPT_COLORS = {
   sales: '#F59E0B',
   admin: '#E12F2C',
   tools: '#0284C7',
+  // Analytics domain colors (used by home dashboard attention items)
+  operations: '#4B5563',
+  labor: '#009ADE',
+  quality: '#7C3AED',
+  timekeeping: '#0D9488',
+  safety: '#DC2626',
 };
 
 export const STATUS = {
@@ -43,7 +49,7 @@ export const NAV_ITEMS = [
   {
     group: 'OVERVIEW',
     items: [
-      { label: 'Dashboard', path: '/', icon: 'LayoutDashboard', moduleKey: null },
+      { label: 'Overview', path: '/', icon: 'LayoutDashboard', moduleKey: null },
     ],
   },
   {
