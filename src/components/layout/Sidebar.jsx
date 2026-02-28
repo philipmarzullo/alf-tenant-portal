@@ -4,7 +4,7 @@ import {
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
   BookOpen, Zap, BarChart3, SlidersHorizontal, ChevronLeft, ChevronRight, LogOut,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
-  Wrench, ClipboardList, FileText, Package, Star, MessageSquare,
+  Wrench, ClipboardList, FileText, Package, Star, MessageSquare, Cable,
 } from 'lucide-react';
 import { NAV_ITEMS } from '../../data/constants';
 import { useUser } from '../../contexts/UserContext';
@@ -18,7 +18,7 @@ const ICON_MAP = {
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
   BookOpen, Zap, BarChart3, SlidersHorizontal,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
-  Wrench, ClipboardList, FileText, Package, Star, MessageSquare,
+  Wrench, ClipboardList, FileText, Package, Star, MessageSquare, Cable,
 };
 
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {

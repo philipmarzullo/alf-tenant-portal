@@ -89,6 +89,7 @@ export const NAV_ITEMS = [
       { label: 'Knowledge Base', path: '/admin/knowledge', icon: 'BookOpen', moduleKey: 'knowledge' },
       { label: 'Automation Insights', path: '/admin/automation', icon: 'Zap', moduleKey: 'automation' },
       { label: 'Role Templates', path: '/admin/role-templates', icon: 'ShieldCheck', moduleKey: 'admin' },
+      { label: 'Connections', path: '/admin/connections', icon: 'Cable', moduleKey: 'superAdmin' },
       { label: 'Dashboard Defaults', path: '/admin/dashboard-settings', icon: 'SlidersHorizontal', moduleKey: 'superAdmin' },
       { label: 'Agent Management', path: '/admin/agents', icon: 'Bot', moduleKey: 'superAdmin' },
       { label: 'Settings', path: '/admin/settings', icon: 'Settings', moduleKey: 'superAdmin' },

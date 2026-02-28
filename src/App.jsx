@@ -38,6 +38,7 @@ import DashboardSettings from './pages/admin/DashboardSettings';
 import RoleTemplates from './pages/admin/RoleTemplates';
 import UserManagement from './pages/admin/UserManagement';
 import AutomationInsightsPage from './pages/admin/AutomationInsightsPage';
+import ConnectionsPage from './pages/admin/ConnectionsPage';
 import DashboardsLayout from './pages/dashboards/DashboardsLayout';
 import OperationsDashboard from './pages/dashboards/OperationsDashboard';
 import LaborDashboard from './pages/dashboards/LaborDashboard';
@@ -356,6 +357,15 @@ export default function App() {
                       element={
                         <ProtectedRoute moduleKey="automation">
                           <AutomationInsightsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="/admin/connections"
+                      element={
+                        <ProtectedRoute superAdminOnly>
+                          <ConnectionsPage />
                         </ProtectedRoute>
                       }
                     />
