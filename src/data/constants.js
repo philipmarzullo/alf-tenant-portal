@@ -88,6 +88,7 @@ export const NAV_ITEMS = [
       { label: 'Automation Insights', path: '/admin/automation', icon: 'Zap', moduleKey: 'automation' },
       { label: 'Role Templates', path: '/admin/role-templates', icon: 'ShieldCheck', moduleKey: 'admin' },
       { label: 'Tool Builder', path: '/tools/custom/builder', icon: 'Wrench', moduleKey: 'admin' },
+      { label: 'Automation Preferences', path: '/admin/automation-preferences', icon: 'SlidersHorizontal', moduleKey: 'superAdmin' },
       { label: 'Connections', path: '/admin/connections', icon: 'Cable', moduleKey: 'superAdmin' },
       { label: 'Settings', path: '/admin/settings', icon: 'Settings', moduleKey: 'superAdmin' },
     ],
