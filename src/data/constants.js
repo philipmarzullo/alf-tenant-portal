@@ -72,12 +72,13 @@ export const NAV_ITEMS = [
   {
     group: 'TOOLS',
     items: [
-      { label: 'Quarterly Review Builder', path: '/tools/qbu', icon: 'FileBarChart', moduleKey: 'tools' },
-      { label: 'Proposal Builder', path: '/tools/sales-deck', icon: 'Presentation', moduleKey: 'tools' },
-      { label: 'Transition Plan Builder', path: '/tools/transition-plan', icon: 'ArrowRightLeft', moduleKey: 'tools' },
-      { label: 'Budget Builder', path: '/tools/budget', icon: 'Calculator', moduleKey: 'tools' },
-      { label: 'Incident Report', path: '/tools/incident-report', icon: 'ShieldAlert', moduleKey: 'tools' },
-      { label: 'Training Plan', path: '/tools/training-plan', icon: 'GraduationCap', moduleKey: 'tools' },
+      { label: 'Quarterly Review Builder', path: '/tools/qbu', icon: 'FileBarChart', moduleKey: 'tools', pageKey: 'quarterly-review' },
+      { label: 'Proposal Builder', path: '/tools/sales-deck', icon: 'Presentation', moduleKey: 'tools', pageKey: 'proposal' },
+      { label: 'Transition Plan Builder', path: '/tools/transition-plan', icon: 'ArrowRightLeft', moduleKey: 'tools', pageKey: 'transition-plan' },
+      { label: 'Budget Builder', path: '/tools/budget', icon: 'Calculator', moduleKey: 'tools', pageKey: 'budget' },
+      { label: 'Incident Report', path: '/tools/incident-report', icon: 'ShieldAlert', moduleKey: 'tools', pageKey: 'incident-report' },
+      { label: 'Training Plan', path: '/tools/training-plan', icon: 'GraduationCap', moduleKey: 'tools', pageKey: 'training-plan' },
+      { label: 'Tool Builder', path: '/tools/custom/builder', icon: 'Wrench', moduleKey: 'tools', adminOnly: true },
     ],
   },
   {

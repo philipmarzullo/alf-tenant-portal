@@ -4,26 +4,30 @@ import {
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
   BookOpen, Zap, BarChart3, SlidersHorizontal, ChevronLeft, ChevronRight, LogOut,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
+  Wrench, ClipboardList, FileText, Package, Star,
 } from 'lucide-react';
 import { NAV_ITEMS } from '../../data/constants';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useBranding } from '../../contexts/BrandingContext';
+import { useCustomTools } from '../../contexts/CustomToolsContext';
 
 const ICON_MAP = {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
   FileBarChart, Presentation, Bot, Settings, UserCog, Briefcase,
   BookOpen, Zap, BarChart3, SlidersHorizontal,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
+  Wrench, ClipboardList, FileText, Package, Star,
 };
 
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {
   const location = useLocation();
   const { currentUser, isSuperAdmin, isAdmin } = useUser();
   const { signOut } = useAuth();
-  const { tenantHasModule } = useTenantConfig();
+  const { tenantHasModule, hasPage } = useTenantConfig();
   const brand = useBranding();
+  const { customTools } = useCustomTools();
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
@@ -32,18 +36,34 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
 
   // Filter nav items by tenant config + user permissions
   const filteredNav = NAV_ITEMS
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
+    .map((group) => {
+      let items = group.items.filter((item) => {
         if (!item.moduleKey) return true;
         if (item.moduleKey === 'superAdmin') return isSuperAdmin;
         if (item.moduleKey === 'admin') return isAdmin;
+        if (item.adminOnly && !isAdmin) return false;
         // Tenant-level gate: if Alf disabled this module, hide it for everyone
         if (!tenantHasModule(item.moduleKey)) return false;
+        // Page-level gate: if Alf disabled this specific page, hide it
+        if (item.pageKey && !hasPage(item.moduleKey, item.pageKey)) return false;
         if (isAdmin) return true;
         return currentUser?.modules?.includes(item.moduleKey);
-      }),
-    }))
+      });
+
+      // Inject custom tools into the TOOLS group
+      if (group.group === 'TOOLS' && items.length > 0 && customTools.length > 0) {
+        const customItems = customTools.map(t => ({
+          label: t.label,
+          path: `/tools/custom/${t.tool_key}`,
+          icon: t.icon || 'Wrench',
+          moduleKey: 'tools',
+          _custom: true,
+        }));
+        items = [...items, ...customItems];
+      }
+
+      return { ...group, items };
+    })
     .filter((group) => group.items.length > 0);
 
   const initials = currentUser?.name

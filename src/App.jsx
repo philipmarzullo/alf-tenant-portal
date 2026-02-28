@@ -29,6 +29,8 @@ import TBITracker from './pages/sales/TBITracker';
 import QBUBuilder from './pages/tools/QBUBuilder';
 import SalesDeckBuilder from './pages/tools/SalesDeckBuilder';
 import ToolPage from './pages/tools/ToolPage';
+import CustomToolBuilder from './pages/tools/CustomToolBuilder';
+import CustomToolPage from './pages/tools/CustomToolPage';
 import AgentManagement from './pages/admin/AgentManagement';
 import KnowledgePage from './pages/admin/KnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
@@ -246,11 +248,11 @@ export default function App() {
                       <Route path="action-plans" element={<ProtectedRoute moduleKey="actionPlans"><ActionPlansPage /></ProtectedRoute>} />
                     </Route>
 
-                    {/* Tools — all gated by "tools" module */}
+                    {/* Tools — gated by "tools" module + per-tool pageKey */}
                     <Route
                       path="/tools/qbu"
                       element={
-                        <ProtectedRoute moduleKey="tools">
+                        <ProtectedRoute moduleKey="tools" pageKey="quarterly-review">
                           <QBUBuilder />
                         </ProtectedRoute>
                       }
@@ -258,7 +260,7 @@ export default function App() {
                     <Route
                       path="/tools/sales-deck"
                       element={
-                        <ProtectedRoute moduleKey="tools">
+                        <ProtectedRoute moduleKey="tools" pageKey="proposal">
                           <SalesDeckBuilder />
                         </ProtectedRoute>
                       }
@@ -266,7 +268,7 @@ export default function App() {
                     <Route
                       path="/tools/transition-plan"
                       element={
-                        <ProtectedRoute moduleKey="tools">
+                        <ProtectedRoute moduleKey="tools" pageKey="transition-plan">
                           <ToolPage toolKey="transitionPlan" />
                         </ProtectedRoute>
                       }
@@ -274,7 +276,7 @@ export default function App() {
                     <Route
                       path="/tools/budget"
                       element={
-                        <ProtectedRoute moduleKey="tools">
+                        <ProtectedRoute moduleKey="tools" pageKey="budget">
                           <ToolPage toolKey="budget" />
                         </ProtectedRoute>
                       }
@@ -282,7 +284,7 @@ export default function App() {
                     <Route
                       path="/tools/incident-report"
                       element={
-                        <ProtectedRoute moduleKey="tools">
+                        <ProtectedRoute moduleKey="tools" pageKey="incident-report">
                           <ToolPage toolKey="incidentReport" />
                         </ProtectedRoute>
                       }
@@ -290,8 +292,24 @@ export default function App() {
                     <Route
                       path="/tools/training-plan"
                       element={
-                        <ProtectedRoute moduleKey="tools">
+                        <ProtectedRoute moduleKey="tools" pageKey="training-plan">
                           <ToolPage toolKey="trainingPlan" />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/tools/custom/builder"
+                      element={
+                        <ProtectedRoute moduleKey="tools" adminOnly>
+                          <CustomToolBuilder />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/tools/custom/:toolKey"
+                      element={
+                        <ProtectedRoute moduleKey="tools">
+                          <CustomToolPage />
                         </ProtectedRoute>
                       }
                     />
