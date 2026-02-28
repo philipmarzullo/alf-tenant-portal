@@ -2,7 +2,8 @@
 
 ALTER TABLE alf_tenants ADD COLUMN IF NOT EXISTS brand_website_url TEXT;
 
--- Recreate RPC to include the new column
+-- Drop and recreate RPC to include the new column (return type changed)
+DROP FUNCTION IF EXISTS get_tenant_branding(UUID);
 CREATE OR REPLACE FUNCTION get_tenant_branding(p_tenant_id UUID)
 RETURNS TABLE (
     company_name TEXT,
