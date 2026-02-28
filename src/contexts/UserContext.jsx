@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
 const UserContext = createContext(null);
+const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 export function UserProvider({ children }) {
   const { session } = useAuth();
@@ -45,10 +46,12 @@ export function UserProvider({ children }) {
   // Fetch all users (for admin user management)
   const refreshUsers = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase
+    let query = supabase
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: true });
+    if (TENANT_ID) query = query.eq('tenant_id', TENANT_ID);
+    const { data, error } = await query;
     if (error) {
       console.error('Failed to fetch users:', error);
     } else {
