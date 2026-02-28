@@ -1,12 +1,55 @@
 import { supabase } from '../lib/supabase';
 
+const LS_KEY = 'aa_qbu_history';
+const LS_MIGRATED_KEY = 'aa_qbu_migrated_to_supabase';
+
 function getTenantId() {
   return import.meta.env.VITE_TENANT_ID || null;
+}
+
+/** One-time: migrate any localStorage QBU entries into Supabase tool_submissions */
+async function migrateLocalStorage(tenantId) {
+  if (typeof window === 'undefined') return;
+  if (localStorage.getItem(LS_MIGRATED_KEY)) return;
+
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) { localStorage.setItem(LS_MIGRATED_KEY, '1'); return; }
+    const entries = JSON.parse(raw);
+    if (!Array.isArray(entries) || entries.length === 0) { localStorage.setItem(LS_MIGRATED_KEY, '1'); return; }
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const rows = entries.map((e) => ({
+      tenant_id: tenantId,
+      tool_key: 'qbu',
+      title: `${e.client || 'Untitled'} — ${e.quarter || ''}`,
+      form_data: e.formData || {},
+      agent_output: e.agentOutput || '',
+      status: e.status || 'complete',
+      created_by: user?.id || null,
+      created_at: e.createdAt || new Date().toISOString(),
+    }));
+
+    const { error } = await supabase.from('tool_submissions').insert(rows);
+    if (error) {
+      console.error('localStorage → Supabase migration failed:', error);
+      return; // don't mark as migrated so it retries next load
+    }
+
+    localStorage.setItem(LS_MIGRATED_KEY, '1');
+    console.log(`Migrated ${rows.length} QBU entries from localStorage to Supabase`);
+  } catch (err) {
+    console.error('localStorage migration error:', err);
+  }
 }
 
 export async function getQBUHistory() {
   const tenantId = getTenantId();
   if (!tenantId) return [];
+
+  // Migrate any old localStorage entries on first load
+  await migrateLocalStorage(tenantId);
 
   const { data, error } = await supabase
     .from('tool_submissions')

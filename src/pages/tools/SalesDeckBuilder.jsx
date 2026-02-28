@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Presentation, ChevronDown, ChevronUp, Plus, Trash2, Bot, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Presentation, ChevronDown, ChevronUp, Plus, Trash2, Bot, Download, Clock } from 'lucide-react';
 import AgentActionButton from '../../components/shared/AgentActionButton';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import StatusBadge from '../../components/shared/StatusBadge';
@@ -7,6 +7,7 @@ import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { generateSalesDeckPptx } from '../../utils/salesDeckPptxTemplate';
 import { useBranding } from '../../contexts/BrandingContext';
+import { supabase } from '../../lib/supabase';
 
 const VERTICALS = [
   'Education — Higher Ed',
@@ -85,8 +86,6 @@ const EMPHASIS_OPTIONS = [
   { key: 'manager', label: 'Manager-Heavy Model' },
 ];
 
-const RECENT = [];
-
 function CollapsibleSection({ title, subtitle, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -111,8 +110,21 @@ export default function SalesDeckBuilder() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [result, setResult] = useState(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [recentProposals, setRecentProposals] = useState([]);
   const toast = useToast();
   const brand = useBranding();
+
+  useEffect(() => {
+    const tenantId = import.meta.env.VITE_TENANT_ID;
+    if (!tenantId) return;
+    supabase
+      .from('tool_submissions')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('tool_key', 'salesDeck')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setRecentProposals(data || []));
+  }, []);
 
   const updateField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -177,6 +189,22 @@ export default function SalesDeckBuilder() {
     });
     setResult(output);
     toast('Proposal content generated');
+
+    // Persist to tool_submissions
+    const tenantId = import.meta.env.VITE_TENANT_ID;
+    if (tenantId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: saved } = await supabase.from('tool_submissions').insert({
+        tenant_id: tenantId,
+        tool_key: 'salesDeck',
+        title: `${form.companyName} — ${form.siteName || 'General'}`,
+        form_data: form,
+        agent_output: output,
+        status: 'complete',
+        created_by: user?.id || null,
+      }).select().single();
+      if (saved) setRecentProposals((prev) => [saved, ...prev]);
+    }
   };
 
   const handleReset = () => {
@@ -490,30 +518,39 @@ export default function SalesDeckBuilder() {
             </div>
           )}
 
-          {/* Recent decks */}
+          {/* Recent proposals */}
           <div>
             <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent Proposals</h2>
             <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-              <table className="w-full text-sm min-w-[400px]">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50/50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Prospect</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Industry</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Created</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {RECENT.map((r) => (
-                    <tr key={r.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer transition-colors">
-                      <td className="px-4 py-3 font-medium text-dark-text">{r.prospect}</td>
-                      <td className="px-4 py-3 text-secondary-text text-xs">{r.industry}</td>
-                      <td className="px-4 py-3 text-secondary-text text-xs">{r.created}</td>
-                      <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+              {recentProposals.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-secondary-text">
+                  <Clock size={20} className="mx-auto mb-2 text-gray-300" />
+                  No proposal generated yet
+                </div>
+              ) : (
+                <table className="w-full text-sm min-w-[400px]">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50/50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Prospect</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Industry</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Created</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-secondary-text uppercase tracking-wider">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recentProposals.map((r) => (
+                      <tr key={r.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <td className="px-4 py-3 font-medium text-dark-text">{r.form_data?.companyName || r.title || 'Untitled'}</td>
+                        <td className="px-4 py-3 text-secondary-text text-xs">{r.form_data?.vertical || '—'}</td>
+                        <td className="px-4 py-3 text-secondary-text text-xs">
+                          {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-4 py-3"><StatusBadge status={r.status || 'complete'} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

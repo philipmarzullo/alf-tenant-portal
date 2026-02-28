@@ -53,6 +53,16 @@ export const NAV_ITEMS = [
     ],
   },
   {
+    group: 'WORKSPACES',
+    items: [
+      { label: 'HR', path: '/hr', icon: 'Users', moduleKey: 'hr' },
+      { label: 'Finance', path: '/finance', icon: 'DollarSign', moduleKey: 'finance' },
+      { label: 'Purchasing', path: '/purchasing', icon: 'ShoppingCart', moduleKey: 'purchasing' },
+      { label: 'Sales', path: '/sales', icon: 'Briefcase', moduleKey: 'sales' },
+      { label: 'Operations', path: '/ops', icon: 'HardHat', moduleKey: 'ops' },
+    ],
+  },
+  {
     group: 'ANALYTICS',
     items: [
       { label: 'Dashboards', path: '/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
@@ -68,16 +78,6 @@ export const NAV_ITEMS = [
       { label: 'Budget Builder', path: '/tools/budget', icon: 'Calculator', moduleKey: 'tools' },
       { label: 'Incident Report', path: '/tools/incident-report', icon: 'ShieldAlert', moduleKey: 'tools' },
       { label: 'Training Plan', path: '/tools/training-plan', icon: 'GraduationCap', moduleKey: 'tools' },
-    ],
-  },
-  {
-    group: 'WORKSPACES',
-    items: [
-      { label: 'HR', path: '/hr', icon: 'Users', moduleKey: 'hr' },
-      { label: 'Finance', path: '/finance', icon: 'DollarSign', moduleKey: 'finance' },
-      { label: 'Purchasing', path: '/purchasing', icon: 'ShoppingCart', moduleKey: 'purchasing' },
-      { label: 'Sales', path: '/sales', icon: 'Briefcase', moduleKey: 'sales' },
-      { label: 'Operations', path: '/ops', icon: 'HardHat', moduleKey: 'ops' },
     ],
   },
   {
