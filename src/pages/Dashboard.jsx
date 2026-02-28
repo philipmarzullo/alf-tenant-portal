@@ -9,6 +9,7 @@ import MetricCard from '../components/shared/MetricCard';
 import TaskCard from '../components/shared/TaskCard';
 import AgentChatPanel from '../components/shared/AgentChatPanel';
 import DashboardEmptyState from '../components/dashboards/DashboardEmptyState';
+import SyncHealthBanner from '../components/dashboards/SyncHealthBanner';
 import { useUser } from '../contexts/UserContext';
 import { useBranding } from '../contexts/BrandingContext';
 import { useRBAC } from '../contexts/RBACContext';
@@ -187,6 +188,7 @@ export default function Dashboard() {
 
   return (
     <div>
+      <SyncHealthBanner />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">{pageTitle}</h1>
         <div className="flex items-center gap-2">

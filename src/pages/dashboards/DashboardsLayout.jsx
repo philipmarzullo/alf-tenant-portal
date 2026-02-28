@@ -6,6 +6,7 @@ import { useDashboardConfigContext } from '../../contexts/DashboardConfigContext
 import { useUser } from '../../contexts/UserContext';
 import { MODULE_REGISTRY } from '../../data/moduleRegistry';
 import ShareDashboardModal from '../../components/dashboards/ShareDashboardModal';
+import SyncHealthBanner from '../../components/dashboards/SyncHealthBanner';
 
 const ALL_TABS = MODULE_REGISTRY.dashboards.pages.map((p) => ({
   key: p.key,
@@ -98,6 +99,7 @@ export default function DashboardsLayout() {
           ))}
         </div>
 
+        <SyncHealthBanner />
         <Outlet />
 
         {/* Share Modal */}
