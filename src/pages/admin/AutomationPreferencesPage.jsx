@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Users, DollarSign, Briefcase, HardHat, Loader, CheckCircle, XCircle, AlertTriangle, Mail, Link as LinkIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, DollarSign, Briefcase, HardHat, Loader, CheckCircle, XCircle, AlertTriangle, Mail, Link as LinkIcon, Sparkles, X } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
@@ -79,6 +79,66 @@ function prefKey(action) {
   return `${action.agentKey}:${action.actionKey}:${action.integration}`;
 }
 
+// ─── Execution Stats ─────────────────────────────────────────────────────────
+
+function ExecutionStats({ pref }) {
+  if (!pref || !pref.total_executions) {
+    return <span className="text-[10px] text-secondary-text">No executions yet</span>;
+  }
+
+  const mode = pref.execution_mode || 'draft';
+  const total = pref.total_executions;
+  const clean = pref.total_approved_without_edit || 0;
+  const pct = total > 0 ? Math.round((clean / total) * 100) : 0;
+
+  if (mode === 'automated') {
+    return (
+      <span className="text-[10px] text-green-700">
+        {total} sent · fully automated
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-[10px] text-secondary-text">
+      {total} sent · {pct}% approved without edits
+    </span>
+  );
+}
+
+// ─── Auto-Promotion Banner ──────────────────────────────────────────────────
+
+function PromotionBanner({ pref, onAccept, onDismiss, accepting }) {
+  if (!pref?.auto_promote_eligible) return null;
+
+  const threshold = pref.auto_promote_threshold || 10;
+
+  return (
+    <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+      <Sparkles size={14} className="text-blue-600 shrink-0" />
+      <span className="text-xs text-blue-800 flex-1">
+        <span className="font-medium">Recommended: Switch to Automated</span> — {threshold} consecutive approvals without edits
+      </span>
+      <button
+        onClick={onAccept}
+        disabled={accepting}
+        className="px-2.5 py-1 text-[11px] font-medium rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+      >
+        {accepting ? <Loader size={10} className="animate-spin" /> : <CheckCircle size={10} />}
+        Accept
+      </button>
+      <button
+        onClick={onDismiss}
+        disabled={accepting}
+        className="p-1 text-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+        title="Dismiss recommendation"
+      >
+        <X size={12} />
+      </button>
+    </div>
+  );
+}
+
 // ─── Mode Selector ───────────────────────────────────────────────────────────
 
 function ModeSelector({ action, currentMode, msConnected, saving, onSelect }) {
@@ -133,9 +193,12 @@ function ModeSelector({ action, currentMode, msConnected, saving, onSelect }) {
 
 // ─── Workspace Group ─────────────────────────────────────────────────────────
 
-function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onModeChange }) {
+function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onModeChange, onPromote, onDismissPromotion, promotingKey }) {
   const [expanded, setExpanded] = useState(true);
   const Icon = ICONS[workspace.icon] || Users;
+
+  // Count actions with promotion recommendations
+  const promoCount = workspace.actions.filter(a => preferences[prefKey(a)]?.auto_promote_eligible).length;
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -147,6 +210,11 @@ function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onMode
           <Icon size={18} className="text-secondary-text" />
           <span className="text-sm font-semibold text-dark-text">{workspace.label}</span>
           <span className="text-xs text-secondary-text">{workspace.actions.length} actions</span>
+          {promoCount > 0 && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
+              {promoCount} recommendation{promoCount > 1 ? 's' : ''}
+            </span>
+          )}
         </div>
         {expanded ? <ChevronDown size={16} className="text-secondary-text" /> : <ChevronRight size={16} className="text-secondary-text" />}
       </button>
@@ -160,37 +228,47 @@ function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onMode
             const riskStyle = RISK_STYLES[action.risk];
             const recommended = RISK_RECOMMENDED[action.risk];
             const isSaving = savingKey === key;
+            const isPromoting = promotingKey === key;
 
             return (
               <div
                 key={key}
-                className={`px-5 py-4 flex flex-col sm:flex-row sm:items-start gap-3 ${idx > 0 ? 'border-t border-gray-100' : ''}`}
+                className={`px-5 py-4 ${idx > 0 ? 'border-t border-gray-100' : ''}`}
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-dark-text">{action.label}</span>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${riskStyle.bg} ${riskStyle.text}`}>
-                      {riskStyle.label}
-                    </span>
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium text-dark-text">{action.label}</span>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${riskStyle.bg} ${riskStyle.text}`}>
+                        {riskStyle.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-secondary-text mb-1">
+                      <span className="flex items-center gap-1">
+                        <Mail size={11} />
+                        Email
+                      </span>
+                      <span>Alf recommends: <span className="font-medium">{MODE_LABELS[recommended]}</span></span>
+                    </div>
+                    <ExecutionStats pref={pref} />
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-secondary-text">
-                    <span className="flex items-center gap-1">
-                      <Mail size={11} />
-                      Email
-                    </span>
-                    <span>Alf recommends: <span className="font-medium">{MODE_LABELS[recommended]}</span></span>
+                  <div className="shrink-0 flex items-center gap-2">
+                    {isSaving && <Loader size={12} className="animate-spin text-secondary-text" />}
+                    <ModeSelector
+                      action={action}
+                      currentMode={currentMode}
+                      msConnected={msConnected}
+                      saving={isSaving}
+                      onSelect={(mode) => onModeChange(action, mode)}
+                    />
                   </div>
                 </div>
-                <div className="shrink-0 flex items-center gap-2">
-                  {isSaving && <Loader size={12} className="animate-spin text-secondary-text" />}
-                  <ModeSelector
-                    action={action}
-                    currentMode={currentMode}
-                    msConnected={msConnected}
-                    saving={isSaving}
-                    onSelect={(mode) => onModeChange(action, mode)}
-                  />
-                </div>
+                <PromotionBanner
+                  pref={pref}
+                  onAccept={() => onPromote(action)}
+                  onDismiss={() => onDismissPromotion(action)}
+                  accepting={isPromoting}
+                />
               </div>
             );
           })}
@@ -204,9 +282,10 @@ function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onMode
 
 export default function AutomationPreferencesPage() {
   const navigate = useNavigate();
-  const [preferences, setPreferences] = useState({}); // keyed by "agentKey:actionKey:integration"
+  const [preferences, setPreferences] = useState({});
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState(null);
+  const [promotingKey, setPromotingKey] = useState(null);
   const [msStatus, setMsStatus] = useState(null);
   const [msLoading, setMsLoading] = useState(true);
 
@@ -252,7 +331,6 @@ export default function AutomationPreferencesPage() {
     const key = prefKey(action);
     setSavingKey(key);
 
-    // Optimistic update
     setPreferences(prev => ({
       ...prev,
       [key]: { ...prev[key], execution_mode: newMode },
@@ -278,10 +356,68 @@ export default function AutomationPreferencesPage() {
       setPreferences(prev => ({ ...prev, [key]: saved }));
     } catch (err) {
       console.error('[automation-preferences] Save error:', err.message);
-      // Revert optimistic update
       loadPreferences();
     } finally {
       setSavingKey(null);
+    }
+  }
+
+  async function handlePromote(action) {
+    const key = prefKey(action);
+    setPromotingKey(key);
+
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${TENANT_ID}/promote`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          agent_key: action.agentKey,
+          action_key: action.actionKey,
+          integration_type: action.integration,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to promote');
+      const saved = await res.json();
+      setPreferences(prev => ({ ...prev, [key]: saved }));
+    } catch (err) {
+      console.error('[automation-preferences] Promote error:', err.message);
+    } finally {
+      setPromotingKey(null);
+    }
+  }
+
+  async function handleDismissPromotion(action) {
+    const key = prefKey(action);
+    setPromotingKey(key);
+
+    // Optimistic
+    setPreferences(prev => ({
+      ...prev,
+      [key]: { ...prev[key], auto_promote_eligible: false, total_approved_without_edit: 0 },
+    }));
+
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${TENANT_ID}/dismiss-promotion`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          agent_key: action.agentKey,
+          action_key: action.actionKey,
+          integration_type: action.integration,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to dismiss');
+      const saved = await res.json();
+      setPreferences(prev => ({ ...prev, [key]: saved }));
+    } catch (err) {
+      console.error('[automation-preferences] Dismiss error:', err.message);
+      loadPreferences();
+    } finally {
+      setPromotingKey(null);
     }
   }
 
@@ -352,6 +488,9 @@ export default function AutomationPreferencesPage() {
             msConnected={msConnected}
             savingKey={savingKey}
             onModeChange={handleModeChange}
+            onPromote={handlePromote}
+            onDismissPromotion={handleDismissPromotion}
+            promotingKey={promotingKey}
           />
         ))}
 
@@ -359,6 +498,7 @@ export default function AutomationPreferencesPage() {
         {!loading && (
           <p className="text-xs text-secondary-text pt-2">
             Default: all actions start in Draft mode. Connecting Microsoft 365 unlocks Review & Send and Automated modes.
+            After {WORKSPACES[0]?.actions[0] ? '10' : ''} consecutive approvals without edits, Alf recommends switching to Automated.
             Changes are saved immediately and logged to the activity log.
           </p>
         )}
