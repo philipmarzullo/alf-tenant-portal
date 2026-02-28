@@ -1,35 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle, Bot, DollarSign, TrendingUp, Clock, HardHat, Settings2,
-  ClipboardList, Shield, CheckCircle, Loader2,
+  AlertTriangle, Bot, DollarSign, TrendingUp, Clock, HardHat,
+  ClipboardList, Shield, CheckCircle, Loader2, ArrowRight,
+  Cpu, Zap, BarChart3, Database,
 } from 'lucide-react';
 import MetricCard from '../components/shared/MetricCard';
 import TaskCard from '../components/shared/TaskCard';
 import AgentChatPanel from '../components/shared/AgentChatPanel';
-import SortableGrid from '../components/dashboards/SortableGrid';
-import DraggableWidget from '../components/dashboards/DraggableWidget';
-import CustomizeToolbar from '../components/dashboards/CustomizeToolbar';
 import DashboardEmptyState from '../components/dashboards/DashboardEmptyState';
 import { useUser } from '../contexts/UserContext';
 import { useBranding } from '../contexts/BrandingContext';
-import { useHomeConfig } from '../hooks/useDashboardConfig';
-import useCustomizeMode from '../hooks/useCustomizeMode';
+import { useRBAC } from '../contexts/RBACContext';
 import useHomeSummary from '../hooks/useHomeSummary';
-import { resolveHomeConfig } from '../data/dashboardKPIRegistry';
+import useOpsIntelligence from '../hooks/useOpsIntelligence';
+import { HEALTH_THRESHOLDS, computeHealth } from '../data/healthThresholds';
 
-// --- Icon map for config-driven rendering ---
-const ICON_MAP = { DollarSign, HardHat, Clock, ClipboardList, TrendingUp, AlertTriangle, Shield, CheckCircle };
-
-// --- Helpers ---
-
-function fmtDollar(n) {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${n}`;
-}
-
-// Domain → display colors + labels for workspace cards and attention badges
+// Domain → display colors + labels
 const DOMAIN_COLORS = {
   operations: '#4B5563',
   labor: '#009ADE',
@@ -54,56 +41,79 @@ const DOMAIN_PATHS = {
   safety: '/dashboards/safety',
 };
 
-const ACTIVITY = [
-  { id: 1, text: 'Operations Agent generated VP performance summary', time: '10m ago', module: 'ops' },
-  { id: 2, text: 'Sales Agent generated contract renewal brief', time: '30m ago', module: 'sales' },
-  { id: 3, text: 'Admin Agent ran cross-department analysis', time: '1h ago', module: 'admin' },
-  { id: 4, text: 'HR Agent drafted benefits reminder for 12 employees', time: '2h ago', module: 'hr' },
-  { id: 5, text: 'Sales Agent flagged 4 contracts expiring within 90 days', time: '3h ago', module: 'sales' },
-  { id: 6, text: 'Operations Agent flagged 2 VPs below safety inspection target', time: '4h ago', module: 'ops' },
-  { id: 7, text: 'HR Agent flagged union pay increase — 847 employees affected', time: '4h ago', module: 'hr' },
-  { id: 8, text: 'Finance Agent summarized client account', time: '6h ago', module: 'finance' },
-  { id: 9, text: 'Purchasing Agent ran reorder analysis for Floor Finish', time: 'Yesterday', module: 'purchasing' },
-  { id: 10, text: 'QBU Builder generated quarterly business update deck', time: 'Yesterday', module: 'qbu' },
-];
+const DOMAIN_ICONS = {
+  operations: ClipboardList,
+  labor: DollarSign,
+  quality: Shield,
+  timekeeping: Clock,
+  safety: AlertTriangle,
+};
+
+// KPI selection per domain per tier — the single most important number
+const DOMAIN_KPI_BY_TIER = {
+  operations: {
+    operational:  { key: 'completionRate', label: 'Completion Rate', format: 'percent' },
+    managerial:   { key: 'completionRate', label: 'Completion Rate', format: 'percent' },
+    financial:    { key: 'completionRate', label: 'Completion Rate', format: 'percent' },
+  },
+  labor: {
+    operational:  { key: 'totalOtHours', label: 'OT Hours', format: 'number' },
+    managerial:   { key: 'totalOtHours', label: 'OT Hours', format: 'number' },
+    financial:    { key: 'laborVariance', label: 'Budget Variance', format: 'signedPercent' },
+  },
+  quality: {
+    operational:  { key: 'totalAudits', label: 'Total Audits', format: 'number' },
+    managerial:   { key: 'caRatio', label: 'CA Ratio', format: 'percent' },
+    financial:    { key: 'caRatio', label: 'CA Ratio', format: 'percent' },
+  },
+  timekeeping: {
+    operational:  { key: 'acceptanceRate', label: 'Acceptance Rate', format: 'percent' },
+    managerial:   { key: 'acceptanceRate', label: 'Acceptance Rate', format: 'percent' },
+    financial:    { key: 'acceptanceRate', label: 'Acceptance Rate', format: 'percent' },
+  },
+  safety: {
+    operational:  { key: 'recordableIncidents', label: 'Recordable Incidents', format: 'number' },
+    managerial:   { key: 'avgTrir', label: 'Avg TRIR', format: 'decimal' },
+    financial:    { key: 'avgTrir', label: 'Avg TRIR', format: 'decimal' },
+  },
+};
+
+const STATUS_STYLES = {
+  green:  { dot: 'bg-green-500', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+  yellow: { dot: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  red:    { dot: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+};
+
+function formatKPIValue(value, format) {
+  if (value == null) return '--';
+  switch (format) {
+    case 'percent': return `${value}%`;
+    case 'signedPercent': return `${value > 0 ? '+' : ''}${value}%`;
+    case 'decimal': return String(value);
+    case 'number': return Number(value).toLocaleString();
+    default: return String(value);
+  }
+}
+
+function formatHealthValue(value, format) {
+  if (value == null) return '--';
+  if (format === 'percent') return `${value}%`;
+  return String(value);
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
-  const { hasModule, isAdmin } = useUser();
+  const { isAdmin } = useUser();
   const brand = useBranding();
-  const { heroMetrics: heroConfig, workspaceCards, sections } = useHomeConfig();
+  const { metricTier, rbacLoading, canSeeDomain } = useRBAC();
   const { data: summary, loading, error } = useHomeSummary();
+  const { data: opsIntel, loading: opsLoading } = useOpsIntelligence();
 
-  const {
-    isCustomizing,
-    enterCustomize,
-    exitCustomize,
-    draft,
-    updateDraft,
-    saveDraft,
-    resetToDefaults,
-    isDirty,
-    saving,
-    source,
-  } = useCustomizeMode('home');
+  const pageTitle = brand.companyName ? `${brand.companyName} Command Center` : 'Command Center';
 
-  // Resolve config from draft when customizing, otherwise use live config
-  const activeHeroConfig = isCustomizing && draft
-    ? resolveHomeConfig(draft).heroMetrics
-    : heroConfig;
-  const activeWorkspaceCards = isCustomizing && draft
-    ? resolveHomeConfig(draft).workspaceCards
-    : workspaceCards;
-  const activeSections = isCustomizing && draft
-    ? resolveHomeConfig(draft).sections
-    : sections;
-
-  // Page title — use company name from branding
-  const pageTitle = brand.companyName || 'Company Overview';
-
-  // --- Loading / Error / Empty ---
-  if (loading) {
+  // --- Loading / Error ---
+  if (loading || rbacLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 size={24} className="text-aa-blue animate-spin" />
@@ -123,169 +133,19 @@ export default function Dashboard() {
 
   const hero = summary?.hero || {};
   const domains = summary?.domains || {};
+  const hasData = summary?.hasData;
+
   const attentionItems = (summary?.attentionItems || []).map(item => ({
     ...item,
-    // Map fields for TaskCard component
     employee: item.detail || '',
     dueDate: 'Active',
     dept: item.dept,
   }));
-  const hasData = summary?.hasData;
 
-  // Hero metric value map — driven by real sf_* data
-  const heroValues = {
-    total_properties:   { value: String(hero.totalProperties || 0), icon: HardHat },
-    open_tickets:       { value: String(hero.openTickets || 0), icon: ClipboardList, color: (hero.openTickets || 0) > 0 ? undefined : '#16A34A' },
-    completion_rate:    { value: `${hero.completionRate || 0}%`, icon: CheckCircle },
-    labor_variance:     { value: `${(hero.laborVariance || 0) > 0 ? '+' : ''}${hero.laborVariance || 0}%`, icon: DollarSign, color: (hero.laborVariance || 0) > 5 ? '#DC2626' : undefined },
-  };
-
-  // Build hero metrics — show all (including hidden dimmed) when customizing
-  const allHeroMetrics = activeHeroConfig
-    .filter(m => (!m.module || hasModule(m.module)) && heroValues[m.id])
-    .map(m => ({
-      id: m.id,
-      label: m.label,
-      value: heroValues[m.id].value,
-      icon: ICON_MAP[m.icon] || heroValues[m.id].icon,
-      color: heroValues[m.id].color,
-      module: m.module,
-      visible: m.visible !== false,
-    }));
-
-  const visibleMetrics = isCustomizing
-    ? allHeroMetrics
-    : allHeroMetrics.filter(m => m.visible);
-
-  // Build domain-based workspace cards directly from sf_* data
-  const domainOrder = ['operations', 'labor', 'quality', 'timekeeping', 'safety'];
-  const allWorkspaces = domainOrder
-    .filter(d => domains[d]?.hasData)
-    .map(d => ({
-      module: d,
-      kpis: domains[d],
-      visible: true,
-    }));
-
-  const visibleWorkspaces = isCustomizing
-    ? allWorkspaces
-    : allWorkspaces.filter(c => c.visible);
-
-  // Attention items
-  const maxAttention = activeSections.needsAttention?.maxItems ?? 12;
-  const visibleAttention = attentionItems.slice(0, maxAttention);
-  const visibleActivity = ACTIVITY.filter((item) => hasModule(item.module));
-
-  // Add Needs Attention card (count based on filtered items) — only in normal mode
-  const displayMetrics = [...visibleMetrics];
-  if (!isCustomizing && visibleAttention.length > 0) {
-    displayMetrics.push({
-      id: '_attention',
-      label: 'Needs Attention',
-      value: String(visibleAttention.length),
-      icon: AlertTriangle,
-      color: '#DC2626',
-      visible: true,
-    });
-  }
-
-  const showAttention = activeSections.needsAttention?.visible !== false && visibleAttention.length > 0;
-  const showActivity = activeSections.agentActivity?.visible !== false && visibleActivity.length > 0;
-
-  // ─── Draft helpers ──────────────────────────────────────────────────────────
-
-  function reorderHeroMetrics(newIdOrder) {
-    updateDraft(prev => {
-      const config = prev || {};
-      const currentMetrics = resolveHomeConfig(config).heroMetrics;
-      const metricMap = {};
-      for (const m of currentMetrics) metricMap[m.id] = m;
-      return {
-        ...config,
-        heroMetrics: newIdOrder.map((id, i) => ({
-          ...metricMap[id],
-          order: i,
-        })),
-      };
-    });
-  }
-
-  function toggleHeroMetric(id) {
-    updateDraft(prev => {
-      const config = prev || {};
-      const currentMetrics = resolveHomeConfig(config).heroMetrics;
-      return {
-        ...config,
-        heroMetrics: currentMetrics.map(m =>
-          m.id === id ? { ...m, visible: m.visible === false ? true : false } : m
-        ),
-      };
-    });
-  }
-
-  function renameHeroMetric(id, label) {
-    updateDraft(prev => {
-      const config = prev || {};
-      const currentMetrics = resolveHomeConfig(config).heroMetrics;
-      return {
-        ...config,
-        heroMetrics: currentMetrics.map(m =>
-          m.id === id ? { ...m, label } : m
-        ),
-      };
-    });
-  }
-
-  function reorderWorkspaceCards(newModuleOrder) {
-    updateDraft(prev => {
-      const config = prev || {};
-      const currentCards = resolveHomeConfig(config).workspaceCards;
-      const cardMap = {};
-      for (const c of currentCards) cardMap[c.module] = c;
-      return {
-        ...config,
-        workspaceCards: newModuleOrder.map((mod, i) => ({
-          ...cardMap[mod],
-          order: i,
-        })),
-      };
-    });
-  }
-
-  function toggleWorkspaceCard(module) {
-    updateDraft(prev => {
-      const config = prev || {};
-      const currentCards = resolveHomeConfig(config).workspaceCards;
-      return {
-        ...config,
-        workspaceCards: currentCards.map(c =>
-          c.module === module ? { ...c, visible: c.visible === false ? true : false } : c
-        ),
-      };
-    });
-  }
-
-  function toggleSection(sectionKey) {
-    updateDraft(prev => {
-      const config = prev || {};
-      const currentSections = resolveHomeConfig(config).sections;
-      return {
-        ...config,
-        sections: {
-          ...currentSections,
-          [sectionKey]: {
-            ...currentSections[sectionKey],
-            visible: currentSections[sectionKey]?.visible === false ? true : false,
-          },
-        },
-      };
-    });
-  }
-
-  if (!hasData && !isCustomizing) {
+  if (!hasData) {
     return (
       <div>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
+        <div className="mb-6">
           <h1 className="text-2xl font-light text-dark-text">{pageTitle}</h1>
         </div>
         <DashboardEmptyState domain="home" />
@@ -293,179 +153,202 @@ export default function Dashboard() {
     );
   }
 
+  // === SECTION 1: Company KPIs ===
+  const domainOrder = ['operations', 'labor', 'quality', 'timekeeping', 'safety'];
+  const kpiCards = domainOrder
+    .filter(d => canSeeDomain(d))
+    .map(d => {
+      const kpiConfig = DOMAIN_KPI_BY_TIER[d]?.[metricTier] || DOMAIN_KPI_BY_TIER[d]?.operational;
+      const value = hero[kpiConfig.key];
+      const Icon = DOMAIN_ICONS[d];
+      return {
+        domain: d,
+        label: `${DOMAIN_LABELS[d]}: ${kpiConfig.label}`,
+        value: formatKPIValue(value, kpiConfig.format),
+        icon: Icon,
+        color: DOMAIN_COLORS[d],
+      };
+    });
+
+  // === SECTION 2: Department Health ===
+  const healthCards = domainOrder
+    .filter(d => canSeeDomain(d))
+    .map(d => {
+      const health = computeHealth(d, hero);
+      return { domain: d, ...health };
+    });
+
+  // === SECTION 3: Operational Intelligence ===
+  const domainsWithData = domainOrder.filter(d => domains[d]?.hasData).length;
+  const dataCoverage = Math.round((domainsWithData / 5) * 100);
+
   return (
     <div>
-      {/* Customize Toolbar */}
-      {isCustomizing && (
-        <CustomizeToolbar
-          onSave={saveDraft}
-          onCancel={exitCustomize}
-          onReset={resetToDefaults}
-          saving={saving}
-          isDirty={isDirty}
-          source={source}
-        />
-      )}
-
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">{pageTitle}</h1>
-        <div className="flex items-center gap-2">
-          {isAdmin && !isCustomizing && (
+        {isAdmin && (
+          <button
+            onClick={() => setChatOpen(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+          >
+            <Bot size={16} />
+            Ask Admin Agent
+          </button>
+        )}
+      </div>
+
+      {/* ─── Section 1: Company KPIs ─── */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
+          Company KPIs
+        </h2>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          {kpiCards.map(card => (
             <button
-              onClick={enterCustomize}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-secondary-text bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              key={card.domain}
+              onClick={() => navigate(DOMAIN_PATHS[card.domain])}
+              className="text-left group"
             >
-              <Settings2 size={16} />
-              Customize
+              <div className="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-sm text-secondary-text mb-1">{card.label}</div>
+                    <div className="text-3xl font-semibold text-dark-text">{card.value}</div>
+                  </div>
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: `${card.color}10` }}>
+                    <card.icon size={20} style={{ color: card.color }} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs text-secondary-text group-hover:text-aa-blue transition-colors">
+                  View dashboard <ArrowRight size={12} />
+                </div>
+              </div>
             </button>
-          )}
-          {isAdmin && !isCustomizing && (
-            <button
-              onClick={() => setChatOpen(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
-            >
-              <Bot size={16} />
-              Ask Admin Agent
-            </button>
-          )}
+          ))}
         </div>
       </div>
 
-      {/* Hero Metric Cards */}
-      {displayMetrics.length > 0 && (
-        <SortableGrid
-          items={allHeroMetrics.map(m => m.id)}
-          onReorder={reorderHeroMetrics}
-          disabled={!isCustomizing}
-        >
-          <div className="grid gap-4 mb-8 responsive-metric-grid" style={{ gridTemplateColumns: `repeat(${Math.min(displayMetrics.length, 5)}, minmax(0, 1fr))` }}>
-            {displayMetrics.map((m) => (
-              <DraggableWidget
-                key={m.id}
-                id={m.id}
-                isCustomizing={isCustomizing && m.id !== '_attention'}
-                visible={m.visible}
-                label={m.label}
-                onToggleVisible={m.id !== '_attention' ? () => toggleHeroMetric(m.id) : undefined}
-                onRenameLabel={m.id !== '_attention' ? (label) => renameHeroMetric(m.id, label) : undefined}
+      {/* ─── Section 2: Department Health ─── */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
+          Department Health
+        </h2>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          {healthCards.map(card => {
+            const style = STATUS_STYLES[card.status];
+            return (
+              <button
+                key={card.domain}
+                onClick={() => navigate(DOMAIN_PATHS[card.domain])}
+                className="text-left"
               >
-                <MetricCard label={m.label} value={m.value} icon={m.icon} color={m.color} />
-              </DraggableWidget>
-            ))}
-          </div>
-        </SortableGrid>
-      )}
+                <div className={`bg-white rounded-lg border p-4 hover:shadow-sm transition-all ${style.border}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-1 h-8 rounded-full" style={{ backgroundColor: DOMAIN_COLORS[card.domain] }} />
+                    <span className="text-sm font-medium text-dark-text">{DOMAIN_LABELS[card.domain]}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
+                    <span className={`text-sm font-semibold ${style.text}`}>{card.label}</span>
+                  </div>
+                  <div className="text-xs text-secondary-text">
+                    {card.metric}: {formatHealthValue(card.value, card.format)}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      {/* Domain Overview Cards */}
-      {visibleWorkspaces.length > 0 && (
-        <>
-          <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
-            Portfolio Overview
-          </h2>
-          <SortableGrid
-            items={allWorkspaces.map(c => c.module)}
-            onReorder={reorderWorkspaceCards}
-            disabled={!isCustomizing}
-          >
-            <div className="grid gap-4 mb-8 responsive-metric-grid" style={{ gridTemplateColumns: `repeat(${Math.min(visibleWorkspaces.length, 5)}, minmax(0, 1fr))` }}>
-              {visibleWorkspaces.map((ws) => (
-                <DraggableWidget
-                  key={ws.module}
-                  id={ws.module}
-                  isCustomizing={isCustomizing}
-                  visible={ws.visible}
-                  onToggleVisible={() => toggleWorkspaceCard(ws.module)}
-                >
-                  <button
-                    onClick={() => !isCustomizing && navigate(DOMAIN_PATHS[ws.module])}
-                    className="w-full bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-gray-300 hover:shadow-sm transition-all"
-                    style={{ borderLeftWidth: 4, borderLeftColor: DOMAIN_COLORS[ws.module] }}
-                    disabled={isCustomizing}
-                  >
-                    <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: DOMAIN_COLORS[ws.module] }}>
-                      {DOMAIN_LABELS[ws.module]}
-                    </div>
-                    {ws.kpis.stats.map((stat, i) => (
-                      <div key={i} className="text-sm text-dark-text leading-relaxed">
-                        {stat}
-                      </div>
-                    ))}
-                  </button>
-                </DraggableWidget>
-              ))}
+      {/* ─── Section 3: Operational Intelligence ─── */}
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
+          Operational Intelligence
+        </h2>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-sm text-secondary-text mb-1">AI Agents</div>
+                <div className="text-3xl font-semibold text-dark-text">
+                  {opsLoading ? '--' : (opsIntel?.activeAgents ?? 0)}
+                </div>
+              </div>
+              <div className="p-2 bg-purple-50 rounded-lg">
+                <Cpu size={20} className="text-purple-600" />
+              </div>
             </div>
-          </SortableGrid>
-        </>
-      )}
+            <div className="mt-2 text-xs text-secondary-text">
+              {opsLoading ? '...' : `${opsIntel?.activeAgents ?? 0} of ${opsIntel?.totalAgents ?? 0} active`}
+            </div>
+          </div>
 
-      {/* Section toggles (customize mode) */}
-      {isCustomizing && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-          <h3 className="text-xs font-semibold text-secondary-text uppercase tracking-wider mb-3">Section Visibility</h3>
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 text-sm text-dark-text cursor-pointer">
-              <input
-                type="checkbox"
-                checked={activeSections.needsAttention?.visible !== false}
-                onChange={() => toggleSection('needsAttention')}
-                className="rounded border-gray-300 text-aa-blue focus:ring-aa-blue"
-              />
-              Needs Attention
-            </label>
-            <label className="flex items-center gap-2 text-sm text-dark-text cursor-pointer">
-              <input
-                type="checkbox"
-                checked={activeSections.agentActivity?.visible !== false}
-                onChange={() => toggleSection('agentActivity')}
-                className="rounded border-gray-300 text-aa-blue focus:ring-aa-blue"
-              />
-              Agent Activity
-            </label>
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-sm text-secondary-text mb-1">Skills Deployed</div>
+                <div className="text-3xl font-semibold text-dark-text">
+                  {opsLoading ? '--' : (opsIntel?.deployedSkills ?? 0)}
+                </div>
+              </div>
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <BarChart3 size={20} className="text-blue-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-secondary-text">
+              {opsLoading ? '...' : `${opsIntel?.deployedSkills ?? 0} of ${opsIntel?.totalSkills ?? 0} completed`}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-sm text-secondary-text mb-1">Automations</div>
+                <div className="text-3xl font-semibold text-dark-text">
+                  {opsLoading ? '--' : `${opsIntel?.automationsCompleted ?? 0}`}
+                </div>
+              </div>
+              <div className="p-2 bg-amber-50 rounded-lg">
+                <Zap size={20} className="text-amber-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-secondary-text">
+              {opsLoading ? '...' : `${opsIntel?.automationsCompleted ?? 0} of ${opsIntel?.automationsTotal ?? 0} completed`}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-sm text-secondary-text mb-1">Data Coverage</div>
+                <div className="text-3xl font-semibold text-dark-text">{dataCoverage}%</div>
+              </div>
+              <div className="p-2 bg-green-50 rounded-lg">
+                <Database size={20} className="text-green-600" />
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-secondary-text">
+              {domainsWithData} of 5 departments reporting
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Bottom section — Activity + Attention */}
-      {(showActivity || showAttention) && !isCustomizing && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          {/* Left column — Recent Agent Activity */}
-          {showActivity && (
-            <div className={showAttention ? 'md:col-span-3' : 'md:col-span-5'}>
-              <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
-                Recent Agent Activity
-              </h2>
-              <div className="bg-white rounded-lg border border-gray-200">
-                {visibleActivity.map((item, i) => (
-                  <div key={item.id} className={`flex items-start gap-3 px-4 py-3 ${i < visibleActivity.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                    <div className="p-1.5 bg-aa-blue/10 rounded shrink-0 mt-0.5">
-                      <Bot size={14} className="text-aa-blue" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-dark-text leading-snug">{item.text}</div>
-                      <div className="text-xs text-secondary-text mt-1">{item.time}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Right column — Needs Attention (compact) */}
-          {showAttention && (
-            <div className={showActivity ? 'md:col-span-2' : 'md:col-span-5'}>
-              <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
-                Needs Attention
-              </h2>
-              <div className="flex flex-col gap-2">
-                {visibleAttention.slice(0, 6).map((task) => (
-                  <TaskCard key={task.id} task={task} onAction={() => navigate(DOMAIN_PATHS[task.dept] || '/dashboards')} />
-                ))}
-              </div>
-              {visibleAttention.length > 6 && (
-                <div className="mt-2 text-xs text-secondary-text text-center">
-                  +{visibleAttention.length - 6} more items
-                </div>
-              )}
+      {/* ─── Needs Attention (compact bottom section) ─── */}
+      {attentionItems.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
+            Needs Attention
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {attentionItems.slice(0, 6).map((task) => (
+              <TaskCard key={task.id} task={task} onAction={() => navigate(DOMAIN_PATHS[task.dept] || '/dashboards')} />
+            ))}
+          </div>
+          {attentionItems.length > 6 && (
+            <div className="mt-2 text-xs text-secondary-text text-center">
+              +{attentionItems.length - 6} more items
             </div>
           )}
         </div>

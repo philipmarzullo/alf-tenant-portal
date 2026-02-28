@@ -47,9 +47,9 @@ export const STATUS = {
 
 export const NAV_ITEMS = [
   {
-    group: 'OVERVIEW',
+    group: 'COMMAND CENTER',
     items: [
-      { label: 'Overview', path: '/', icon: 'LayoutDashboard', moduleKey: null },
+      { label: 'Command Center', path: '/', icon: 'LayoutDashboard', moduleKey: null },
     ],
   },
   {
@@ -81,6 +81,7 @@ export const NAV_ITEMS = [
       { label: 'User Management', path: '/admin/users', icon: 'UserCog', moduleKey: 'admin' },
       { label: 'Knowledge Base', path: '/admin/knowledge', icon: 'BookOpen', moduleKey: 'admin' },
       { label: 'Automation Insights', path: '/admin/automation', icon: 'Zap', moduleKey: 'automation' },
+      { label: 'Role Templates', path: '/admin/role-templates', icon: 'ShieldCheck', moduleKey: 'admin' },
       { label: 'Dashboard Defaults', path: '/admin/dashboard-settings', icon: 'SlidersHorizontal', moduleKey: 'superAdmin' },
       { label: 'Agent Management', path: '/admin/agents', icon: 'Bot', moduleKey: 'superAdmin' },
       { label: 'Settings', path: '/admin/settings', icon: 'Settings', moduleKey: 'superAdmin' },

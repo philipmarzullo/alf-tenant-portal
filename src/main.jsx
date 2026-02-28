@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { UserProvider } from './contexts/UserContext';
 import { TenantConfigProvider } from './contexts/TenantConfigContext';
 import { DashboardConfigProvider } from './contexts/DashboardConfigContext';
+import { RBACProvider } from './contexts/RBACContext';
 import ToastProvider from './components/shared/ToastProvider';
 import './index.css';
 import App from './App.jsx';
@@ -16,13 +17,15 @@ createRoot(document.getElementById('root')).render(
       <BrandingProvider>
         <AuthProvider>
           <UserProvider>
-            <TenantConfigProvider>
-              <DashboardConfigProvider>
-                <ToastProvider>
-                  <App />
-                </ToastProvider>
-              </DashboardConfigProvider>
-            </TenantConfigProvider>
+            <RBACProvider>
+              <TenantConfigProvider>
+                <DashboardConfigProvider>
+                  <ToastProvider>
+                    <App />
+                  </ToastProvider>
+                </DashboardConfigProvider>
+              </TenantConfigProvider>
+            </RBACProvider>
           </UserProvider>
         </AuthProvider>
       </BrandingProvider>

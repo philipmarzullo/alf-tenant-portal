@@ -6,6 +6,7 @@ import useDashboardConfig from '../../hooks/useDashboardConfig';
 import useDomainCustomize from '../../hooks/useDomainCustomize';
 import DashboardFilters from '../../components/dashboards/DashboardFilters';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
+import FirstTimeSetup from '../../components/dashboards/FirstTimeSetup';
 import KPICard from '../../components/dashboards/KPICard';
 import SortableGrid from '../../components/dashboards/SortableGrid';
 import DraggableWidget from '../../components/dashboards/DraggableWidget';
@@ -38,6 +39,17 @@ export default function TimekeepingDashboard() {
 
   const activeKpis = isCustomizing && draft ? resolveConfig('timekeeping', draft).kpis : kpis;
   const activeCharts = isCustomizing && draft ? resolveConfig('timekeeping', draft).charts : charts;
+
+  // First-time setup for non-admin users
+  const [setupDismissed, setSetupDismissed] = useState(false);
+  if (!isAdmin && !setupDismissed && source === 'default' && !loading) {
+    return (
+      <FirstTimeSetup
+        domain="timekeeping"
+        onComplete={() => setSetupDismissed(true)}
+      />
+    );
+  }
 
   const metrics = useMemo(() => {
     if (!data?.timekeeping?.length) return null;

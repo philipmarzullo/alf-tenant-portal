@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Users, UserCheck, Shield, Boxes, Plus, Loader2, Mail } from 'lucide-react';
 import MetricCard from '../../components/shared/MetricCard';
 import DataTable from '../../components/shared/DataTable';
@@ -8,7 +8,16 @@ import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, getFreshToken } from '../../lib/supabase';
 
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
+const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+
 const EMPTY_FORM = { name: '', email: '', title: '', role: 'user', modules: [], active: true, password: '' };
+
+const TIER_BADGES = {
+  operational: { label: 'Operational', style: 'bg-gray-100 text-gray-700' },
+  managerial: { label: 'Managerial', style: 'bg-blue-50 text-blue-700' },
+  financial: { label: 'Financial', style: 'bg-purple-50 text-purple-700' },
+};
 
 export default function UserManagement() {
   const { currentUser, allUsers, refreshUsers } = useUser();
@@ -20,11 +29,66 @@ export default function UserManagement() {
   const [saveError, setSaveError] = useState(null);
   const [resetSending, setResetSending] = useState(false);
 
+  // Role templates + site assignments for the edit form
+  const [roleTemplates, setRoleTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [sites, setSites] = useState([]);
+  const [assignedSiteIds, setAssignedSiteIds] = useState([]);
+  const [loadingExtras, setLoadingExtras] = useState(false);
+
+  // Fetch role templates and sites when panel opens
+  const fetchExtras = useCallback(async (userId) => {
+    if (!TENANT_ID) return;
+    setLoadingExtras(true);
+    try {
+      const token = await getFreshToken();
+      if (!token) return;
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [templatesRes, sitesRes, assignmentsRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/role-templates`, { headers }),
+        fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/home-summary`, { headers }),
+        userId
+          ? fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/site-assignments/${userId}`, { headers })
+          : Promise.resolve(null),
+      ]);
+
+      if (templatesRes.ok) {
+        setRoleTemplates(await templatesRes.json());
+      }
+
+      // Extract jobs list from home-summary response (uses the JOBS query)
+      if (sitesRes.ok) {
+        const summaryData = await sitesRes.json();
+        // We need the actual jobs list — let's fetch it directly
+        const jobsRes = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/operations?dateFrom=2000-01-01&dateTo=2099-12-31`, { headers });
+        if (jobsRes.ok) {
+          const domainData = await jobsRes.json();
+          setSites(domainData.jobs || []);
+        }
+      }
+
+      if (assignmentsRes?.ok) {
+        const assignments = await assignmentsRes.json();
+        setAssignedSiteIds(assignments.map(a => a.job_id));
+      } else {
+        setAssignedSiteIds([]);
+      }
+    } catch (err) {
+      console.error('[UserManagement] Error loading extras:', err.message);
+    } finally {
+      setLoadingExtras(false);
+    }
+  }, []);
+
   const openAdd = () => {
     setEditingUser(null);
     setForm(EMPTY_FORM);
+    setSelectedTemplateId('');
+    setAssignedSiteIds([]);
     setSaveError(null);
     setPanelOpen(true);
+    fetchExtras(null);
   };
 
   const openEdit = (user) => {
@@ -38,8 +102,10 @@ export default function UserManagement() {
       active: user.active,
       password: '',
     });
+    setSelectedTemplateId(user.dashboard_template_id || '');
     setSaveError(null);
     setPanelOpen(true);
+    fetchExtras(user.id);
   };
 
   const handleSave = async () => {
@@ -52,23 +118,45 @@ export default function UserManagement() {
       : form.modules;
 
     if (editingUser) {
-      // Update existing profile
+      // Update existing profile (including dashboard_template_id)
+      const updatePayload = {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        title: form.title.trim(),
+        role: form.role,
+        modules,
+        active: form.active,
+        dashboard_template_id: selectedTemplateId || null,
+      };
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          name: form.name.trim(),
-          email: form.email.trim(),
-          title: form.title.trim(),
-          role: form.role,
-          modules,
-          active: form.active,
-        })
+        .update(updatePayload)
         .eq('id', editingUser.id);
 
       if (error) {
         setSaveError(error.message);
         setSaving(false);
         return;
+      }
+
+      // Save site assignments (for non-admin users)
+      if (form.role !== 'admin' && form.role !== 'super-admin') {
+        try {
+          const token = await getFreshToken();
+          if (token) {
+            await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/site-assignments/${editingUser.id}`, {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ jobIds: assignedSiteIds }),
+            });
+          }
+        } catch (err) {
+          console.error('[UserManagement] Site assignment save error:', err.message);
+        }
       }
     } else {
       // Create new user via Edge Function
@@ -128,7 +216,6 @@ export default function UserManagement() {
     setResetSending(true);
     await resetPassword(editingUser.email);
     setResetSending(false);
-    // The toast for this would come from a toast context if wired up
     alert(`Password reset email sent to ${editingUser.email}`);
   };
 
@@ -141,7 +228,16 @@ export default function UserManagement() {
     }));
   };
 
+  const toggleSite = (jobId) => {
+    setAssignedSiteIds(prev =>
+      prev.includes(jobId)
+        ? prev.filter(id => id !== jobId)
+        : [...prev, jobId]
+    );
+  };
+
   const isSelf = editingUser?.id === currentUser?.id;
+  const isNonAdminRole = form.role !== 'admin' && form.role !== 'super-admin';
 
   // Filter to this tenant's users (exclude platform_owner accounts)
   const tenantId = import.meta.env.VITE_TENANT_ID;
@@ -162,6 +258,13 @@ export default function UserManagement() {
     acc[m.group].push(m);
     return acc;
   }, {});
+
+  // Find template for a user (for table display)
+  const getTemplateName = (user) => {
+    if (!user.dashboard_template_id) return null;
+    const t = roleTemplates.find(rt => rt.id === user.dashboard_template_id);
+    return t?.name || null;
+  };
 
   const columns = [
     {
@@ -365,7 +468,7 @@ export default function UserManagement() {
           </div>
 
           {/* Modules — hidden when admin or super-admin */}
-          {form.role !== 'admin' && form.role !== 'super-admin' && (
+          {isNonAdminRole && (
             <div>
               <label className="block text-sm font-medium text-dark-text mb-2">Module Access</label>
               <div className="space-y-4">
@@ -403,6 +506,97 @@ export default function UserManagement() {
               <p className="text-sm text-purple-700">
                 Admins automatically have access to all modules.
               </p>
+            </div>
+          )}
+
+          {/* Dashboard Template — non-admin roles only */}
+          {isNonAdminRole && editingUser && (
+            <div>
+              <label className="block text-sm font-medium text-dark-text mb-1">Dashboard Template</label>
+              {loadingExtras ? (
+                <div className="flex items-center gap-2 text-sm text-secondary-text py-2">
+                  <Loader2 size={14} className="animate-spin" /> Loading templates...
+                </div>
+              ) : (
+                <>
+                  <select
+                    value={selectedTemplateId}
+                    onChange={(e) => setSelectedTemplateId(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
+                  >
+                    <option value="">No template (uses defaults)</option>
+                    {roleTemplates.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} — {t.metric_tier}{t.is_default ? ' (default)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedTemplateId && (() => {
+                    const t = roleTemplates.find(rt => rt.id === selectedTemplateId);
+                    if (!t) return null;
+                    const badge = TIER_BADGES[t.metric_tier] || TIER_BADGES.operational;
+                    return (
+                      <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${badge.style}`}>
+                            {badge.label}
+                          </span>
+                        </div>
+                        {t.description && (
+                          <p className="text-xs text-secondary-text">{t.description}</p>
+                        )}
+                        {t.allowed_domains?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {t.allowed_domains.map(d => (
+                              <span key={d} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white border border-gray-200 text-secondary-text">
+                                {d}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Site Access — non-admin roles only, edit mode only */}
+          {isNonAdminRole && editingUser && (
+            <div>
+              <label className="block text-sm font-medium text-dark-text mb-1">Site Access</label>
+              <p className="text-xs text-secondary-text mb-2">
+                {assignedSiteIds.length === 0
+                  ? 'No sites assigned — user sees all sites (default).'
+                  : `${assignedSiteIds.length} site${assignedSiteIds.length === 1 ? '' : 's'} assigned. User only sees data for these sites.`}
+              </p>
+              {loadingExtras ? (
+                <div className="flex items-center gap-2 text-sm text-secondary-text py-2">
+                  <Loader2 size={14} className="animate-spin" /> Loading sites...
+                </div>
+              ) : sites.length === 0 ? (
+                <p className="text-xs text-secondary-text italic">No sites found in the database.</p>
+              ) : (
+                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                  {sites.map(site => (
+                    <label key={site.id} className="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={assignedSiteIds.includes(site.id)}
+                        onChange={() => toggleSite(site.id)}
+                        className="w-4 h-4 rounded border-gray-300 text-aa-blue focus:ring-aa-blue"
+                      />
+                      <span className="text-sm text-dark-text group-hover:text-aa-blue transition-colors">
+                        {site.job_name}
+                      </span>
+                      {site.location && (
+                        <span className="text-xs text-secondary-text">({site.location})</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
