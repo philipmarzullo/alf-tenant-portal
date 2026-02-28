@@ -84,24 +84,24 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       {/* Logo + tagline */}
       <div className="flex items-center px-4 h-16 border-b border-white/10 shrink-0">
         {brand.logoUrl ? (
-          <div className="flex flex-col">
+          <div className="flex items-center gap-3">
             <img
               src={brand.logoUrl}
               alt={brand.companyName || 'Company'}
-              className={`transition-all duration-200 ${showCollapsed ? 'h-6' : 'h-7'}`}
+              className={`transition-all duration-200 ${showCollapsed ? 'h-6' : 'h-[30px]'}`}
             />
             {!showCollapsed && (
-              <span className="text-[9px] font-light tracking-[3px] text-white/30 mt-1.5 uppercase">Operations Intelligence</span>
+              <span className="text-[9px] font-light tracking-[3px] text-white/30 uppercase">Operations Intelligence</span>
             )}
           </div>
         ) : (
           !showCollapsed && (
-            <div className="flex flex-col">
+            <div className="flex items-center gap-3">
               <span className="text-white text-sm font-medium truncate">
                 {brand.companyName || 'Operations Intelligence'}
               </span>
               {brand.companyName && (
-                <span className="text-[9px] font-light tracking-[3px] text-white/30 mt-1 uppercase">Operations Intelligence</span>
+                <span className="text-[9px] font-light tracking-[3px] text-white/30 uppercase">Operations Intelligence</span>
               )}
             </div>
           )
