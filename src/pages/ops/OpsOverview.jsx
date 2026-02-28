@@ -9,6 +9,7 @@ import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { vpSummary, getOpsSummaryMetrics } from '../../data/mock/operationsMocks';
+import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
 
 const summary = getOpsSummaryMetrics();
 
@@ -109,6 +110,8 @@ export default function OpsOverview() {
         </h2>
         <DataTable columns={vpColumns} data={vpSummary} onRowClick={setSelected} />
       </div>
+
+      <WorkspaceActionItems departments={['operations', 'quality', 'safety', 'ops']} />
 
       {/* Coming soon modules */}
       <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">

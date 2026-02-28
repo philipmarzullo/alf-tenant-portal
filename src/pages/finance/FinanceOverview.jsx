@@ -9,6 +9,7 @@ import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { arAging } from '../../data/mock/financeMocks';
+import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
 
 const METRICS = [
   { label: 'Outstanding AR', value: '$842,300', icon: DollarSign },
@@ -68,6 +69,8 @@ export default function FinanceOverview() {
         </h2>
         <DataTable columns={arColumns} data={arAging} onRowClick={setSelected} />
       </div>
+
+      <WorkspaceActionItems departments={['labor', 'finance']} />
 
       {/* Coming soon modules */}
       <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">

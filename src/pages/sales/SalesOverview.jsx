@@ -1,6 +1,7 @@
 import { DollarSign, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
 import MetricCard from '../../components/shared/MetricCard';
 import StatusBadge from '../../components/shared/StatusBadge';
+import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
 import { contracts, getSalesMetrics, daysUntilExpiry, getUrgencyTier } from '../../data/mock/salesMocks';
 
 const fmt = (n) => {
@@ -114,6 +115,8 @@ export default function SalesOverview() {
           </div>
         </div>
       )}
+
+      <WorkspaceActionItems departments={['sales']} />
 
       {/* Recently Expired */}
       {expired.length > 0 && (

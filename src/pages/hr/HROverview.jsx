@@ -2,6 +2,7 @@ import { Users, FileText, ClipboardCheck, Calendar } from 'lucide-react';
 import MetricCard from '../../components/shared/MetricCard';
 import StatusBadge from '../../components/shared/StatusBadge';
 import DataTable from '../../components/shared/DataTable';
+import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
 
 const METRICS = [
   { label: 'Active Employees', value: '2,147', icon: Users },
@@ -45,6 +46,8 @@ export default function HROverview() {
         </h2>
       </div>
       <DataTable columns={columns} data={TASKS} />
+
+      <WorkspaceActionItems departments={['labor', 'timekeeping', 'hr']} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { reorderAlerts } from '../../data/mock/purchasingMocks';
+import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
 
 const METRICS = [
   { label: 'Open POs', value: '18', icon: ShoppingCart },
@@ -100,6 +101,8 @@ export default function PurchasingOverview() {
           </table>
         </div>
       </div>
+
+      <WorkspaceActionItems departments={['purchasing']} />
 
       {/* Coming soon modules */}
       <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
