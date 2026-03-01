@@ -45,7 +45,7 @@ export default function OnboardingPage() {
 
   // Pre-populate from existing draft profile (template-created tenants)
   useEffect(() => {
-    if (companyProfile && companyProfile.status === 'draft') {
+    if (companyProfile && companyProfile.profile_status === 'draft') {
       setFormData(prev => ({
         ...prev,
         industry: companyProfile.industry || prev.industry,

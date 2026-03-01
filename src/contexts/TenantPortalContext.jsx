@@ -212,7 +212,7 @@ export function TenantPortalProvider({ children }) {
     }
   }, [tenantId]);
 
-  const profileStatus = companyProfile?.status || null;
+  const profileStatus = companyProfile?.profile_status || null;
 
   /** Get the route path for a dashboard domain by domain_key */
   const getDomainPath = useCallback(

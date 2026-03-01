@@ -171,7 +171,7 @@ function AuthGate({ children }) {
 
   // Onboarding redirect: only on unified portal (no VITE_TENANT_ID)
   if (!isStandalone) {
-    const profileIsDraft = !companyProfile || companyProfile.status === 'draft';
+    const profileIsDraft = !companyProfile || companyProfile.profile_status === 'draft';
     if (profileIsDraft) {
       if (realIsSuperAdmin && !location.pathname.startsWith('/onboarding')) {
         return <Navigate to="/onboarding" replace />;
