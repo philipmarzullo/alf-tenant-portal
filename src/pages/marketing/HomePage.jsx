@@ -148,13 +148,13 @@ export default function HomePage() {
             >
               Request a Demo
             </Link>
-            <Link
-              to="/login"
+            <a
+              href="https://portal.alfpro.ai/login"
               className="px-7 py-3.5 border border-alf-dark/20 text-alf-dark text-sm font-medium rounded-lg hover:border-alf-dark hover:bg-alf-dark hover:text-white transition-colors"
               style={{ fontFamily: "var(--font-marketing-body)" }}
             >
               Log In
-            </Link>
+            </a>
           </div>
         </div>
       </section>

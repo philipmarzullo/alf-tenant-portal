@@ -25,13 +25,13 @@ export default function MarketingLayout() {
             >
               Pricing
             </Link>
-            <Link
-              to="/login"
+            <a
+              href="https://portal.alfpro.ai/login"
               className="text-sm font-medium text-alf-dark hover:text-alf-orange transition-colors"
               style={{ fontFamily: "var(--font-marketing-body)" }}
             >
               Log In
-            </Link>
+            </a>
             <Link
               to="/request-demo"
               className="px-4 py-2 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"
