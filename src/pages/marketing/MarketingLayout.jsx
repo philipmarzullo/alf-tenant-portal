@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router-dom';
 import AlfMark from '../../components/shared/AlfMark';
+import SalesChatWidget from '../../components/marketing/SalesChatWidget';
 
 export default function MarketingLayout() {
   return (
@@ -46,6 +47,9 @@ export default function MarketingLayout() {
       <main className="flex-1 pt-16">
         <Outlet />
       </main>
+
+      {/* Sales Chat */}
+      <SalesChatWidget />
 
       {/* Footer */}
       <footer className="bg-alf-dark text-white/60 py-10">

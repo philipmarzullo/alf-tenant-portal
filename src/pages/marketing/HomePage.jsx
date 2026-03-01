@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Database, Brain, Zap } from 'lucide-react';
 
 const TIERS = [
   {
@@ -42,6 +43,7 @@ const TIERS = [
       'Custom Builds',
     ],
     accent: '#C84B0A',
+    badge: 'Full Platform',
   },
 ];
 
@@ -70,14 +72,17 @@ const STEPS = [
 
 const DIFFERENTIATORS = [
   {
+    icon: Database,
     title: 'Dynamic portal generation',
     description: 'Every portal is built from your company profile — departments, services, and differentiators shape what you see.',
   },
   {
+    icon: Brain,
     title: 'SOP-driven automation',
     description: 'Upload your standard operating procedures and Alf discovers automation opportunities across your workflows.',
   },
   {
+    icon: Zap,
     title: 'Company-specific AI agents',
     description: 'Agents trained on your knowledge base, your data, and your processes — not generic templates.',
   },
@@ -155,16 +160,17 @@ export default function HomePage() {
       </section>
 
       {/* Tier Cards */}
-      <section className="bg-white py-20">
+      <section className="bg-white py-24">
         <div className="max-w-6xl mx-auto px-6">
           <h2
-            className="text-3xl text-alf-dark text-center mb-4"
+            className="text-3xl md:text-4xl text-alf-dark text-center mb-3"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
             Three tiers of operations intelligence
           </h2>
+          <div className="w-12 h-[3px] bg-alf-orange mx-auto rounded-full mb-4" />
           <p
-            className="text-center text-alf-slate mb-12 max-w-xl mx-auto"
+            className="text-center text-alf-slate mb-14 max-w-xl mx-auto"
             style={{ fontFamily: "var(--font-marketing-body)" }}
           >
             From visibility to full automation — choose the level that fits your operations.
@@ -173,8 +179,20 @@ export default function HomePage() {
             {TIERS.map((tier) => (
               <div
                 key={tier.name}
-                className="bg-white rounded-xl border border-alf-bone p-6 flex flex-col"
+                className={`bg-white rounded-xl p-6 flex flex-col relative ${
+                  tier.badge
+                    ? 'border-2 border-alf-orange shadow-lg shadow-alf-orange/10'
+                    : 'border border-alf-bone'
+                }`}
               >
+                {tier.badge && (
+                  <div
+                    className="absolute -top-3 left-6 px-3 py-0.5 bg-alf-orange text-white text-[11px] font-semibold rounded-full"
+                    style={{ fontFamily: "var(--font-marketing-body)" }}
+                  >
+                    {tier.badge}
+                  </div>
+                )}
                 <div
                   className="inline-block self-start px-3 py-1 rounded-full text-xs font-semibold text-white mb-4"
                   style={{ backgroundColor: tier.accent, fontFamily: "var(--font-marketing-body)" }}
@@ -193,10 +211,10 @@ export default function HomePage() {
                 >
                   {tier.description}
                 </p>
-                <ul className="space-y-2 mt-auto" style={{ fontFamily: "var(--font-marketing-body)" }}>
+                <ul className="space-y-2.5 mt-auto" style={{ fontFamily: "var(--font-marketing-body)" }}>
                   {tier.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-alf-dark">
-                      <span className="text-alf-orange mt-0.5">&#10003;</span>
+                    <li key={f} className="flex items-start gap-2.5 text-sm text-alf-dark">
+                      <span className="text-alf-orange mt-0.5 shrink-0">&#10003;</span>
                       {f}
                     </li>
                   ))}
@@ -208,19 +226,24 @@ export default function HomePage() {
       </section>
 
       {/* How It Works */}
-      <section className="bg-alf-warm-white py-20">
+      <section className="bg-alf-bone py-24">
         <div className="max-w-6xl mx-auto px-6">
           <h2
-            className="text-3xl text-alf-dark text-center mb-12"
+            className="text-3xl md:text-4xl text-alf-dark text-center mb-3"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
             How it works
           </h2>
-          <div className="grid md:grid-cols-4 gap-8">
-            {STEPS.map((s) => (
-              <div key={s.step} className="text-center md:text-left">
+          <div className="w-12 h-[3px] bg-alf-orange mx-auto rounded-full mb-14" />
+          <div className="grid md:grid-cols-4 gap-10">
+            {STEPS.map((s, i) => (
+              <div key={s.step} className="relative">
+                {/* Connector line between steps (desktop only) */}
+                {i < STEPS.length - 1 && (
+                  <div className="hidden md:block absolute top-6 left-[calc(100%+4px)] w-[calc(100%-8px)] h-px bg-alf-orange/20" style={{ transform: 'translateX(-50%)' }} />
+                )}
                 <div
-                  className="text-3xl font-light text-alf-orange mb-3"
+                  className="text-4xl font-light text-alf-orange mb-4"
                   style={{ fontFamily: "var(--font-marketing-heading)" }}
                 >
                   {s.step}
@@ -244,47 +267,85 @@ export default function HomePage() {
       </section>
 
       {/* Differentiators */}
-      <section className="bg-white py-20">
+      <section className="bg-alf-warm-white py-24">
         <div className="max-w-5xl mx-auto px-6">
           <h2
-            className="text-3xl text-alf-dark text-center mb-12"
+            className="text-3xl md:text-4xl text-alf-dark text-center mb-3"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
             What makes Alf different
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {DIFFERENTIATORS.map((d) => (
-              <div key={d.title}>
-                <h3
-                  className="text-lg text-alf-dark mb-2"
-                  style={{ fontFamily: "var(--font-marketing-heading)" }}
-                >
-                  {d.title}
-                </h3>
-                <p
-                  className="text-sm text-alf-slate leading-relaxed"
-                  style={{ fontFamily: "var(--font-marketing-body)" }}
-                >
-                  {d.description}
-                </p>
-              </div>
-            ))}
+          <div className="w-12 h-[3px] bg-alf-orange mx-auto rounded-full mb-14" />
+          <div className="grid md:grid-cols-3 gap-10">
+            {DIFFERENTIATORS.map((d) => {
+              const Icon = d.icon;
+              return (
+                <div key={d.title} className="text-center md:text-left">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-alf-orange/10 mb-5">
+                    <Icon size={22} className="text-alf-orange" />
+                  </div>
+                  <h3
+                    className="text-lg text-alf-dark mb-3"
+                    style={{ fontFamily: "var(--font-marketing-heading)" }}
+                  >
+                    {d.title}
+                  </h3>
+                  <p
+                    className="text-sm text-alf-slate leading-relaxed"
+                    style={{ fontFamily: "var(--font-marketing-body)" }}
+                  >
+                    {d.description}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* CTA Banner */}
-      <section className="bg-alf-dark py-20">
-        <div className="max-w-3xl mx-auto px-6 text-center">
+      <section className="bg-alf-dark py-24 relative overflow-hidden">
+        {/* AlfMark watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none" aria-hidden="true">
+          <div className="opacity-[0.06]">
+            <span style={{
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontSize: 'clamp(200px, 30vw, 400px)',
+              fontWeight: 400,
+              letterSpacing: -10,
+              color: '#FFFFFF',
+              lineHeight: 0.85,
+              display: 'block',
+            }}>
+              alf
+            </span>
+            <div style={{
+              width: '55%',
+              height: 5,
+              background: '#C84B0A',
+              borderRadius: 2.5,
+              marginTop: 10,
+            }} />
+          </div>
+        </div>
+
+        <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
           <h2
-            className="text-3xl text-white mb-6"
+            className="text-3xl md:text-4xl text-white mb-4"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
             Ready to see your operations clearly?
           </h2>
+          <div className="w-12 h-[3px] bg-alf-orange mx-auto rounded-full mb-6" />
+          <p
+            className="text-white/50 mb-10 max-w-md mx-auto"
+            style={{ fontFamily: "var(--font-marketing-body)" }}
+          >
+            See how Alf connects your data, deploys AI agents, and automates your workflows.
+          </p>
           <a
             href="mailto:support@alfpro.ai?subject=Demo request"
-            className="inline-block px-6 py-3 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"
+            className="inline-block px-7 py-3.5 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"
             style={{ fontFamily: "var(--font-marketing-body)" }}
           >
             Request a Demo
