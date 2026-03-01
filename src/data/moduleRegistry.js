@@ -15,11 +15,11 @@ export const MODULE_REGISTRY = {
     description: 'Operational dashboards with KPI tracking',
     icon: 'BarChart3',
     pages: [
-      { key: 'operations', label: 'Operations', path: '/dashboards', default: true },
-      { key: 'labor', label: 'Labor', path: '/dashboards/labor' },
-      { key: 'quality', label: 'Quality', path: '/dashboards/quality' },
-      { key: 'timekeeping', label: 'Timekeeping', path: '/dashboards/timekeeping' },
-      { key: 'safety', label: 'Safety', path: '/dashboards/safety' },
+      { key: 'operations', label: 'Operations', path: '/portal/dashboards', default: true },
+      { key: 'labor', label: 'Labor', path: '/portal/dashboards/labor' },
+      { key: 'quality', label: 'Quality', path: '/portal/dashboards/quality' },
+      { key: 'timekeeping', label: 'Timekeeping', path: '/portal/dashboards/timekeeping' },
+      { key: 'safety', label: 'Safety', path: '/portal/dashboards/safety' },
     ],
     actions: [],
   },
@@ -28,7 +28,7 @@ export const MODULE_REGISTRY = {
     description: 'Conversational analytics agent for operational data',
     icon: 'MessageSquareText',
     pages: [
-      { key: 'chat', label: 'Analytics Chat', path: '/analytics', default: true },
+      { key: 'chat', label: 'Analytics Chat', path: '/portal/analytics', default: true },
     ],
     actions: [
       { key: 'askAnalytics', label: 'Ask Analytics Agent' },
@@ -41,12 +41,12 @@ export const MODULE_REGISTRY = {
     description: 'Document generation tools — reviews, proposals, plans, reports',
     icon: 'Wrench',
     pages: [
-      { key: 'quarterly-review', label: 'Quarterly Review Builder', path: '/tools/qbu' },
-      { key: 'proposal', label: 'Proposal Builder', path: '/tools/sales-deck' },
-      { key: 'transition-plan', label: 'Transition Plan Builder', path: '/tools/transition-plan' },
-      { key: 'budget', label: 'Budget Builder', path: '/tools/budget' },
-      { key: 'incident-report', label: 'Incident Report', path: '/tools/incident-report' },
-      { key: 'training-plan', label: 'Training Plan', path: '/tools/training-plan' },
+      { key: 'quarterly-review', label: 'Quarterly Review Builder', path: '/portal/tools/qbu' },
+      { key: 'proposal', label: 'Proposal Builder', path: '/portal/tools/sales-deck' },
+      { key: 'transition-plan', label: 'Transition Plan Builder', path: '/portal/tools/transition-plan' },
+      { key: 'budget', label: 'Budget Builder', path: '/portal/tools/budget' },
+      { key: 'incident-report', label: 'Incident Report', path: '/portal/tools/incident-report' },
+      { key: 'training-plan', label: 'Training Plan', path: '/portal/tools/training-plan' },
     ],
     actions: [
       { key: 'generateQBU', label: 'Generate Quarterly Review' },
@@ -62,7 +62,7 @@ export const MODULE_REGISTRY = {
     description: 'AI-generated action plans from dashboard metrics',
     icon: 'ListChecks',
     pages: [
-      { key: 'action-plans', label: 'Action Plans', path: '/dashboards/action-plans', default: true },
+      { key: 'action-plans', label: 'Action Plans', path: '/portal/dashboards/action-plans', default: true },
     ],
     actions: [
       { key: 'generateActionPlan', label: 'Generate Action Plan' },
@@ -73,7 +73,7 @@ export const MODULE_REGISTRY = {
     description: 'Company SOPs, documents, and agent knowledge',
     icon: 'BookOpen',
     pages: [
-      { key: 'library', label: 'Knowledge Base', path: '/admin/knowledge', default: true },
+      { key: 'library', label: 'Knowledge Base', path: '/portal/admin/knowledge', default: true },
     ],
     actions: [],
   },
@@ -84,12 +84,12 @@ export const MODULE_REGISTRY = {
     description: 'Benefits, payroll, leave management, union calendars',
     icon: 'Users',
     pages: [
-      { key: 'overview', label: 'Overview', path: '/hr', default: true },
-      { key: 'benefits', label: 'Benefits', path: '/hr/benefits' },
-      { key: 'pay-rates', label: 'Pay Rate Changes', path: '/hr/pay-rates' },
-      { key: 'leave', label: 'Leave Management', path: '/hr/leave' },
-      { key: 'unemployment', label: 'Unemployment', path: '/hr/unemployment' },
-      { key: 'union-calendar', label: 'Union Calendar', path: '/hr/union-calendar' },
+      { key: 'overview', label: 'Overview', path: '/portal/hr', default: true },
+      { key: 'benefits', label: 'Benefits', path: '/portal/hr/benefits' },
+      { key: 'pay-rates', label: 'Pay Rate Changes', path: '/portal/hr/pay-rates' },
+      { key: 'leave', label: 'Leave Management', path: '/portal/hr/leave' },
+      { key: 'unemployment', label: 'Unemployment', path: '/portal/hr/unemployment' },
+      { key: 'union-calendar', label: 'Union Calendar', path: '/portal/hr/union-calendar' },
     ],
     actions: [
       { key: 'draftReminder', label: 'Draft Reminder Email' },
@@ -108,7 +108,7 @@ export const MODULE_REGISTRY = {
     description: 'AR, collections, budget tracking',
     icon: 'DollarSign',
     pages: [
-      { key: 'overview', label: 'Overview', path: '/finance', default: true },
+      { key: 'overview', label: 'Overview', path: '/portal/finance', default: true },
     ],
     actions: [
       { key: 'draftCollectionEmail', label: 'Draft Collection Email' },
@@ -120,7 +120,7 @@ export const MODULE_REGISTRY = {
     description: 'Reorders, vendor management',
     icon: 'ShoppingCart',
     pages: [
-      { key: 'overview', label: 'Overview', path: '/purchasing', default: true },
+      { key: 'overview', label: 'Overview', path: '/portal/purchasing', default: true },
     ],
     actions: [
       { key: 'reorderAnalysis', label: 'Reorder Analysis' },
@@ -131,10 +131,10 @@ export const MODULE_REGISTRY = {
     description: 'Contracts, renewals, pipeline management',
     icon: 'Briefcase',
     pages: [
-      { key: 'overview', label: 'Overview', path: '/sales', default: true },
-      { key: 'contracts', label: 'Contracts', path: '/sales/contracts' },
-      { key: 'apc', label: 'APC Tracker', path: '/sales/apc' },
-      { key: 'tbi', label: 'TBI Tracker', path: '/sales/tbi' },
+      { key: 'overview', label: 'Overview', path: '/portal/sales', default: true },
+      { key: 'contracts', label: 'Contracts', path: '/portal/sales/contracts' },
+      { key: 'apc', label: 'APC Tracker', path: '/portal/sales/apc' },
+      { key: 'tbi', label: 'TBI Tracker', path: '/portal/sales/tbi' },
     ],
     actions: [
       { key: 'renewalBrief', label: 'Generate Renewal Brief' },
@@ -149,7 +149,7 @@ export const MODULE_REGISTRY = {
     description: 'Inspections, KPIs, incidents',
     icon: 'ClipboardCheck',
     pages: [
-      { key: 'overview', label: 'Overview', path: '/ops', default: true },
+      { key: 'overview', label: 'Overview', path: '/portal/ops', default: true },
     ],
     actions: [
       { key: 'vpPerformanceSummary', label: 'VP Performance Summary' },
@@ -164,7 +164,7 @@ export const MODULE_REGISTRY = {
     description: 'AI-powered SOP analysis and automation roadmaps',
     icon: 'Zap',
     pages: [
-      { key: 'insights', label: 'Automation Insights', path: '/admin/automation', default: true },
+      { key: 'insights', label: 'Automation Insights', path: '/portal/admin/automation', default: true },
     ],
     actions: [
       { key: 'selfServicePipeline', label: 'Self-Service Analysis Pipeline' },
@@ -180,7 +180,7 @@ export const MODULE_REGISTRY = {
     description: 'Quarterly business review decks (legacy key — use "tools" module)',
     icon: 'FileBarChart',
     pages: [
-      { key: 'builder', label: 'Quarterly Review Builder', path: '/tools/qbu', default: true },
+      { key: 'builder', label: 'Quarterly Review Builder', path: '/portal/tools/qbu', default: true },
     ],
     actions: [
       { key: 'generateQBU', label: 'Generate Quarterly Review' },
@@ -191,7 +191,7 @@ export const MODULE_REGISTRY = {
     description: 'Prospect proposal decks (legacy key — use "tools" module)',
     icon: 'Presentation',
     pages: [
-      { key: 'builder', label: 'Proposal Builder', path: '/tools/sales-deck', default: true },
+      { key: 'builder', label: 'Proposal Builder', path: '/portal/tools/sales-deck', default: true },
     ],
     actions: [
       { key: 'generateDeck', label: 'Generate Proposal' },

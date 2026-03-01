@@ -54,27 +54,27 @@ export const STATIC_NAV_GROUPS = [
   {
     group: 'COMMAND CENTER',
     items: [
-      { label: 'Command Center', path: '/', icon: 'LayoutDashboard', moduleKey: null },
+      { label: 'Command Center', path: '/portal', icon: 'LayoutDashboard', moduleKey: null },
     ],
   },
   {
     group: 'ANALYTICS',
     items: [
-      { label: 'Dashboards', path: '/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
-      { label: 'Action Plans', path: '/dashboards/action-plans', icon: 'ListChecks', moduleKey: 'actionPlans' },
+      { label: 'Dashboards', path: '/portal/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
+      { label: 'Action Plans', path: '/portal/dashboards/action-plans', icon: 'ListChecks', moduleKey: 'actionPlans' },
     ],
   },
   {
     group: 'ADMIN',
     items: [
-      { label: 'User Management', path: '/admin/users', icon: 'UserCog', moduleKey: 'admin' },
-      { label: 'Knowledge Base', path: '/admin/knowledge', icon: 'BookOpen', moduleKey: 'knowledge' },
-      { label: 'Automation Insights', path: '/admin/automation', icon: 'Zap', moduleKey: 'automation' },
-      { label: 'Role Templates', path: '/admin/role-templates', icon: 'ShieldCheck', moduleKey: 'admin' },
-      { label: 'Tool Builder', path: '/tools/custom/builder', icon: 'Wrench', moduleKey: 'admin' },
-      { label: 'Automation Preferences', path: '/admin/automation-preferences', icon: 'SlidersHorizontal', moduleKey: 'superAdmin' },
-      { label: 'Connections', path: '/admin/connections', icon: 'Cable', moduleKey: 'superAdmin' },
-      { label: 'Settings', path: '/admin/settings', icon: 'Settings', moduleKey: 'superAdmin' },
+      { label: 'User Management', path: '/portal/admin/users', icon: 'UserCog', moduleKey: 'admin' },
+      { label: 'Knowledge Base', path: '/portal/admin/knowledge', icon: 'BookOpen', moduleKey: 'knowledge' },
+      { label: 'Automation Insights', path: '/portal/admin/automation', icon: 'Zap', moduleKey: 'automation' },
+      { label: 'Role Templates', path: '/portal/admin/role-templates', icon: 'ShieldCheck', moduleKey: 'admin' },
+      { label: 'Tool Builder', path: '/portal/tools/custom/builder', icon: 'Wrench', moduleKey: 'admin' },
+      { label: 'Automation Preferences', path: '/portal/admin/automation-preferences', icon: 'SlidersHorizontal', moduleKey: 'superAdmin' },
+      { label: 'Connections', path: '/portal/admin/connections', icon: 'Cable', moduleKey: 'superAdmin' },
+      { label: 'Settings', path: '/portal/admin/settings', icon: 'Settings', moduleKey: 'superAdmin' },
     ],
   },
 ];

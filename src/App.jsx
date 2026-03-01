@@ -56,6 +56,10 @@ import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
+import MarketingLayout from './pages/marketing/MarketingLayout';
+import HomePage from './pages/marketing/HomePage';
+import PricingPage from './pages/marketing/PricingPage';
+
 function LoadingScreen() {
   return (
     <div className="min-h-screen bg-dark-nav flex flex-col items-center justify-center">
@@ -157,7 +161,7 @@ function AuthGate({ children }) {
 
   if (!isConfigured) return <SetupScreen />;
   if (authLoading) return <LoadingScreen />;
-  if (!session) return <Navigate to="/auth/login" replace />;
+  if (!session) return <Navigate to="/login" replace />;
   if (profileLoading) return <LoadingScreen />;
   if (realUser && !realUser.tenant_id) return <NoTenantScreen />;
   if (realUser && !realUser.active) return <DeactivatedScreen />;
@@ -182,16 +186,16 @@ function ProtectedRoute({ moduleKey, pageKey, adminOnly, superAdminOnly, childre
   const { hasPage } = useTenantConfig();
   const { hasFeature, requiredTierLabel } = useTierAccess();
 
-  if (superAdminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
-  if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
+  if (superAdminOnly && !isSuperAdmin) return <Navigate to="/portal" replace />;
+  if (adminOnly && !isAdmin) return <Navigate to="/portal" replace />;
 
   // Tier gating — show upgrade prompt instead of redirecting
   if (moduleKey && !hasFeature(moduleKey)) {
     return <UpgradePrompt featureLabel={moduleKey} requiredTierLabel={requiredTierLabel(moduleKey)} />;
   }
 
-  if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/" replace />;
-  if (moduleKey && pageKey && !hasPage(moduleKey, pageKey)) return <Navigate to="/" replace />;
+  if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/portal" replace />;
+  if (moduleKey && pageKey && !hasPage(moduleKey, pageKey)) return <Navigate to="/portal" replace />;
   return children;
 }
 
@@ -202,17 +206,23 @@ export default function App() {
 
   return (
     <Routes>
-      {/* Public auth routes — no sidebar */}
-      <Route path="/auth/login" element={<LoginPage />} />
-      <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+      {/* Public marketing — separate layout, no auth */}
+      <Route element={<MarketingLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+      </Route>
+
+      {/* Auth — no sidebar, public */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Onboarding — standalone layout, no sidebar */}
       <Route path="/onboarding/*" element={<AuthGate><OnboardingPage /></AuthGate>} />
 
-      {/* All other routes wrapped in AuthGate + app shell */}
+      {/* Portal — authenticated, full app shell */}
       <Route
-        path="/*"
+        path="/portal/*"
         element={
           <AuthGate>
             <div className="flex h-screen overflow-hidden">
@@ -231,10 +241,10 @@ export default function App() {
                 <TopBar isMobile={isMobile} onMenuToggle={() => setMobileMenuOpen(true)} />
                 <PageWrapper>
                   <Routes>
-                    <Route path="/" element={<Dashboard />} />
+                    <Route index element={<Dashboard />} />
 
                     <Route
-                      path="/hr"
+                      path="hr"
                       element={
                         <ProtectedRoute moduleKey="hr">
                           <HRLayout />
@@ -250,7 +260,7 @@ export default function App() {
                     </Route>
 
                     <Route
-                      path="/finance"
+                      path="finance"
                       element={
                         <ProtectedRoute moduleKey="finance">
                           <FinanceOverview />
@@ -259,7 +269,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/ops"
+                      path="ops"
                       element={
                         <ProtectedRoute moduleKey="ops">
                           <OpsOverview />
@@ -268,7 +278,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/purchasing"
+                      path="purchasing"
                       element={
                         <ProtectedRoute moduleKey="purchasing">
                           <PurchasingOverview />
@@ -277,7 +287,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/sales"
+                      path="sales"
                       element={
                         <ProtectedRoute moduleKey="sales">
                           <SalesLayout />
@@ -291,7 +301,7 @@ export default function App() {
                     </Route>
 
                     <Route
-                      path="/dashboards"
+                      path="dashboards"
                       element={
                         <ProtectedRoute moduleKey="dashboards">
                           <DashboardsLayout />
@@ -308,7 +318,7 @@ export default function App() {
 
                     {/* Tools — gated by "tools" module + per-tool pageKey */}
                     <Route
-                      path="/tools/qbu"
+                      path="tools/qbu"
                       element={
                         <ProtectedRoute moduleKey="tools" pageKey="quarterly-review">
                           <QBUBuilder />
@@ -316,7 +326,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/tools/sales-deck"
+                      path="tools/sales-deck"
                       element={
                         <ProtectedRoute moduleKey="tools" pageKey="proposal">
                           <SalesDeckBuilder />
@@ -324,7 +334,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/tools/transition-plan"
+                      path="tools/transition-plan"
                       element={
                         <ProtectedRoute moduleKey="tools" pageKey="transition-plan">
                           <ToolPage toolKey="transitionPlan" />
@@ -332,7 +342,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/tools/budget"
+                      path="tools/budget"
                       element={
                         <ProtectedRoute moduleKey="tools" pageKey="budget">
                           <ToolPage toolKey="budget" />
@@ -340,7 +350,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/tools/incident-report"
+                      path="tools/incident-report"
                       element={
                         <ProtectedRoute moduleKey="tools" pageKey="incident-report">
                           <ToolPage toolKey="incidentReport" />
@@ -348,7 +358,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/tools/training-plan"
+                      path="tools/training-plan"
                       element={
                         <ProtectedRoute moduleKey="tools" pageKey="training-plan">
                           <ToolPage toolKey="trainingPlan" />
@@ -356,7 +366,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/tools/custom/builder"
+                      path="tools/custom/builder"
                       element={
                         <ProtectedRoute adminOnly>
                           <CustomToolBuilder />
@@ -364,7 +374,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/tools/custom/:toolKey"
+                      path="tools/custom/:toolKey"
                       element={
                         <ProtectedRoute moduleKey="tools">
                           <CustomToolPage />
@@ -373,7 +383,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/admin/users"
+                      path="admin/users"
                       element={
                         <ProtectedRoute adminOnly>
                           <UserManagement />
@@ -382,7 +392,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/admin/knowledge"
+                      path="admin/knowledge"
                       element={
                         <ProtectedRoute moduleKey="knowledge" adminOnly>
                           <KnowledgePage />
@@ -391,7 +401,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/admin/role-templates"
+                      path="admin/role-templates"
                       element={
                         <ProtectedRoute adminOnly>
                           <RoleTemplates />
@@ -400,7 +410,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/admin/automation"
+                      path="admin/automation"
                       element={
                         <ProtectedRoute moduleKey="automation">
                           <AutomationInsightsPage />
@@ -409,7 +419,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/admin/automation-preferences"
+                      path="admin/automation-preferences"
                       element={
                         <ProtectedRoute superAdminOnly>
                           <AutomationPreferencesPage />
@@ -418,7 +428,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/admin/connections"
+                      path="admin/connections"
                       element={
                         <ProtectedRoute superAdminOnly>
                           <ConnectionsPage />
@@ -427,7 +437,7 @@ export default function App() {
                     />
 
                     <Route
-                      path="/admin/settings"
+                      path="admin/settings"
                       element={
                         <ProtectedRoute superAdminOnly>
                           <SettingsPage />
@@ -435,7 +445,7 @@ export default function App() {
                       }
                     />
 
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="*" element={<Navigate to="/portal" replace />} />
                   </Routes>
                 </PageWrapper>
               </div>
@@ -443,6 +453,9 @@ export default function App() {
           </AuthGate>
         }
       />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

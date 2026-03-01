@@ -31,7 +31,7 @@ export default function ResetPasswordPage() {
     const ok = await updatePassword(password);
     if (ok) {
       setDone(true);
-      setTimeout(() => navigate('/', { replace: true }), 2000);
+      setTimeout(() => navigate('/portal', { replace: true }), 2000);
     }
     setSubmitting(false);
   };

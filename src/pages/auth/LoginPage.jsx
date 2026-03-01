@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranding } from '../../contexts/BrandingContext';
@@ -7,11 +7,14 @@ import AlfMark from '../../components/shared/AlfMark';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, authError } = useAuth();
+  const { session, signIn, authError } = useAuth();
   const brand = useBranding();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Already logged in — redirect to portal
+  if (session) return <Navigate to="/portal" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +22,7 @@ export default function LoginPage() {
     setSubmitting(true);
     const ok = await signIn(email.trim(), password);
     if (ok) {
-      navigate('/', { replace: true });
+      navigate('/portal', { replace: true });
     }
     setSubmitting(false);
   };
@@ -92,7 +95,7 @@ export default function LoginPage() {
 
           <div className="mt-4 text-center">
             <Link
-              to="/auth/forgot-password"
+              to="/forgot-password"
               className="text-sm text-aa-blue hover:text-aa-blue/80 transition-colors"
             >
               Forgot password?

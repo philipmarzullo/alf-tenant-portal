@@ -17,6 +17,15 @@
   --color-status-red: #DC2626;
   --color-status-blue: #009ADE;
   --color-status-gray: #9CA3AF;
+
+  --color-alf-orange: #C84B0A;
+  --color-alf-dark: #1C1C1C;
+  --color-alf-warm-white: #F5F0EB;
+  --color-alf-slate: #6B6B6B;
+  --color-alf-bone: #E0D8D2;
+
+  --font-marketing-heading: Georgia, 'Times New Roman', serif;
+  --font-marketing-body: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 body {

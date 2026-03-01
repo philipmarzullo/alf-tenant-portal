@@ -40,7 +40,7 @@ export default function OnboardingPage() {
 
   // Guard: if profile is already confirmed, redirect to portal
   if (profileStatus && profileStatus !== 'draft') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/portal" replace />;
   }
 
   // Pre-populate from existing draft profile (template-created tenants)

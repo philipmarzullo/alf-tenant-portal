@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
                 Check your inbox and follow the link to reset your password.
               </p>
               <Link
-                to="/auth/login"
+                to="/login"
                 className="inline-flex items-center gap-1.5 text-sm text-aa-blue hover:text-aa-blue/80 transition-colors"
               >
                 <ArrowLeft size={14} />
@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
 
               <div className="mt-4 text-center">
                 <Link
-                  to="/auth/login"
+                  to="/login"
                   className="inline-flex items-center gap-1.5 text-sm text-aa-blue hover:text-aa-blue/80 transition-colors"
                 >
                   <ArrowLeft size={14} />

@@ -463,7 +463,7 @@ export default function AutomationPreferencesPage() {
           )}
           {!msLoading && !msConnected && (
             <button
-              onClick={() => navigate('/admin/connections')}
+              onClick={() => navigate('/portal/admin/connections')}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-secondary-text hover:text-dark-text hover:border-gray-400 transition-colors"
             >
               <LinkIcon size={12} />

@@ -34,7 +34,7 @@ export default function UpgradePrompt({ featureLabel, requiredTierLabel }) {
             Contact us to upgrade
           </a>
           <Link
-            to="/"
+            to="/portal"
             className="text-sm text-secondary-text hover:text-dark-text transition-colors"
           >
             Go to Command Center

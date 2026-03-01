@@ -28,7 +28,7 @@ export default function SyncHealthBanner() {
       color: 'bg-blue-50 border-blue-200 text-blue-800',
       iconColor: 'text-blue-500',
       message: isSuperAdmin
-        ? <>Connect a data source in <Link to="/admin/connections" className="underline font-medium">Settings &rarr; Connections</Link> to see live data.</>
+        ? <>Connect a data source in <Link to="/portal/admin/connections" className="underline font-medium">Settings &rarr; Connections</Link> to see live data.</>
         : 'Connect a data source in Settings \u2192 Connections to see live data.',
     },
     inactive: {
@@ -36,7 +36,7 @@ export default function SyncHealthBanner() {
       color: 'bg-amber-50 border-amber-200 text-amber-800',
       iconColor: 'text-amber-500',
       message: isSuperAdmin
-        ? <>Your data source connection is inactive. <Link to="/admin/connections" className="underline font-medium">Reactivate it</Link> to resume syncing. Dashboard data may be outdated.</>
+        ? <>Your data source connection is inactive. <Link to="/portal/admin/connections" className="underline font-medium">Reactivate it</Link> to resume syncing. Dashboard data may be outdated.</>
         : 'Your data source connection is inactive. Dashboard data may be outdated. Contact your administrator.',
     },
     stale: {

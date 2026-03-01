@@ -11,12 +11,12 @@ const TenantPortalContext = createContext(null);
  * Some tools have legacy paths that differ from their tool_key.
  */
 const TOOL_PATH_OVERRIDES = {
-  qbu: '/tools/qbu',
-  proposal: '/tools/sales-deck',
-  'transition-plan': '/tools/transition-plan',
-  'incident-report': '/tools/incident-report',
-  'training-plan': '/tools/training-plan',
-  budget: '/tools/budget',
+  qbu: '/portal/tools/qbu',
+  proposal: '/portal/tools/sales-deck',
+  'transition-plan': '/portal/tools/transition-plan',
+  'incident-report': '/portal/tools/incident-report',
+  'training-plan': '/portal/tools/training-plan',
+  budget: '/portal/tools/budget',
 };
 
 /**
@@ -24,7 +24,7 @@ const TOOL_PATH_OVERRIDES = {
  * Most map to /{department_key} but ops is an exception.
  */
 const WORKSPACE_PATH_OVERRIDES = {
-  operations: '/ops',
+  operations: '/portal/ops',
 };
 
 /**
@@ -180,13 +180,13 @@ export function TenantPortalProvider({ children }) {
 
   /** Get the route path for a workspace by department_key */
   const getWorkspacePath = useCallback(
-    (departmentKey) => WORKSPACE_PATH_OVERRIDES[departmentKey] || `/${departmentKey}`,
+    (departmentKey) => WORKSPACE_PATH_OVERRIDES[departmentKey] || `/portal/${departmentKey}`,
     [],
   );
 
   /** Get the route path for a tool by tool_key */
   const getToolPath = useCallback(
-    (toolKey) => TOOL_PATH_OVERRIDES[toolKey] || `/tools/${toolKey}`,
+    (toolKey) => TOOL_PATH_OVERRIDES[toolKey] || `/portal/tools/${toolKey}`,
     [],
   );
 
@@ -218,7 +218,7 @@ export function TenantPortalProvider({ children }) {
   const getDomainPath = useCallback(
     (domainKey) => {
       const first = dashboardDomains[0];
-      return first && first.domain_key === domainKey ? '/dashboards' : `/dashboards/${domainKey}`;
+      return first && first.domain_key === domainKey ? '/portal/dashboards' : `/portal/dashboards/${domainKey}`;
     },
     [dashboardDomains],
   );

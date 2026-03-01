@@ -40,7 +40,7 @@ export default function SalesLayout() {
           <NavLink
             key={tab.path}
             to={tab.path}
-            end={tab.path === '/sales'}
+            end={tab.path === '/portal/sales'}
             className={({ isActive }) =>
               `px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                 isActive

@@ -37,7 +37,7 @@ export default function PortalReadyScreen() {
       )}
 
       <button
-        onClick={() => navigate('/', { replace: true })}
+        onClick={() => navigate('/portal', { replace: true })}
         className="inline-flex items-center gap-2 px-6 py-3 bg-[#C84B0A] text-white text-sm font-medium rounded-lg hover:bg-[#C84B0A]/90 transition-colors"
       >
         Enter your portal

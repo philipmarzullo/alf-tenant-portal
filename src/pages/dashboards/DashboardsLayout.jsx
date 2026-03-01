@@ -49,7 +49,7 @@ export default function DashboardsLayout() {
   }, [dashboardDomains, getDomainPath]);
 
   // Track current path for share button
-  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/dashboards';
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/portal/dashboards';
   const currentDomain = domainByPath[currentPath] || dashboardDomains[0]?.domain_key || 'operations';
 
   // Build data context for analytics agent
@@ -145,7 +145,7 @@ export default function DashboardsLayout() {
             <NavLink
               key={tab.path}
               to={tab.path}
-              end={tab.path === '/dashboards'}
+              end={tab.path === '/portal/dashboards'}
               className={({ isActive }) =>
                 `px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                   isActive

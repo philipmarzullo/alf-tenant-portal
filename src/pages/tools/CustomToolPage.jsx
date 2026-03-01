@@ -137,7 +137,7 @@ export default function CustomToolPage() {
   }
 
   if (notFound) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/portal" replace />;
   }
 
   const updateField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));

@@ -73,7 +73,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   const [upgradeModal, setUpgradeModal] = useState(null);
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
+    if (path === '/portal') return location.pathname === '/portal';
     return location.pathname.startsWith(path);
   };
 
@@ -148,7 +148,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
           .filter(m => !hasFeature(m))
           .map(m => ({
             label: MODULE_REGISTRY[m]?.label || m,
-            path: `/${m}`,
+            path: `/portal/${m}`,
             icon: MODULE_REGISTRY[m]?.icon || 'ClipboardList',
             _tierLocked: true,
             _lockedModule: m,
@@ -159,7 +159,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       if (group.group === 'TOOLS' && items.length === 0 && !hasFeature('tools')) {
         items = [{
           label: 'Tools',
-          path: '/tools',
+          path: '/portal/tools',
           icon: 'Wrench',
           _tierLocked: true,
           _lockedModule: 'tools',
@@ -170,7 +170,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       if (group.group === 'TOOLS' && items.length > 0 && !items[0]?._tierLocked && customTools.length > 0) {
         const customItems = customTools.map(t => ({
           label: t.label,
-          path: `/tools/custom/${t.tool_key}`,
+          path: `/portal/tools/custom/${t.tool_key}`,
           icon: t.icon || 'Wrench',
           moduleKey: 'tools',
           _custom: true,

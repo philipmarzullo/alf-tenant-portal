@@ -431,7 +431,7 @@ export default function Dashboard() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {attentionItems.slice(0, 6).map((task) => (
-              <TaskCard key={task.id} task={task} onAction={() => navigate(getDomainPath(task.dept) || '/dashboards')} />
+              <TaskCard key={task.id} task={task} onAction={() => navigate(getDomainPath(task.dept) || '/portal/dashboards')} />
             ))}
           </div>
           {attentionItems.length > 6 && (

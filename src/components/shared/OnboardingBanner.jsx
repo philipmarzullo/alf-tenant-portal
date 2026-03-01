@@ -25,7 +25,7 @@ export default function OnboardingBanner() {
       <BookOpen size={16} className="mt-0.5 shrink-0 text-blue-500" />
       <span className="flex-1">
         Upload your SOPs and operational documents to the{' '}
-        <Link to="/admin/knowledge" className="underline font-medium">Knowledge Base</Link>{' '}
+        <Link to="/portal/admin/knowledge" className="underline font-medium">Knowledge Base</Link>{' '}
         to unlock full agent intelligence.
       </span>
       <button
