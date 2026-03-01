@@ -50,6 +50,7 @@ const ICON_MAP = {
   'calculator': Calculator,
   'graduation-cap': GraduationCap,
   'arrow-right-left': ArrowRightLeft,
+  'building': Building2,
   'building-2': Building2,
   'activity': Activity,
   'zap': Zap,
