@@ -78,6 +78,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       path: getWorkspacePath(ws.department_key),
       icon: ws.icon || 'ClipboardList',
       moduleKey: ws.department_key,
+      _dynamic: true,
     })),
   }), [workspaces, getWorkspacePath]);
 
@@ -90,6 +91,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       icon: t.icon || 'Wrench',
       moduleKey: 'tools',
       pageKey: t.tool_key,
+      _dynamic: true,
     })),
   }), [tools, getToolPath]);
 
@@ -109,9 +111,13 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
         if (item.moduleKey === 'superAdmin') return isSuperAdmin;
         if (item.moduleKey === 'admin') return isAdmin;
         if (item.adminOnly && !isAdmin) return false;
-        // Tenant-level gate: if Alf disabled this module, hide it for everyone
+        // Dynamic items from DB are already tenant-gated — skip module_config checks
+        if (item._dynamic) {
+          if (isAdmin) return true;
+          return currentUser?.modules?.includes(item.moduleKey);
+        }
+        // Static items: apply tenant-level gating via module_config
         if (!tenantHasModule(item.moduleKey)) return false;
-        // Page-level gate: if Alf disabled this specific page, hide it
         if (item.pageKey && !hasPage(item.moduleKey, item.pageKey)) return false;
         if (isAdmin) return true;
         return currentUser?.modules?.includes(item.moduleKey);
