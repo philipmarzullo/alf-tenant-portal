@@ -1,19 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, X } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
+import { useTenantId } from '../../contexts/TenantIdContext';
+import { supabase } from '../../lib/supabase';
 
 /**
  * Post-onboarding dismissible banner encouraging document upload.
- * Only shown to admins/super-admins. Persists dismissal in localStorage.
+ * Only shown to admins/super-admins when no docs exist yet.
+ * Persists dismissal in localStorage.
  */
 export default function OnboardingBanner() {
   const [dismissed, setDismissed] = useState(
     () => localStorage.getItem('onboarding_banner_dismissed') === 'true'
   );
+  const [hasDocs, setHasDocs] = useState(null);
   const { isAdmin } = useUser();
+  const { tenantId } = useTenantId();
 
-  if (dismissed || !isAdmin) return null;
+  useEffect(() => {
+    if (dismissed || !isAdmin || !tenantId) return;
+
+    supabase
+      .from('tenant_documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .then(({ count }) => {
+        setHasDocs((count || 0) > 0);
+      });
+  }, [dismissed, isAdmin, tenantId]);
+
+  if (dismissed || !isAdmin || hasDocs !== false) return null;
 
   function handleDismiss() {
     localStorage.setItem('onboarding_banner_dismissed', 'true');
