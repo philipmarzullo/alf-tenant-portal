@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, MessageCircle, Copy, Check } from 'lucide-react';
+import { X, Send, Copy, Check } from 'lucide-react';
 import AlfMark from '../shared/AlfMark';
+
+const ALF_AVATAR = '/alf-avatar.png';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
@@ -83,10 +85,10 @@ export default function SalesChatWidget() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-alf-orange text-white rounded-full shadow-lg hover:bg-alf-orange/90 transition-all hover:scale-105 flex items-center justify-center"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-alf-orange rounded-full shadow-lg hover:bg-alf-orange/90 transition-all hover:scale-105 flex items-center justify-center p-1.5"
           aria-label="Chat with Alf"
         >
-          <MessageCircle size={24} />
+          <img src={ALF_AVATAR} alt="Alf" className="w-full h-full object-contain brightness-0 invert" />
         </button>
       )}
 
@@ -106,7 +108,9 @@ export default function SalesChatWidget() {
             {/* Header */}
             <div className="flex items-center justify-between px-4 h-14 bg-alf-dark shrink-0 md:rounded-t-2xl">
               <div className="flex items-center gap-2.5">
-                <AlfMark variant="dark" size="sm" />
+                <div className="w-8 h-8 rounded-full bg-alf-orange/20 flex items-center justify-center p-1">
+                  <img src={ALF_AVATAR} alt="Alf" className="w-full h-full object-contain" />
+                </div>
                 <div>
                   <div
                     className="text-sm font-medium text-white"
@@ -132,13 +136,8 @@ export default function SalesChatWidget() {
               {messages.map((msg, i) => (
                 <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                   {msg.role === 'assistant' && (
-                    <div className="w-7 h-7 rounded-full bg-alf-orange/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <span
-                        className="text-[10px] font-medium text-alf-orange"
-                        style={{ fontFamily: "var(--font-marketing-heading)" }}
-                      >
-                        alf
-                      </span>
+                    <div className="w-7 h-7 rounded-full bg-alf-orange/10 flex items-center justify-center shrink-0 mt-0.5 p-0.5">
+                      <img src={ALF_AVATAR} alt="Alf" className="w-full h-full object-contain" />
                     </div>
                   )}
                   <div className={`max-w-[85%] ${msg.role === 'user' ? 'order-first' : ''}`}>
@@ -165,13 +164,8 @@ export default function SalesChatWidget() {
 
               {loading && (
                 <div className="flex gap-2">
-                  <div className="w-7 h-7 rounded-full bg-alf-orange/10 flex items-center justify-center shrink-0">
-                    <span
-                      className="text-[10px] font-medium text-alf-orange"
-                      style={{ fontFamily: "var(--font-marketing-heading)" }}
-                    >
-                      alf
-                    </span>
+                  <div className="w-7 h-7 rounded-full bg-alf-orange/10 flex items-center justify-center shrink-0 p-0.5">
+                    <img src={ALF_AVATAR} alt="Alf" className="w-full h-full object-contain" />
                   </div>
                   <div className="bg-white border border-alf-bone rounded-xl px-3.5 py-2.5">
                     <div className="flex items-center gap-1.5">
