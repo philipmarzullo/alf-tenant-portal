@@ -341,7 +341,7 @@ export default function HomePage() {
             className="text-white/50 mb-10 max-w-md mx-auto"
             style={{ fontFamily: "var(--font-marketing-body)" }}
           >
-            AI agents handle the operational busywork so your team can focus on delivering for clients.
+            Automate your workflows. Leverage your data. Focus on your clients.
           </p>
           <Link
             to="/request-demo"
