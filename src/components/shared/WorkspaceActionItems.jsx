@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, CheckCircle, Clock, XCircle, ChevronDown, Zap } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+import { useTenantId } from '../../contexts/TenantIdContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const PRIORITY_BADGE = {
@@ -34,12 +33,13 @@ const STATUS_TRANSITIONS = {
  * @param {string} title - Section title (default "Recent Action Items")
  */
 export default function WorkspaceActionItems({ departments = [], limit = 5, title = 'Recent Action Items' }) {
+  const { tenantId } = useTenantId();
   const [actions, setActions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
   const loadActions = useCallback(async () => {
-    if (!TENANT_ID || !departments.length) {
+    if (!tenantId || !departments.length) {
       setLoading(false);
       return;
     }
@@ -55,7 +55,7 @@ export default function WorkspaceActionItems({ departments = [], limit = 5, titl
       });
 
       const res = await fetch(
-        `${BACKEND_URL}/api/dashboards/${TENANT_ID}/action-plans?${params}`,
+        `${BACKEND_URL}/api/dashboards/${tenantId}/action-plans?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -67,7 +67,7 @@ export default function WorkspaceActionItems({ departments = [], limit = 5, titl
     } finally {
       setLoading(false);
     }
-  }, [departments.join(','), limit]);
+  }, [tenantId, departments.join(','), limit]);
 
   useEffect(() => {
     loadActions();
@@ -80,7 +80,7 @@ export default function WorkspaceActionItems({ departments = [], limit = 5, titl
       if (!token) return;
 
       const res = await fetch(
-        `${BACKEND_URL}/api/dashboards/${TENANT_ID}/action-plans/${actionId}`,
+        `${BACKEND_URL}/api/dashboards/${tenantId}/action-plans/${actionId}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

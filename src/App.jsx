@@ -9,6 +9,7 @@ import { useUser } from './contexts/UserContext';
 import { useAuth } from './contexts/AuthContext';
 import { useTenantConfig } from './contexts/TenantConfigContext';
 import { useBranding } from './contexts/BrandingContext';
+import AlfMark from './components/shared/AlfMark';
 
 import Dashboard from './pages/Dashboard';
 import HRLayout from './pages/hr/HRLayout';
@@ -118,6 +119,31 @@ function DeactivatedScreen() {
   );
 }
 
+function NoTenantScreen() {
+  const { signOut } = useAuth();
+  return (
+    <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <div className="flex justify-center mb-8">
+          <AlfMark variant="dark" size="lg" showTagline />
+        </div>
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+          <h1 className="text-xl font-semibold text-dark-text mb-2">No Organization Found</h1>
+          <p className="text-sm text-secondary-text mb-6">
+            Your account is not associated with any organization. Contact your administrator.
+          </p>
+          <button
+            onClick={signOut}
+            className="px-4 py-2 bg-aa-blue text-white text-sm font-medium rounded-lg hover:bg-aa-blue/90 transition-colors"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AuthGate({ children }) {
   const { loading: authLoading, isConfigured, session } = useAuth();
   const { realUser, profileLoading } = useUser();
@@ -126,6 +152,7 @@ function AuthGate({ children }) {
   if (authLoading) return <LoadingScreen />;
   if (!session) return <Navigate to="/auth/login" replace />;
   if (profileLoading) return <LoadingScreen />;
+  if (realUser && !realUser.tenant_id) return <NoTenantScreen />;
   if (realUser && !realUser.active) return <DeactivatedScreen />;
 
   return children;

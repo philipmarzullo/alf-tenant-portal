@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader2, Zap, CheckCircle, Clock, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useTenantConfig } from '../../contexts/TenantConfigContext';
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+import { useTenantId } from '../../contexts/TenantIdContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const PRIORITY_BADGE = {
@@ -29,6 +28,7 @@ const STATUS_TRANSITIONS = {
 
 export default function ActionPlansPage() {
   const { hasAction } = useTenantConfig();
+  const { tenantId } = useTenantId();
   const canGenerate = hasAction('dashboards', 'generateActionPlan');
 
   const [actions, setActions] = useState([]);
@@ -43,7 +43,7 @@ export default function ActionPlansPage() {
       const token = await getFreshToken();
       if (!token) return;
 
-      const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/action-plans`, {
+      const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/action-plans`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -55,7 +55,7 @@ export default function ActionPlansPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     loadActions();
@@ -70,7 +70,7 @@ export default function ActionPlansPage() {
       const token = await getFreshToken();
       if (!token) throw new Error('Not authenticated');
 
-      const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/action-plan`, {
+      const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/action-plan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ export default function ActionPlansPage() {
       const token = await getFreshToken();
       if (!token) return;
 
-      const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/action-plans/${actionId}`, {
+      const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/action-plans/${actionId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

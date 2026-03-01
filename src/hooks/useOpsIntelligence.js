@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getFreshToken } from '../lib/supabase';
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+import { useTenantId } from '../contexts/TenantIdContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 /**
@@ -10,12 +9,13 @@ const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'
  * data shape: { activeAgents, totalAgents, deployedSkills, totalSkills, automationsCompleted, automationsTotal }
  */
 export default function useOpsIntelligence() {
+  const { tenantId } = useTenantId();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchData = useCallback(async () => {
-    if (!TENANT_ID) {
+    if (!tenantId) {
       setLoading(false);
       setError('Tenant ID not configured');
       return;
@@ -28,7 +28,7 @@ export default function useOpsIntelligence() {
       const token = await getFreshToken();
       if (!token) throw new Error('Not authenticated');
 
-      const url = `${BACKEND_URL}/api/dashboards/${TENANT_ID}/ops-intelligence`;
+      const url = `${BACKEND_URL}/api/dashboards/${tenantId}/ops-intelligence`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -44,7 +44,7 @@ export default function useOpsIntelligence() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     fetchData();

@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { useTenantId } from './TenantIdContext';
 import { supabase } from '../lib/supabase';
+import { setApiTenantId } from '../agents/api';
 
 const UserContext = createContext(null);
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 export function UserProvider({ children }) {
   const { session } = useAuth();
+  const { tenantId, setTenantId } = useTenantId();
   const [realUser, setRealUser] = useState(null);
   const [viewingAs, setViewingAsState] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
@@ -18,6 +20,9 @@ export function UserProvider({ children }) {
       setRealUser(null);
       setViewingAsState(null);
       setProfileLoading(false);
+      // Clear tenant on sign-out
+      setTenantId(null);
+      setApiTenantId(null);
       return;
     }
 
@@ -36,12 +41,17 @@ export function UserProvider({ children }) {
           setRealUser(null);
         } else {
           setRealUser(data);
+          // Push tenant_id from profile into context + API layer
+          if (data.tenant_id) {
+            setTenantId(data.tenant_id);
+            setApiTenantId(data.tenant_id);
+          }
         }
         setProfileLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, setTenantId]);
 
   // Fetch all users (for admin user management)
   const refreshUsers = useCallback(async () => {
@@ -50,14 +60,14 @@ export function UserProvider({ children }) {
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: true });
-    if (TENANT_ID) query = query.eq('tenant_id', TENANT_ID);
+    if (tenantId) query = query.eq('tenant_id', tenantId);
     const { data, error } = await query;
     if (error) {
       console.error('Failed to fetch users:', error);
     } else {
       setAllUsers(data);
     }
-  }, []);
+  }, [tenantId]);
 
   // Load all users when we have a profile (admin may need the list)
   useEffect(() => {

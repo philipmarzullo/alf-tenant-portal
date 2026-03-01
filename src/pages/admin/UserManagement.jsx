@@ -7,9 +7,9 @@ import { MODULE_DEFINITIONS } from '../../data/users';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, getFreshToken } from '../../lib/supabase';
+import { useTenantId } from '../../contexts/TenantIdContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 const EMPTY_FORM = { name: '', email: '', title: '', role: 'user', modules: [], active: true, password: '' };
 
@@ -22,6 +22,7 @@ const TIER_BADGES = {
 export default function UserManagement() {
   const { currentUser, allUsers, refreshUsers } = useUser();
   const { session, resetPassword } = useAuth();
+  const { tenantId } = useTenantId();
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -38,7 +39,7 @@ export default function UserManagement() {
 
   // Fetch role templates and sites when panel opens
   const fetchExtras = useCallback(async (userId) => {
-    if (!TENANT_ID) return;
+    if (!tenantId) return;
     setLoadingExtras(true);
     try {
       const token = await getFreshToken();
@@ -46,10 +47,10 @@ export default function UserManagement() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [templatesRes, sitesRes, assignmentsRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/role-templates`, { headers }),
-        fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/home-summary`, { headers }),
+        fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/role-templates`, { headers }),
+        fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/home-summary`, { headers }),
         userId
-          ? fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/site-assignments/${userId}`, { headers })
+          ? fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/site-assignments/${userId}`, { headers })
           : Promise.resolve(null),
       ]);
 
@@ -61,7 +62,7 @@ export default function UserManagement() {
       if (sitesRes.ok) {
         const summaryData = await sitesRes.json();
         // We need the actual jobs list — let's fetch it directly
-        const jobsRes = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/operations?dateFrom=2000-01-01&dateTo=2099-12-31`, { headers });
+        const jobsRes = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/operations?dateFrom=2000-01-01&dateTo=2099-12-31`, { headers });
         if (jobsRes.ok) {
           const domainData = await jobsRes.json();
           setSites(domainData.jobs || []);
@@ -79,7 +80,7 @@ export default function UserManagement() {
     } finally {
       setLoadingExtras(false);
     }
-  }, []);
+  }, [tenantId]);
 
   const openAdd = () => {
     setEditingUser(null);
@@ -168,7 +169,7 @@ export default function UserManagement() {
         try {
           const token = await getFreshToken();
           if (token) {
-            await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/site-assignments/${editingUser.id}`, {
+            await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/site-assignments/${editingUser.id}`, {
               method: 'PUT',
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -281,7 +282,6 @@ export default function UserManagement() {
   );
 
   // Filter to this tenant's users (exclude platform_owner accounts)
-  const tenantId = import.meta.env.VITE_TENANT_ID;
   const visibleUsers = allUsers.filter((u) =>
     u.role !== 'platform_owner' && (!tenantId || u.tenant_id === tenantId)
   );

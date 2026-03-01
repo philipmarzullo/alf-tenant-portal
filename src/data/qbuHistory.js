@@ -1,11 +1,8 @@
 import { supabase } from '../lib/supabase';
+import { getTenantId } from '../agents/api';
 
 const LS_KEY = 'aa_qbu_history';
 const LS_MIGRATED_KEY = 'aa_qbu_migrated_to_supabase';
-
-function getTenantId() {
-  return import.meta.env.VITE_TENANT_ID || null;
-}
 
 /** One-time: migrate any localStorage QBU entries into Supabase tool_submissions */
 async function migrateLocalStorage(tenantId) {

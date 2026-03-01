@@ -2,20 +2,21 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { useUser } from './UserContext';
 import { useTenantConfig } from './TenantConfigContext';
 import { getFreshToken } from '../lib/supabase';
+import { useTenantId } from './TenantIdContext';
 
 const CustomToolsContext = createContext(null);
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 export function CustomToolsProvider({ children }) {
   const { realUser } = useUser();
   const { tenantHasModule } = useTenantConfig();
+  const { tenantId } = useTenantId();
   const [customTools, setCustomTools] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   const fetchTools = useCallback(async () => {
-    if (!realUser || !TENANT_ID || !tenantHasModule('tools')) {
+    if (!realUser || !tenantId || !tenantHasModule('tools')) {
       setCustomTools([]);
       setLoaded(true);
       return;
@@ -25,7 +26,7 @@ export function CustomToolsProvider({ children }) {
       const token = await getFreshToken();
       if (!token) return;
 
-      const res = await fetch(`${BACKEND_URL}/api/custom-tools/${TENANT_ID}`, {
+      const res = await fetch(`${BACKEND_URL}/api/custom-tools/${tenantId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -36,7 +37,7 @@ export function CustomToolsProvider({ children }) {
       console.warn('[customTools] Failed to load:', err.message);
     }
     setLoaded(true);
-  }, [realUser, tenantHasModule]);
+  }, [realUser, tenantHasModule, tenantId]);
 
   useEffect(() => {
     fetchTools();

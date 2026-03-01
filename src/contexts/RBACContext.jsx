@@ -3,8 +3,7 @@ import { useAuth } from './AuthContext';
 import { useUser } from './UserContext';
 import { getFreshToken } from '../lib/supabase';
 import { canSeeTier as canSeeTierFn } from '../data/dashboardKPIRegistry';
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+import { useTenantId } from './TenantIdContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const RBACContext = createContext(null);
@@ -18,6 +17,7 @@ const RBACContext = createContext(null);
 export function RBACProvider({ children }) {
   const { session } = useAuth();
   const { realUser, isAdmin } = useUser();
+  const { tenantId } = useTenantId();
   const [metricTier, setMetricTier] = useState('financial');
   const [allowedDomains, setAllowedDomains] = useState(['operations', 'labor', 'quality', 'timekeeping', 'safety']);
   const [templateName, setTemplateName] = useState(null);
@@ -25,7 +25,7 @@ export function RBACProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchCatalog = useCallback(async () => {
-    if (!TENANT_ID || !session) {
+    if (!tenantId || !session) {
       setLoading(false);
       return;
     }
@@ -37,7 +37,7 @@ export function RBACProvider({ children }) {
         return;
       }
 
-      const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/metric-catalog`, {
+      const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/metric-catalog`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -57,7 +57,7 @@ export function RBACProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [session, tenantId]);
 
   useEffect(() => {
     if (realUser) fetchCatalog();

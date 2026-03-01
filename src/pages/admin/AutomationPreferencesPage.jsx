@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Users, DollarSign, Briefcase, HardHat, Loader, CheckCircle, XCircle, AlertTriangle, Mail, Link as LinkIcon, Sparkles, X } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useTenantId } from '../../contexts/TenantIdContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 // ─── Action inventory ────────────────────────────────────────────────────────
 
@@ -282,6 +282,7 @@ function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onMode
 
 export default function AutomationPreferencesPage() {
   const navigate = useNavigate();
+  const { tenantId } = useTenantId();
   const [preferences, setPreferences] = useState({});
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState(null);
@@ -292,7 +293,7 @@ export default function AutomationPreferencesPage() {
   async function loadPreferences() {
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${TENANT_ID}`, { headers });
+      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${tenantId}`, { headers });
       if (!res.ok) throw new Error('Failed to load');
       const data = await res.json();
       const map = {};
@@ -308,7 +309,7 @@ export default function AutomationPreferencesPage() {
   async function loadMsStatus() {
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/oauth/microsoft/status?tenantId=${TENANT_ID}`, { headers });
+      const res = await fetch(`${BACKEND_URL}/api/oauth/microsoft/status?tenantId=${tenantId}`, { headers });
       if (res.ok) {
         setMsStatus(await res.json());
       } else {
@@ -338,7 +339,7 @@ export default function AutomationPreferencesPage() {
 
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${TENANT_ID}`, {
+      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${tenantId}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({
@@ -368,7 +369,7 @@ export default function AutomationPreferencesPage() {
 
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${TENANT_ID}/promote`, {
+      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${tenantId}/promote`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -400,7 +401,7 @@ export default function AutomationPreferencesPage() {
 
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${TENANT_ID}/dismiss-promotion`, {
+      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${tenantId}/dismiss-promotion`, {
         method: 'POST',
         headers,
         body: JSON.stringify({

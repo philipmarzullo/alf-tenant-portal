@@ -5,8 +5,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { buildDocumentPath, formatFileSize } from '../../utils/storagePaths';
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+import { useTenantId } from '../../contexts/TenantIdContext';
 
 const DEPARTMENTS = [
   { key: 'all', label: 'All' },
@@ -109,6 +108,7 @@ function DocumentTextPreview({ docId }) {
 /* ─── Main Knowledge Page ─── */
 
 export default function KnowledgePage() {
+  const { tenantId } = useTenantId();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -133,7 +133,7 @@ export default function KnowledgePage() {
     const { data, error: err } = await supabase
       .from('tenant_documents')
       .select('id, file_name, file_type, file_size, department, doc_type, char_count, page_count, status, title, description, created_at')
-      .eq('tenant_id', TENANT_ID)
+      .eq('tenant_id', tenantId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -178,7 +178,7 @@ export default function KnowledgePage() {
         const fileType = file.name.toLowerCase().endsWith('.pdf') ? 'pdf'
           : file.name.toLowerCase().endsWith('.docx') ? 'docx' : 'txt';
 
-        const storagePath = buildDocumentPath(TENANT_ID, uploadDept, file.name);
+        const storagePath = buildDocumentPath(tenantId, uploadDept, file.name);
         const { error: uploadErr } = await supabase.storage
           .from('tenant-documents')
           .upload(storagePath, file);
@@ -188,7 +188,7 @@ export default function KnowledgePage() {
         const { error: insertErr } = await supabase
           .from('tenant_documents')
           .insert({
-            tenant_id: TENANT_ID,
+            tenant_id: tenantId,
             department: uploadDept,
             doc_type: uploadDocType,
             file_name: file.name,

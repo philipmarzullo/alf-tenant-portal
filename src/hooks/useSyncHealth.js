@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getFreshToken } from '../lib/supabase';
+import { useTenantId } from '../contexts/TenantIdContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 const CACHE_KEY = 'sync_health';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -35,11 +35,12 @@ function setCache(data) {
  * Status: 'no_source' | 'inactive' | 'stale' | 'healthy' | null (loading)
  */
 export default function useSyncHealth() {
+  const { tenantId } = useTenantId();
   const [health, setHealth] = useState(() => getCached());
   const [loading, setLoading] = useState(!getCached());
 
   useEffect(() => {
-    if (!TENANT_ID) {
+    if (!tenantId) {
       setLoading(false);
       return;
     }
@@ -56,7 +57,7 @@ export default function useSyncHealth() {
     async function fetchHealth() {
       try {
         const token = await getFreshToken();
-        const res = await fetch(`${BACKEND_URL}/api/sync/${TENANT_ID}/health`, {
+        const res = await fetch(`${BACKEND_URL}/api/sync/${tenantId}/health`, {
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -77,7 +78,7 @@ export default function useSyncHealth() {
 
     fetchHealth();
     return () => { cancelled = true; };
-  }, []);
+  }, [tenantId]);
 
   return { ...health, loading };
 }

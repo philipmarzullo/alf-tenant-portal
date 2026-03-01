@@ -1,12 +1,24 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { setTenantContext } from '../agents/api';
+import { useTenantId } from './TenantIdContext';
 
 const BrandingContext = createContext(null);
 
-const TENANT_ID = import.meta.env.VITE_TENANT_ID || null;
+// Alf defaults when no tenant is known (pre-login on single portal)
+const ALF_DEFAULTS = {
+  companyName: null,
+  displayName: 'Operations Intelligence',
+  logoUrl: null,
+  primaryColor: '#C84B0A',
+  sidebarBg: '#1C1C1C',
+  websiteUrl: null,
+  brandLoading: false,
+};
 
 export function BrandingProvider({ children }) {
+  const { tenantId } = useTenantId();
+
   const [brand, setBrand] = useState({
     companyName: null,
     displayName: 'Operations Intelligence',
@@ -18,13 +30,23 @@ export function BrandingProvider({ children }) {
   });
 
   useEffect(() => {
-    if (!supabase || !TENANT_ID) {
-      setBrand((prev) => ({ ...prev, brandLoading: false }));
+    if (!supabase || !tenantId) {
+      // No tenant known — apply Alf defaults
+      if (ALF_DEFAULTS.primaryColor) {
+        document.documentElement.style.setProperty('--color-aa-blue', ALF_DEFAULTS.primaryColor);
+      }
+      if (ALF_DEFAULTS.sidebarBg) {
+        document.documentElement.style.setProperty('--color-dark-nav', ALF_DEFAULTS.sidebarBg);
+      }
+      document.title = 'alf | Operations Intelligence';
+      setBrand({ ...ALF_DEFAULTS });
       return;
     }
 
+    setBrand((prev) => ({ ...prev, brandLoading: true }));
+
     supabase
-      .rpc('get_tenant_branding', { p_tenant_id: TENANT_ID })
+      .rpc('get_tenant_branding', { p_tenant_id: tenantId })
       .then(({ data, error }) => {
         if (error || !data || data.length === 0) {
           setBrand((prev) => ({ ...prev, brandLoading: false }));
@@ -76,7 +98,7 @@ export function BrandingProvider({ children }) {
           brandLoading: false,
         });
       });
-  }, []);
+  }, [tenantId]);
 
   // Keep the agent API layer in sync with the tenant's company name so
   // every callAgent / chatWithAgent automatically uses the right context.

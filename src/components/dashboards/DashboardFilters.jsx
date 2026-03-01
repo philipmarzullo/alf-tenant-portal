@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Filter } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+import { useTenantId } from '../../contexts/TenantIdContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 export default function DashboardFilters({ filters, onChange }) {
+  const { tenantId } = useTenantId();
   const [sites, setSites] = useState([]);
 
   // Fetch sites for the multi-select filter
@@ -16,7 +16,7 @@ export default function DashboardFilters({ filters, onChange }) {
         if (!token) return;
 
         // Use operations domain to get jobs list
-        const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/operations?dateFrom=2025-01-01&dateTo=2025-01-02`, {
+        const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/operations?dateFrom=2025-01-01&dateTo=2025-01-02`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -27,7 +27,7 @@ export default function DashboardFilters({ filters, onChange }) {
       }
     }
     loadSites();
-  }, []);
+  }, [tenantId]);
 
   return (
     <div className="flex flex-wrap items-center gap-3 bg-white rounded-lg border border-gray-200 px-4 py-3 mb-6">

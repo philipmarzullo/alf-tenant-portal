@@ -8,9 +8,9 @@ import {
 import { useUser } from '../../contexts/UserContext';
 import { useToast } from '../../components/shared/ToastProvider';
 import { getFreshToken } from '../../lib/supabase';
+import { useTenantId } from '../../contexts/TenantIdContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 const ICON_OPTIONS = [
   { value: 'Wrench', label: 'Wrench', Icon: Wrench },
@@ -86,6 +86,7 @@ function FormFieldPreview({ field }) {
 export default function CustomToolBuilder() {
   const { isAdmin } = useUser();
   const toast = useToast();
+  const { tenantId } = useTenantId();
 
   const [tools, setTools] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +98,7 @@ export default function CustomToolBuilder() {
   async function loadTools() {
     setLoading(true);
     try {
-      const data = await apiFetch(`/${TENANT_ID}/all`);
+      const data = await apiFetch(`/${tenantId}/all`);
       setTools(data);
     } catch (err) {
       toast(err.message, 'error');
@@ -128,7 +129,7 @@ export default function CustomToolBuilder() {
     setSaving(true);
     try {
       if (editing.id) {
-        const updated = await apiFetch(`/${TENANT_ID}/${editing.id}`, {
+        const updated = await apiFetch(`/${tenantId}/${editing.id}`, {
           method: 'PUT',
           body: JSON.stringify({
             label: editing.label,
@@ -142,7 +143,7 @@ export default function CustomToolBuilder() {
         setTools(prev => prev.map(t => t.id === updated.id ? updated : t));
         toast('Tool updated');
       } else {
-        const created = await apiFetch(`/${TENANT_ID}`, {
+        const created = await apiFetch(`/${tenantId}`, {
           method: 'POST',
           body: JSON.stringify({
             label: editing.label,
@@ -166,7 +167,7 @@ export default function CustomToolBuilder() {
   async function handleDelete(tool) {
     if (!confirm(`Deactivate "${tool.label}"? Users will no longer see it.`)) return;
     try {
-      await apiFetch(`/${TENANT_ID}/${tool.id}`, { method: 'DELETE' });
+      await apiFetch(`/${tenantId}/${tool.id}`, { method: 'DELETE' });
       setTools(prev => prev.map(t => t.id === tool.id ? { ...t, is_active: false } : t));
       toast('Tool deactivated');
     } catch (err) {
@@ -176,7 +177,7 @@ export default function CustomToolBuilder() {
 
   async function handleReactivate(tool) {
     try {
-      const updated = await apiFetch(`/${TENANT_ID}/${tool.id}`, {
+      const updated = await apiFetch(`/${tenantId}/${tool.id}`, {
         method: 'PUT',
         body: JSON.stringify({ is_active: true }),
       });

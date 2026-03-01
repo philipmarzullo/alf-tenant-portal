@@ -3,9 +3,9 @@ import { useParams, Navigate } from 'react-router-dom';
 import { Download, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '../../components/shared/ToastProvider';
 import { getFreshToken } from '../../lib/supabase';
+import { useTenantId } from '../../contexts/TenantIdContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 async function apiFetch(path, options = {}) {
   const token = await getFreshToken();
@@ -96,6 +96,7 @@ function FormField({ field, value, onChange }) {
 export default function CustomToolPage() {
   const { toolKey } = useParams();
   const toast = useToast();
+  const { tenantId } = useTenantId();
 
   const [tool, setTool] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +114,7 @@ export default function CustomToolPage() {
     setNotFound(false);
     try {
       // Fetch all active tools and find by tool_key
-      const tools = await apiFetch(`/${TENANT_ID}`);
+      const tools = await apiFetch(`/${tenantId}`);
       const found = tools.find(t => t.tool_key === toolKey);
       if (!found) {
         setNotFound(true);
@@ -152,7 +153,7 @@ export default function CustomToolPage() {
 
     setGenerating(true);
     try {
-      const data = await apiFetch(`/${TENANT_ID}/${tool.id}/generate`, {
+      const data = await apiFetch(`/${tenantId}/${tool.id}/generate`, {
         method: 'POST',
         body: JSON.stringify({ formData: form }),
       });

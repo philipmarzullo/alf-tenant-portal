@@ -8,6 +8,7 @@ import { callAgent } from '../../agents/api';
 import { generateSalesDeckPptx } from '../../utils/salesDeckPptxTemplate';
 import { useBranding } from '../../contexts/BrandingContext';
 import { useTenantPortal } from '../../contexts/TenantPortalContext';
+import { useTenantId } from '../../contexts/TenantIdContext';
 import { supabase } from '../../lib/supabase';
 
 const VERTICALS = [
@@ -115,6 +116,7 @@ export default function SalesDeckBuilder() {
   const toast = useToast();
   const brand = useBranding();
   const { companyProfile } = useTenantPortal();
+  const { tenantId } = useTenantId();
 
   // Build service options from company profile, fall back to defaults
   const serviceOptions = useMemo(() => {
@@ -138,7 +140,6 @@ export default function SalesDeckBuilder() {
   }, [companyProfile]);
 
   useEffect(() => {
-    const tenantId = import.meta.env.VITE_TENANT_ID;
     if (!tenantId) return;
     supabase
       .from('tool_submissions')
@@ -147,7 +148,7 @@ export default function SalesDeckBuilder() {
       .eq('tool_key', 'salesDeck')
       .order('created_at', { ascending: false })
       .then(({ data }) => setRecentProposals(data || []));
-  }, []);
+  }, [tenantId]);
 
   const updateField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -214,7 +215,6 @@ export default function SalesDeckBuilder() {
     toast('Proposal content generated');
 
     // Persist to tool_submissions
-    const tenantId = import.meta.env.VITE_TENANT_ID;
     if (tenantId) {
       const { data: { user } } = await supabase.auth.getUser();
       const { data: saved } = await supabase.from('tool_submissions').insert({

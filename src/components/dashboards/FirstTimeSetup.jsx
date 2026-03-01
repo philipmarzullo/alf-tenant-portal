@@ -3,9 +3,9 @@ import { Loader2, Star, ArrowRight, LayoutGrid } from 'lucide-react';
 import { useRBAC } from '../../contexts/RBACContext';
 import { useUser } from '../../contexts/UserContext';
 import { supabase, getFreshToken } from '../../lib/supabase';
+import { useTenantId } from '../../contexts/TenantIdContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 const TIER_BADGES = {
   operational: { label: 'Operational', style: 'bg-gray-100 text-gray-700' },
@@ -38,17 +38,18 @@ const DOMAIN_LABELS = {
 export default function FirstTimeSetup({ onComplete, domain }) {
   const { templateName, refreshRBAC } = useRBAC();
   const { currentUser } = useUser();
+  const { tenantId } = useTenantId();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selecting, setSelecting] = useState(null);
 
   const fetchTemplates = useCallback(async () => {
-    if (!TENANT_ID) return;
+    if (!tenantId) return;
     try {
       const token = await getFreshToken();
       if (!token) return;
 
-      const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/role-templates`, {
+      const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/role-templates`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -65,7 +66,7 @@ export default function FirstTimeSetup({ onComplete, domain }) {
     } finally {
       setLoading(false);
     }
-  }, [domain]);
+  }, [domain, tenantId]);
 
   useEffect(() => {
     fetchTemplates();
@@ -85,7 +86,7 @@ export default function FirstTimeSetup({ onComplete, domain }) {
         const token = await getFreshToken();
         if (!token) throw new Error('Not authenticated');
 
-        const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/user-config/${domain}`, {
+        const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/user-config/${domain}`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -125,7 +126,7 @@ export default function FirstTimeSetup({ onComplete, domain }) {
         const token = await getFreshToken();
         if (!token) throw new Error('Not authenticated');
 
-        const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/user-config/${domain}`, {
+        const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/user-config/${domain}`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,

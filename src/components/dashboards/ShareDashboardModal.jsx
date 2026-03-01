@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { X, Share2, Loader2, Trash2 } from 'lucide-react';
 import { supabase, getFreshToken } from '../../lib/supabase';
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+import { useTenantId } from '../../contexts/TenantIdContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 export default function ShareDashboardModal({ open, onClose, dashboardKey, dashboardLabel }) {
+  const { tenantId } = useTenantId();
   const [users, setUsers] = useState([]);
   const [existingShares, setExistingShares] = useState([]);
   const [selectedUser, setSelectedUser] = useState('');
@@ -24,7 +24,7 @@ export default function ShareDashboardModal({ open, onClose, dashboardKey, dashb
         if (!token || cancelled) return;
 
         // Fetch shares
-        const sharesRes = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/shares`, {
+        const sharesRes = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/shares`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (sharesRes.ok) {
@@ -37,7 +37,7 @@ export default function ShareDashboardModal({ open, onClose, dashboardKey, dashb
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name, email, role')
-          .eq('tenant_id', TENANT_ID)
+          .eq('tenant_id', tenantId)
           .eq('active', true)
           .not('role', 'in', '("admin","super-admin")')
           .order('full_name');
@@ -52,14 +52,14 @@ export default function ShareDashboardModal({ open, onClose, dashboardKey, dashb
 
     load();
     return () => { cancelled = true; };
-  }, [open, dashboardKey]);
+  }, [open, dashboardKey, tenantId]);
 
   async function handleShare() {
     if (!selectedUser) return;
     setSharing(true);
     try {
       const token = await getFreshToken();
-      const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/shares`, {
+      const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/shares`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ dashboardKey, sharedWith: selectedUser }),
@@ -80,7 +80,7 @@ export default function ShareDashboardModal({ open, onClose, dashboardKey, dashb
   async function handleRevoke(shareId) {
     try {
       const token = await getFreshToken();
-      await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/shares/${shareId}`, {
+      await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/shares/${shareId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

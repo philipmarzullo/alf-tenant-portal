@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Loader2, Trash2, Edit3, Star } from 'lucide-react';
 import SlidePanel from '../../components/layout/SlidePanel';
 import { getFreshToken } from '../../lib/supabase';
+import { useTenantId } from '../../contexts/TenantIdContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 const TIER_OPTIONS = [
   { value: 'operational', label: 'Operational', description: 'Ticket counts, audits, safety — no financial data', style: 'bg-gray-100 text-gray-700' },
@@ -31,6 +31,7 @@ const EMPTY_FORM = {
 };
 
 export default function RoleTemplates() {
+  const { tenantId } = useTenantId();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -41,12 +42,12 @@ export default function RoleTemplates() {
   const [deleting, setDeleting] = useState(null);
 
   const fetchTemplates = useCallback(async () => {
-    if (!TENANT_ID) return;
+    if (!tenantId) return;
     try {
       const token = await getFreshToken();
       if (!token) return;
 
-      const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/role-templates`, {
+      const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/role-templates`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -58,7 +59,7 @@ export default function RoleTemplates() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     fetchTemplates();
@@ -94,8 +95,8 @@ export default function RoleTemplates() {
       if (!token) throw new Error('Not authenticated');
 
       const url = editingTemplate
-        ? `${BACKEND_URL}/api/dashboards/${TENANT_ID}/role-templates/${editingTemplate.id}`
-        : `${BACKEND_URL}/api/dashboards/${TENANT_ID}/role-templates`;
+        ? `${BACKEND_URL}/api/dashboards/${tenantId}/role-templates/${editingTemplate.id}`
+        : `${BACKEND_URL}/api/dashboards/${tenantId}/role-templates`;
 
       const res = await fetch(url, {
         method: editingTemplate ? 'PUT' : 'POST',
@@ -136,7 +137,7 @@ export default function RoleTemplates() {
       const token = await getFreshToken();
       if (!token) return;
 
-      await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/role-templates/${id}`, {
+      await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/role-templates/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

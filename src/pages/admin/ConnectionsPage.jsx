@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Cable, Plus, Trash2, Play, Power, PowerOff, Loader, CheckCircle, XCircle, X, History, ExternalLink, Unplug } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useUser } from '../../contexts/UserContext';
+import { useTenantId } from '../../contexts/TenantIdContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
 
 // Generic paste-key services (microsoft handled separately via OAuth)
 const SERVICE_TYPES = {
@@ -26,6 +26,7 @@ async function authHeaders() {
 
 export default function ConnectionsPage() {
   const { isSuperAdmin } = useUser();
+  const { tenantId } = useTenantId();
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -77,7 +78,7 @@ export default function ConnectionsPage() {
   async function loadCredentials() {
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/credentials/${TENANT_ID}`, { headers });
+      const res = await fetch(`${BACKEND_URL}/api/credentials/${tenantId}`, { headers });
       if (!res.ok) throw new Error('Failed to load');
       const data = await res.json();
       // Filter out anthropic (platform-only) and microsoft (handled via OAuth card)
@@ -93,7 +94,7 @@ export default function ConnectionsPage() {
     setAuditLoading(true);
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/credentials/${TENANT_ID}/audit-log`, { headers });
+      const res = await fetch(`${BACKEND_URL}/api/credentials/${tenantId}/audit-log`, { headers });
       if (res.ok) setAuditLog(await res.json());
     } catch (err) {
       console.error('[connections] Audit log error:', err.message);
@@ -106,7 +107,7 @@ export default function ConnectionsPage() {
     setMsLoading(true);
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/oauth/microsoft/status?tenantId=${TENANT_ID}`, { headers });
+      const res = await fetch(`${BACKEND_URL}/api/oauth/microsoft/status?tenantId=${tenantId}`, { headers });
       if (res.ok) {
         setMsStatus(await res.json());
       } else {
@@ -135,7 +136,7 @@ export default function ConnectionsPage() {
         return;
       }
       // Navigate to authorize endpoint (browser redirect, not fetch)
-      window.location.href = `${BACKEND_URL}/api/oauth/microsoft/authorize?tenantId=${TENANT_ID}&token=${token}`;
+      window.location.href = `${BACKEND_URL}/api/oauth/microsoft/authorize?tenantId=${tenantId}&token=${token}`;
     } catch (err) {
       console.error('[connections] MS connect error:', err.message);
       setMsMessage({ type: 'error', text: 'Failed to start Microsoft sign-in.' });
@@ -149,7 +150,7 @@ export default function ConnectionsPage() {
       const res = await fetch(`${BACKEND_URL}/api/oauth/microsoft/disconnect`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ tenantId: TENANT_ID }),
+        body: JSON.stringify({ tenantId: tenantId }),
       });
       if (!res.ok) throw new Error('Failed to disconnect');
       setMsStatus({ connected: false });
@@ -169,7 +170,7 @@ export default function ConnectionsPage() {
     setSaving(true);
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/credentials/${TENANT_ID}`, {
+      const res = await fetch(`${BACKEND_URL}/api/credentials/${tenantId}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ service_type: formType, key: formKey, label: formLabel || null }),

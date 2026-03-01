@@ -1,14 +1,14 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { getFreshToken } from '../lib/supabase';
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+import { useTenantId } from './TenantIdContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const DashboardConfigContext = createContext(null);
 
 export function DashboardConfigProvider({ children }) {
   const { session } = useAuth();
+  const { tenantId } = useTenantId();
   const [configs, setConfigs] = useState({});    // { home: {...}, operations: {...}, ... }
   const [sources, setSources] = useState({});    // { home: 'user'|'tenant'|'default', ... }
   const [shares, setShares] = useState([]);      // dashboard_shares rows for current user
@@ -16,7 +16,7 @@ export function DashboardConfigProvider({ children }) {
 
   // Load user-resolved configs + shares when authenticated
   const loadConfigs = useCallback(async () => {
-    if (!TENANT_ID || !session) {
+    if (!tenantId || !session) {
       setLoading(false);
       return;
     }
@@ -27,10 +27,10 @@ export function DashboardConfigProvider({ children }) {
 
       // Fetch user-resolved configs + shares in parallel
       const [configRes, sharesRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/user-config`, {
+        fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/user-config`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/shares`, {
+        fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/shares`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -52,7 +52,7 @@ export function DashboardConfigProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [session, tenantId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,7 +80,7 @@ export function DashboardConfigProvider({ children }) {
     const token = await getFreshToken();
     if (!token) throw new Error('Not authenticated');
 
-    const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/user-config/${dashboardKey}`, {
+    const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/user-config/${dashboardKey}`, {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -96,14 +96,14 @@ export function DashboardConfigProvider({ children }) {
     setConfigs(prev => ({ ...prev, [dashboardKey]: json.config }));
     setSources(prev => ({ ...prev, [dashboardKey]: 'user' }));
     return json.config;
-  }, []);
+  }, [tenantId]);
 
   // Delete per-user override — fall back to tenant/default
   const resetUserConfig = useCallback(async (dashboardKey) => {
     const token = await getFreshToken();
     if (!token) throw new Error('Not authenticated');
 
-    const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/user-config/${dashboardKey}`, {
+    const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/user-config/${dashboardKey}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -119,14 +119,14 @@ export function DashboardConfigProvider({ children }) {
       delete next[dashboardKey];
       return next;
     });
-  }, []);
+  }, [tenantId]);
 
   // Save tenant-level config (admin action — used by DashboardSettings)
   const updateConfig = useCallback(async (dashboardKey, config) => {
     const token = await getFreshToken();
     if (!token) throw new Error('Not authenticated');
 
-    const res = await fetch(`${BACKEND_URL}/api/dashboards/${TENANT_ID}/config/${dashboardKey}`, {
+    const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/config/${dashboardKey}`, {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -144,7 +144,7 @@ export function DashboardConfigProvider({ children }) {
       setSources(prev => ({ ...prev, [dashboardKey]: 'tenant' }));
     }
     return json.config;
-  }, [sources]);
+  }, [sources, tenantId]);
 
   // Force reload all configs from server
   const refreshConfigs = useCallback(async () => {

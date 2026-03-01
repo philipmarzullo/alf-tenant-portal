@@ -2,10 +2,9 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { supabase } from '../lib/supabase';
 import { TOOL_REGISTRY } from '../data/toolRegistry';
 import { MODULE_REGISTRY } from '../data/moduleRegistry';
+import { useTenantId } from './TenantIdContext';
 
 const TenantPortalContext = createContext(null);
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID || null;
 
 /**
  * Maps a tool_key from the DB to the route path used in App.jsx.
@@ -92,6 +91,7 @@ function buildDomainFallbacks() {
 }
 
 export function TenantPortalProvider({ children }) {
+  const { tenantId } = useTenantId();
   const [workspaces, setWorkspaces] = useState([]);
   const [tools, setTools] = useState([]);
   const [dashboardDomains, setDashboardDomains] = useState([]);
@@ -99,7 +99,7 @@ export function TenantPortalProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabase || !TENANT_ID) {
+    if (!supabase || !tenantId) {
       // No DB available — use hardcoded fallbacks
       setWorkspaces(buildWorkspaceFallbacks());
       setTools(buildToolFallbacks());
@@ -115,25 +115,25 @@ export function TenantPortalProvider({ children }) {
         supabase
           .from('tenant_workspaces')
           .select('*')
-          .eq('tenant_id', TENANT_ID)
+          .eq('tenant_id', tenantId)
           .eq('is_active', true)
           .order('sort_order'),
         supabase
           .from('tenant_tools')
           .select('*')
-          .eq('tenant_id', TENANT_ID)
+          .eq('tenant_id', tenantId)
           .eq('is_active', true)
           .order('sort_order'),
         supabase
           .from('tenant_dashboard_domains')
           .select('*')
-          .eq('tenant_id', TENANT_ID)
+          .eq('tenant_id', tenantId)
           .eq('is_active', true)
           .order('sort_order'),
         supabase
           .from('tenant_company_profiles')
           .select('*')
-          .eq('tenant_id', TENANT_ID)
+          .eq('tenant_id', tenantId)
           .single(),
       ]);
 
@@ -164,7 +164,7 @@ export function TenantPortalProvider({ children }) {
     });
 
     return () => { cancelled = true; };
-  }, []);
+  }, [tenantId]);
 
   /** Get a tool config by its tool_key */
   const getToolByKey = useCallback(

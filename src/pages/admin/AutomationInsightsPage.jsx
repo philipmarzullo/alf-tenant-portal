@@ -7,8 +7,7 @@ import MetricCard from '../../components/shared/MetricCard';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useUser } from '../../contexts/UserContext';
-
-const TENANT_ID = import.meta.env.VITE_TENANT_ID;
+import { useTenantId } from '../../contexts/TenantIdContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const DEPARTMENTS = [
@@ -80,6 +79,7 @@ async function sopAnalysisFetch(path, body) {
 export default function AutomationInsightsPage() {
   const { hasAction } = useTenantConfig();
   const { isAdmin } = useUser();
+  const { tenantId } = useTenantId();
   const canSelfService = isAdmin && hasAction('automation', 'selfServicePipeline');
 
   const [analyses, setAnalyses] = useState([]);
@@ -102,19 +102,19 @@ export default function AutomationInsightsPage() {
       supabase
         .from('sop_analyses')
         .select('*')
-        .eq('tenant_id', TENANT_ID)
+        .eq('tenant_id', tenantId)
         .eq('status', 'completed')
         .order('department'),
       supabase
         .from('dept_automation_roadmaps')
         .select('*')
-        .eq('tenant_id', TENANT_ID)
+        .eq('tenant_id', tenantId)
         .eq('status', 'completed')
         .order('department'),
       supabase
         .from('automation_actions')
         .select('*')
-        .eq('tenant_id', TENANT_ID)
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: true }),
     ];
 
@@ -124,7 +124,7 @@ export default function AutomationInsightsPage() {
         supabase
           .from('tenant_documents')
           .select('id, file_name, department, doc_type, status')
-          .eq('tenant_id', TENANT_ID)
+          .eq('tenant_id', tenantId)
           .eq('doc_type', 'sop')
           .eq('status', 'extracted')
           .order('department'),

@@ -8,12 +8,17 @@ const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'
 let _tenantContext = null;
 export function setTenantContext(ctx) { _tenantContext = ctx; }
 
+// Module-level tenant ID — set by UserProvider when profile loads.
+// Falls back to env var for standalone deploys.
+let _tenantId = import.meta.env.VITE_TENANT_ID || null;
+export function setApiTenantId(id) { _tenantId = id; }
+
 /**
- * Resolve the tenant_id for API calls from the VITE_TENANT_ID env var.
- * Each tenant deploy has its own TENANT_ID set at build/deploy time.
+ * Resolve the tenant_id for API calls.
+ * Uses the module-level _tenantId set by UserProvider (or env var fallback).
  */
-function getTenantId() {
-  return import.meta.env.VITE_TENANT_ID || null;
+export function getTenantId() {
+  return _tenantId;
 }
 
 /**

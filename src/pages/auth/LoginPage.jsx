@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBranding } from '../../contexts/BrandingContext';
+import AlfMark from '../../components/shared/AlfMark';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -23,16 +24,21 @@ export default function LoginPage() {
     setSubmitting(false);
   };
 
+  // Show AlfMark when no tenant branding is available (single portal pre-login)
+  const showAlfMark = !brand.logoUrl && !brand.companyName;
+
   return (
     <div className="min-h-screen bg-dark-nav flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Logo / Company Name */}
         <div className="flex flex-col items-center mb-8">
-          {brand.logoUrl ? (
+          {showAlfMark ? (
+            <AlfMark variant="dark" size="lg" showTagline />
+          ) : brand.logoUrl ? (
             <img src={brand.logoUrl} alt={brand.companyName || 'Company'} className="h-12 mb-2" />
           ) : (
             <div className="text-white text-xl font-light tracking-wide mb-2">
-              {brand.companyName || 'Operations Intelligence'}
+              {brand.companyName}
             </div>
           )}
         </div>
