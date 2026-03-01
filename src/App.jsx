@@ -201,6 +201,8 @@ function ProtectedRoute({ moduleKey, pageKey, adminOnly, superAdminOnly, childre
   return children;
 }
 
+const isStandalone = !!import.meta.env.VITE_TENANT_ID;
+
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -208,12 +210,16 @@ export default function App() {
 
   return (
     <Routes>
-      {/* Public marketing — separate layout, no auth */}
-      <Route element={<MarketingLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/request-demo" element={<RequestDemoPage />} />
-      </Route>
+      {/* Public marketing — only on unified portal (no VITE_TENANT_ID) */}
+      {!isStandalone ? (
+        <Route element={<MarketingLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/request-demo" element={<RequestDemoPage />} />
+        </Route>
+      ) : (
+        <Route path="/" element={<Navigate to="/portal" replace />} />
+      )}
 
       {/* Auth — no sidebar, public */}
       <Route path="/login" element={<LoginPage />} />
@@ -458,7 +464,7 @@ export default function App() {
       />
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={isStandalone ? "/portal" : "/"} replace />} />
     </Routes>
   );
 }
