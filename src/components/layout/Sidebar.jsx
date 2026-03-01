@@ -7,7 +7,7 @@ import {
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
   Wrench, ClipboardList, FileText, Package, Star, MessageSquare, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
-  Lock,
+  Lock, TrendingUp,
 } from 'lucide-react';
 import { STATIC_NAV_GROUPS } from '../../data/constants';
 import { MODULE_REGISTRY } from '../../data/moduleRegistry';
@@ -59,6 +59,8 @@ const ICON_MAP = {
   'activity': Activity,
   'zap': Zap,
   'settings': Settings,
+  'shield-check': ShieldCheck,
+  'trending-up': TrendingUp,
 };
 
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {
