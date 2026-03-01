@@ -59,7 +59,10 @@ export default function MarketingLayout() {
           <div className="flex items-center gap-2">
             <AlfMark variant="dark" size="md" />
           </div>
-          <div className="flex items-center gap-4 text-xs">
+          <p className="text-xs text-white/40 text-center md:text-right">
+            Automate your workflows. Leverage your data. Focus on your clients.
+          </p>
+          <div className="text-xs">
             <span>&copy; 2026 Alf &middot; Operations Intelligence</span>
           </div>
         </div>
