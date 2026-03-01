@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
@@ -9,7 +9,12 @@ import { useUser } from './contexts/UserContext';
 import { useAuth } from './contexts/AuthContext';
 import { useTenantConfig } from './contexts/TenantConfigContext';
 import { useBranding } from './contexts/BrandingContext';
+import { useTenantPortal } from './contexts/TenantPortalContext';
 import AlfMark from './components/shared/AlfMark';
+import OnboardingPage from './pages/onboarding/OnboardingPage';
+import PortalSetupPlaceholder from './pages/onboarding/PortalSetupPlaceholder';
+import useTierAccess from './hooks/useTierAccess';
+import UpgradePrompt from './components/shared/UpgradePrompt';
 
 import Dashboard from './pages/Dashboard';
 import HRLayout from './pages/hr/HRLayout';
@@ -146,7 +151,9 @@ function NoTenantScreen() {
 
 function AuthGate({ children }) {
   const { loading: authLoading, isConfigured, session } = useAuth();
-  const { realUser, profileLoading } = useUser();
+  const { realUser, realIsSuperAdmin, profileLoading } = useUser();
+  const { companyProfile, loading: portalLoading } = useTenantPortal();
+  const location = useLocation();
 
   if (!isConfigured) return <SetupScreen />;
   if (authLoading) return <LoadingScreen />;
@@ -154,6 +161,18 @@ function AuthGate({ children }) {
   if (profileLoading) return <LoadingScreen />;
   if (realUser && !realUser.tenant_id) return <NoTenantScreen />;
   if (realUser && !realUser.active) return <DeactivatedScreen />;
+  if (portalLoading) return <LoadingScreen />;
+
+  // Onboarding redirect: draft or missing company profile
+  const profileIsDraft = !companyProfile || companyProfile.status === 'draft';
+  if (profileIsDraft) {
+    if (realIsSuperAdmin && !location.pathname.startsWith('/onboarding')) {
+      return <Navigate to="/onboarding" replace />;
+    }
+    if (!realIsSuperAdmin) {
+      return <PortalSetupPlaceholder />;
+    }
+  }
 
   return children;
 }
@@ -161,8 +180,16 @@ function AuthGate({ children }) {
 function ProtectedRoute({ moduleKey, pageKey, adminOnly, superAdminOnly, children }) {
   const { hasModule, isAdmin, isSuperAdmin } = useUser();
   const { hasPage } = useTenantConfig();
+  const { hasFeature, requiredTierLabel } = useTierAccess();
+
   if (superAdminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/" replace />;
+
+  // Tier gating — show upgrade prompt instead of redirecting
+  if (moduleKey && !hasFeature(moduleKey)) {
+    return <UpgradePrompt featureLabel={moduleKey} requiredTierLabel={requiredTierLabel(moduleKey)} />;
+  }
+
   if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/" replace />;
   if (moduleKey && pageKey && !hasPage(moduleKey, pageKey)) return <Navigate to="/" replace />;
   return children;
@@ -179,6 +206,9 @@ export default function App() {
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
+
+      {/* Onboarding — standalone layout, no sidebar */}
+      <Route path="/onboarding/*" element={<AuthGate><OnboardingPage /></AuthGate>} />
 
       {/* All other routes wrapped in AuthGate + app shell */}
       <Route

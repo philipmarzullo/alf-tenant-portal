@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
@@ -7,14 +7,18 @@ import {
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
   Wrench, ClipboardList, FileText, Package, Star, MessageSquare, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
+  Lock,
 } from 'lucide-react';
 import { STATIC_NAV_GROUPS } from '../../data/constants';
+import { MODULE_REGISTRY } from '../../data/moduleRegistry';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useBranding } from '../../contexts/BrandingContext';
 import { useCustomTools } from '../../contexts/CustomToolsContext';
 import { useTenantPortal } from '../../contexts/TenantPortalContext';
+import useTierAccess from '../../hooks/useTierAccess';
+import UpgradeModal from '../shared/UpgradeModal';
 
 /**
  * Maps icon identifiers (PascalCase or kebab-case from DB) to lucide-react components.
@@ -65,6 +69,8 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   const brand = useBranding();
   const { customTools } = useCustomTools();
   const { workspaces, tools, getWorkspacePath, getToolPath } = useTenantPortal();
+  const { hasFeature, requiredTierLabel } = useTierAccess();
+  const [upgradeModal, setUpgradeModal] = useState(null);
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
@@ -104,28 +110,64 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     return [commandCenter, dynamicWorkspaces, analytics, dynamicTools, admin].filter(Boolean);
   }, [dynamicWorkspaces, dynamicTools]);
 
-  // Filter nav items by tenant config + user permissions
+  // Filter nav items by tenant config + user permissions.
+  // Tier-locked items are kept visible (grayed + lock icon) instead of hidden.
   const filteredNav = allNavGroups
     .map((group) => {
-      let items = group.items.filter((item) => {
-        if (!item.moduleKey) return true;
-        if (item.moduleKey === 'superAdmin') return isSuperAdmin;
-        if (item.moduleKey === 'admin') return isAdmin;
-        if (item.adminOnly && !isAdmin) return false;
-        // Dynamic items from DB are already tenant-gated — skip module_config checks
-        if (item._dynamic) {
-          if (isAdmin) return true;
-          return currentUser?.modules?.includes(item.moduleKey);
-        }
-        // Static items: apply tenant-level gating via module_config
-        if (!tenantHasModule(item.moduleKey)) return false;
-        if (item.pageKey && !hasPage(item.moduleKey, item.pageKey)) return false;
-        if (isAdmin) return true;
-        return currentUser?.modules?.includes(item.moduleKey);
-      });
+      let items = group.items
+        .map((item) => {
+          if (!item.moduleKey) return item;
+          if (item.moduleKey === 'superAdmin') return isSuperAdmin ? item : null;
+          if (item.moduleKey === 'admin') return isAdmin ? item : null;
+          if (item.adminOnly && !isAdmin) return null;
+
+          // Dynamic items from DB are already tenant-gated
+          if (item._dynamic) {
+            if (isAdmin) return item;
+            return currentUser?.modules?.includes(item.moduleKey) ? item : null;
+          }
+
+          // Static items: check tenant module config
+          if (!tenantHasModule(item.moduleKey)) {
+            // Module not enabled — is it locked by tier? Show it locked.
+            if (!hasFeature(item.moduleKey)) {
+              return { ...item, _tierLocked: true };
+            }
+            return null; // Not tier-locked, just admin-disabled — hide
+          }
+          if (item.pageKey && !hasPage(item.moduleKey, item.pageKey)) return null;
+          if (isAdmin) return item;
+          return currentUser?.modules?.includes(item.moduleKey) ? item : null;
+        })
+        .filter(Boolean);
+
+      // Inject locked placeholders for empty dynamic groups
+      if (group.group === 'WORKSPACES' && items.length === 0) {
+        const workspaceModules = ['hr', 'finance', 'purchasing', 'sales', 'ops'];
+        const lockedWorkspaces = workspaceModules
+          .filter(m => !hasFeature(m))
+          .map(m => ({
+            label: MODULE_REGISTRY[m]?.label || m,
+            path: `/${m}`,
+            icon: MODULE_REGISTRY[m]?.icon || 'ClipboardList',
+            _tierLocked: true,
+            _lockedModule: m,
+          }));
+        items = lockedWorkspaces;
+      }
+
+      if (group.group === 'TOOLS' && items.length === 0 && !hasFeature('tools')) {
+        items = [{
+          label: 'Tools',
+          path: '/tools',
+          icon: 'Wrench',
+          _tierLocked: true,
+          _lockedModule: 'tools',
+        }];
+      }
 
       // Inject custom tools into the TOOLS group
-      if (group.group === 'TOOLS' && items.length > 0 && customTools.length > 0) {
+      if (group.group === 'TOOLS' && items.length > 0 && !items[0]?._tierLocked && customTools.length > 0) {
         const customItems = customTools.map(t => ({
           label: t.label,
           path: `/tools/custom/${t.tool_key}`,
@@ -193,6 +235,28 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
             )}
             {group.items.map((item) => {
               const Icon = ICON_MAP[item.icon];
+
+              if (item._tierLocked) {
+                return (
+                  <button
+                    key={item.path || item._lockedModule}
+                    onClick={() => setUpgradeModal({
+                      featureLabel: item.label,
+                      requiredTierLabel: requiredTierLabel(item._lockedModule || item.moduleKey),
+                    })}
+                    className="flex items-center gap-3 px-4 py-2.5 mx-2 rounded-md text-sm text-white/20 cursor-pointer hover:bg-white/5 transition-colors w-full text-left"
+                  >
+                    {Icon && <Icon size={18} />}
+                    {!showCollapsed && (
+                      <>
+                        <span className="flex-1">{item.label}</span>
+                        <Lock size={12} className="text-white/15" />
+                      </>
+                    )}
+                  </button>
+                );
+              }
+
               const active = isActive(item.path);
               return (
                 <NavLink
@@ -267,6 +331,12 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
         />
       )}
       {sidebar}
+      <UpgradeModal
+        open={!!upgradeModal}
+        onClose={() => setUpgradeModal(null)}
+        featureLabel={upgradeModal?.featureLabel}
+        requiredTierLabel={upgradeModal?.requiredTierLabel}
+      />
     </>
   );
 }

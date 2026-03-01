@@ -190,6 +190,30 @@ export function TenantPortalProvider({ children }) {
     [],
   );
 
+  /** Re-fetch all portal data (workspaces, tools, domains, profile) from DB */
+  const refreshAll = useCallback(async () => {
+    if (!supabase || !tenantId) return;
+    setLoading(true);
+    try {
+      const [wsRes, toolsRes, domainsRes, profileRes] = await Promise.all([
+        supabase.from('tenant_workspaces').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
+        supabase.from('tenant_tools').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
+        supabase.from('tenant_dashboard_domains').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
+        supabase.from('tenant_company_profiles').select('*').eq('tenant_id', tenantId).single(),
+      ]);
+      setWorkspaces(wsRes.data?.length ? wsRes.data : buildWorkspaceFallbacks());
+      setTools(toolsRes.data?.length ? toolsRes.data : buildToolFallbacks());
+      setDashboardDomains(domainsRes.data?.length ? domainsRes.data : buildDomainFallbacks());
+      setCompanyProfile(profileRes.data || null);
+    } catch (err) {
+      console.error('Failed to refresh tenant portal data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
+
+  const profileStatus = companyProfile?.status || null;
+
   /** Get the route path for a dashboard domain by domain_key */
   const getDomainPath = useCallback(
     (domainKey) => {
@@ -205,14 +229,16 @@ export function TenantPortalProvider({ children }) {
       tools,
       dashboardDomains,
       companyProfile,
+      profileStatus,
       loading,
+      refreshAll,
       getToolByKey,
       getDomainByKey,
       getWorkspacePath,
       getToolPath,
       getDomainPath,
     }),
-    [workspaces, tools, dashboardDomains, companyProfile, loading, getToolByKey, getDomainByKey, getWorkspacePath, getToolPath, getDomainPath],
+    [workspaces, tools, dashboardDomains, companyProfile, profileStatus, loading, refreshAll, getToolByKey, getDomainByKey, getWorkspacePath, getToolPath, getDomainPath],
   );
 
   return (

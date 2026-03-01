@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, Bot, DollarSign, TrendingUp, Clock, HardHat,
   ClipboardList, Shield, CheckCircle, Loader2, ArrowRight,
-  Cpu, Zap, BarChart3, Database,
+  Cpu, Zap, BarChart3, Database, Lock,
 } from 'lucide-react';
 import MetricCard from '../components/shared/MetricCard';
 import TaskCard from '../components/shared/TaskCard';
 import AgentChatPanel from '../components/shared/AgentChatPanel';
 import DashboardEmptyState from '../components/dashboards/DashboardEmptyState';
 import SyncHealthBanner from '../components/dashboards/SyncHealthBanner';
+import OnboardingBanner from '../components/shared/OnboardingBanner';
 import { useUser } from '../contexts/UserContext';
 import { useBranding } from '../contexts/BrandingContext';
 import { useRBAC } from '../contexts/RBACContext';
 import { useTenantConfig } from '../contexts/TenantConfigContext';
+import useTierAccess from '../hooks/useTierAccess';
 import { useTenantPortal } from '../contexts/TenantPortalContext';
 import useHomeSummary from '../hooks/useHomeSummary';
 import useOpsIntelligence from '../hooks/useOpsIntelligence';
@@ -93,6 +95,7 @@ export default function Dashboard() {
   const { data: summary, loading, error } = useHomeSummary();
   const { data: opsIntel, loading: opsLoading } = useOpsIntelligence();
   const { dashboardDomains, getDomainPath } = useTenantPortal();
+  const { hasFeature, nextTierLabel } = useTierAccess();
 
   // Build domain lookup maps from dynamic config
   const domainOrder = useMemo(() => dashboardDomains.map(d => d.domain_key), [dashboardDomains]);
@@ -218,27 +221,37 @@ export default function Dashboard() {
 
   return (
     <div>
+      <OnboardingBanner />
       <SyncHealthBanner />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">{pageTitle}</h1>
         <div className="flex items-center gap-2">
-          {tenantHasModule('analytics') && (
-            <button
-              onClick={() => setAnalyticsChatOpen(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
-            >
-              <Bot size={16} />
-              Ask Analytics Agent
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => setChatOpen(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
-            >
-              <Bot size={16} />
-              Ask Admin Agent
-            </button>
+          {hasFeature('agentChat') ? (
+            <>
+              {tenantHasModule('analytics') && (
+                <button
+                  onClick={() => setAnalyticsChatOpen(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+                >
+                  <Bot size={16} />
+                  Ask Analytics Agent
+                </button>
+              )}
+              {isAdmin && (
+                <button
+                  onClick={() => setChatOpen(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+                >
+                  <Bot size={16} />
+                  Ask Admin Agent
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="inline-flex items-center gap-2 px-3.5 py-2 text-sm text-secondary-text bg-gray-50 border border-gray-200 rounded-lg">
+              <Lock size={14} />
+              <span>AI Agents available on {nextTierLabel}</span>
+            </div>
           )}
         </div>
       </div>
@@ -312,73 +325,102 @@ export default function Dashboard() {
         <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
           Operational Intelligence
         </h2>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-sm text-secondary-text mb-1">AI Agents</div>
-                <div className="text-3xl font-semibold text-dark-text">
-                  {opsLoading ? '--' : (opsIntel?.activeAgents ?? 0)}
+        {!hasFeature('agentChat') ? (
+          <div className="grid gap-4 grid-cols-1">
+            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+              <div className="flex justify-center mb-3">
+                <div className="p-3 bg-purple-50 rounded-full">
+                  <Cpu size={24} className="text-purple-400" />
                 </div>
               </div>
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <Cpu size={20} className="text-purple-600" />
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-secondary-text">
-              {opsLoading ? '...' : `${opsIntel?.activeAgents ?? 0} of ${opsIntel?.totalAgents ?? 0} active`}
+              <h3 className="text-base font-medium text-dark-text mb-1">Unlock Operational Intelligence</h3>
+              <p className="text-sm text-secondary-text mb-4">
+                AI agents, deployed skills, and automation tracking are available on {nextTierLabel} and above.
+              </p>
+              <a
+                href="mailto:support@alfpro.ai?subject=Upgrade inquiry"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+              >
+                Learn about upgrading
+              </a>
             </div>
           </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-sm text-secondary-text mb-1">Skills Deployed</div>
-                <div className="text-3xl font-semibold text-dark-text">
-                  {opsLoading ? '--' : (opsIntel?.deployedSkills ?? 0)}
+        ) : (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-sm text-secondary-text mb-1">AI Agents</div>
+                  <div className="text-3xl font-semibold text-dark-text">
+                    {opsLoading ? '--' : (opsIntel?.activeAgents ?? 0)}
+                  </div>
+                </div>
+                <div className="p-2 bg-purple-50 rounded-lg">
+                  <Cpu size={20} className="text-purple-600" />
                 </div>
               </div>
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <BarChart3 size={20} className="text-blue-600" />
+              <div className="mt-2 text-xs text-secondary-text">
+                {opsLoading ? '...' : `${opsIntel?.activeAgents ?? 0} of ${opsIntel?.totalAgents ?? 0} active`}
               </div>
             </div>
-            <div className="mt-2 text-xs text-secondary-text">
-              {opsLoading ? '...' : `${opsIntel?.deployedSkills ?? 0} of ${opsIntel?.totalSkills ?? 0} completed`}
-            </div>
-          </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-sm text-secondary-text mb-1">Automations</div>
-                <div className="text-3xl font-semibold text-dark-text">
-                  {opsLoading ? '--' : `${opsIntel?.automationsCompleted ?? 0}`}
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-sm text-secondary-text mb-1">Skills Deployed</div>
+                  <div className="text-3xl font-semibold text-dark-text">
+                    {opsLoading ? '--' : (opsIntel?.deployedSkills ?? 0)}
+                  </div>
+                </div>
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <BarChart3 size={20} className="text-blue-600" />
                 </div>
               </div>
-              <div className="p-2 bg-amber-50 rounded-lg">
-                <Zap size={20} className="text-amber-600" />
+              <div className="mt-2 text-xs text-secondary-text">
+                {opsLoading ? '...' : `${opsIntel?.deployedSkills ?? 0} of ${opsIntel?.totalSkills ?? 0} completed`}
               </div>
             </div>
-            <div className="mt-2 text-xs text-secondary-text">
-              {opsLoading ? '...' : `${opsIntel?.automationsCompleted ?? 0} of ${opsIntel?.automationsTotal ?? 0} completed`}
-            </div>
-          </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-sm text-secondary-text mb-1">Data Coverage</div>
-                <div className="text-3xl font-semibold text-dark-text">{dataCoverage}%</div>
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-sm text-secondary-text mb-1">Automations</div>
+                  <div className="text-3xl font-semibold text-dark-text">
+                    {opsLoading ? '--' : `${opsIntel?.automationsCompleted ?? 0}`}
+                  </div>
+                </div>
+                <div className="p-2 bg-amber-50 rounded-lg">
+                  <Zap size={20} className="text-amber-600" />
+                </div>
               </div>
-              <div className="p-2 bg-green-50 rounded-lg">
-                <Database size={20} className="text-green-600" />
-              </div>
+              {hasFeature('automation') ? (
+                <div className="mt-2 text-xs text-secondary-text">
+                  {opsLoading ? '...' : `${opsIntel?.automationsCompleted ?? 0} of ${opsIntel?.automationsTotal ?? 0} completed`}
+                </div>
+              ) : (
+                <div className="mt-2 text-xs text-secondary-text">
+                  <Lock size={10} className="inline mr-1" />
+                  Available on Galaxy
+                </div>
+              )}
             </div>
-            <div className="mt-2 text-xs text-secondary-text">
-              {domainsWithData} of {totalDomains} departments reporting
+
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-sm text-secondary-text mb-1">Data Coverage</div>
+                  <div className="text-3xl font-semibold text-dark-text">{dataCoverage}%</div>
+                </div>
+                <div className="p-2 bg-green-50 rounded-lg">
+                  <Database size={20} className="text-green-600" />
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-secondary-text">
+                {domainsWithData} of {totalDomains} departments reporting
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ─── Needs Attention (compact bottom section) ─── */}
@@ -401,7 +443,7 @@ export default function Dashboard() {
       )}
 
       {/* Admin Agent Chat Panel */}
-      {isAdmin && (
+      {hasFeature('agentChat') && isAdmin && (
         <AgentChatPanel
           open={chatOpen}
           onClose={() => setChatOpen(false)}
@@ -412,7 +454,7 @@ export default function Dashboard() {
       )}
 
       {/* Analytics Agent Chat Panel */}
-      {tenantHasModule('analytics') && (
+      {hasFeature('agentChat') && tenantHasModule('analytics') && (
         <AgentChatPanel
           open={analyticsChatOpen}
           onClose={() => setAnalyticsChatOpen(false)}

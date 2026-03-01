@@ -7,6 +7,7 @@ const TenantConfigContext = createContext(null);
 export function TenantConfigProvider({ children }) {
   const { realUser } = useUser();
   const [moduleConfig, setModuleConfig] = useState(null);
+  const [tenantPlan, setTenantPlan] = useState(null);
   const [configLoading, setConfigLoading] = useState(true);
 
   // Fetch tenant's module_config once we know the user's tenant_id
@@ -22,7 +23,7 @@ export function TenantConfigProvider({ children }) {
 
     supabase
       .from('alf_tenants')
-      .select('module_config')
+      .select('module_config, plan')
       .eq('id', realUser.tenant_id)
       .single()
       .then(({ data, error }) => {
@@ -30,8 +31,10 @@ export function TenantConfigProvider({ children }) {
         if (error) {
           console.error('Failed to fetch tenant config:', error);
           setModuleConfig(null);
+          setTenantPlan(null);
         } else {
           setModuleConfig(data?.module_config || null);
+          setTenantPlan(data?.plan || null);
         }
         setConfigLoading(false);
       });
@@ -96,6 +99,7 @@ export function TenantConfigProvider({ children }) {
   const value = useMemo(
     () => ({
       moduleConfig,
+      tenantPlan,
       configLoading,
       tenantHasModule,
       hasPage,
@@ -103,7 +107,7 @@ export function TenantConfigProvider({ children }) {
       getEnabledPages,
       getEnabledActions,
     }),
-    [moduleConfig, configLoading, tenantHasModule, hasPage, hasAction, getEnabledPages, getEnabledActions],
+    [moduleConfig, tenantPlan, configLoading, tenantHasModule, hasPage, hasAction, getEnabledPages, getEnabledActions],
   );
 
   return (
