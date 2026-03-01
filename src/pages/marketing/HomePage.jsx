@@ -331,18 +331,14 @@ export default function HomePage() {
 
         <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
           <h2
-            className="text-3xl md:text-5xl text-white mb-4 whitespace-normal md:whitespace-nowrap"
+            className="text-3xl md:text-5xl text-white mb-4"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
-            Automate your back office. Focus on your clients.
+            Automate your workflows.<br />
+            Leverage your data.<br />
+            Focus on your clients.
           </h2>
-          <div className="w-12 h-[3px] bg-alf-orange mx-auto rounded-full mb-6" />
-          <p
-            className="text-white/50 mb-10 max-w-md mx-auto"
-            style={{ fontFamily: "var(--font-marketing-body)" }}
-          >
-            Automate your workflows. Leverage your data. Focus on your clients.
-          </p>
+          <div className="w-12 h-[3px] bg-alf-orange mx-auto rounded-full mb-10" />
           <Link
             to="/request-demo"
             className="inline-block px-7 py-3.5 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"

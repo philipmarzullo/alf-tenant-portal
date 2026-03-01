@@ -53,16 +53,13 @@ export default function MarketingLayout() {
 
       {/* Footer */}
       <footer className="bg-alf-dark text-white/60 py-10">
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 items-center gap-4 text-sm"
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm"
           style={{ fontFamily: "var(--font-marketing-body)" }}
         >
-          <div className="flex items-center justify-center md:justify-start gap-2">
+          <div className="flex items-center gap-2">
             <AlfMark variant="dark" size="md" />
           </div>
-          <p className="text-xs text-white/40 text-center">
-            Automate your workflows. Leverage your data. Focus on your clients.
-          </p>
-          <div className="text-xs text-center md:text-right">
+          <div className="text-xs">
             <span>&copy; 2026 Alf &middot; Operations Intelligence</span>
           </div>
         </div>
