@@ -108,6 +108,7 @@ export function TenantPortalProvider({ children }) {
       return;
     }
 
+    setLoading(true);
     let cancelled = false;
 
     async function fetchAll() {
