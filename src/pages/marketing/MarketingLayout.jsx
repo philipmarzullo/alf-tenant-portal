@@ -7,8 +7,14 @@ export default function MarketingLayout() {
       {/* Nav */}
       <header className="fixed top-0 inset-x-0 z-50 bg-alf-warm-white border-b border-alf-bone">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <AlfMark variant="light" size="sm" />
+          <Link to="/" className="flex items-center gap-3">
+            <AlfMark variant="light" size="md" />
+            <span
+              className="text-[10px] font-light tracking-[4px] text-alf-slate uppercase hidden sm:inline"
+              style={{ fontFamily: "var(--font-marketing-body)" }}
+            >
+              Operations Intelligence
+            </span>
           </Link>
           <nav className="flex items-center gap-6">
             <Link
@@ -47,7 +53,7 @@ export default function MarketingLayout() {
           style={{ fontFamily: "var(--font-marketing-body)" }}
         >
           <div className="flex items-center gap-2">
-            <AlfMark variant="dark" size="sm" />
+            <AlfMark variant="dark" size="md" />
           </div>
           <div className="flex items-center gap-4 text-xs">
             <span>alfpro.ai</span>

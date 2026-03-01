@@ -87,32 +87,65 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-alf-warm-white py-24 md:py-32">
-        <div className="max-w-4xl mx-auto px-6 text-center">
+      <section className="bg-alf-warm-white py-28 md:py-40 relative overflow-hidden">
+        {/* Large-scale AlfMark as background visual anchor */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none" aria-hidden="true">
+          <div className="opacity-[0.04]" style={{ transform: 'translateY(-8%)' }}>
+            <span style={{
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontSize: 'clamp(280px, 40vw, 520px)',
+              fontWeight: 400,
+              letterSpacing: -12,
+              color: '#1C1C1C',
+              lineHeight: 0.85,
+              display: 'block',
+            }}>
+              alf
+            </span>
+            <div style={{
+              width: '55%',
+              height: 6,
+              background: '#C84B0A',
+              borderRadius: 3,
+              marginTop: 12,
+            }} />
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <h1
-            className="text-4xl md:text-5xl lg:text-6xl text-alf-dark mb-6 leading-tight"
+            className="text-5xl md:text-7xl lg:text-8xl text-alf-dark mb-5 leading-[0.95] tracking-tight"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
-            The operating system for facility services operations
+            Operations Intelligence
           </h1>
+          <div
+            className="w-16 h-[3px] bg-alf-orange mx-auto rounded-full mb-6"
+          />
           <p
-            className="text-lg md:text-xl text-alf-slate max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="text-xl md:text-2xl text-alf-dark/70 mb-6"
+            style={{ fontFamily: "var(--font-marketing-heading)" }}
+          >
+            The operating system for service operations
+          </p>
+          <p
+            className="text-base md:text-lg text-alf-slate max-w-xl mx-auto mb-12 leading-relaxed"
             style={{ fontFamily: "var(--font-marketing-body)" }}
           >
-            Alf connects your operational data, deploys AI agents that understand your business,
-            and automates the work your team does every day.
+            Connect your data. Deploy AI agents that understand your business.
+            Automate the work your team does every day.
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <a
               href="mailto:support@alfpro.ai?subject=Demo request"
-              className="px-6 py-3 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"
+              className="px-7 py-3.5 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"
               style={{ fontFamily: "var(--font-marketing-body)" }}
             >
               Request a Demo
             </a>
             <Link
               to="/login"
-              className="px-6 py-3 border border-alf-dark text-alf-dark text-sm font-medium rounded-lg hover:bg-alf-dark hover:text-white transition-colors"
+              className="px-7 py-3.5 border border-alf-dark/20 text-alf-dark text-sm font-medium rounded-lg hover:border-alf-dark hover:bg-alf-dark hover:text-white transition-colors"
               style={{ fontFamily: "var(--font-marketing-body)" }}
             >
               Log In
