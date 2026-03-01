@@ -141,13 +141,13 @@ export default function HomePage() {
             Automate the work your team does every day.
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <a
-              href="mailto:support@alfpro.ai?subject=Demo request"
+            <Link
+              to="/request-demo"
               className="px-7 py-3.5 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"
               style={{ fontFamily: "var(--font-marketing-body)" }}
             >
               Request a Demo
-            </a>
+            </Link>
             <Link
               to="/login"
               className="px-7 py-3.5 border border-alf-dark/20 text-alf-dark text-sm font-medium rounded-lg hover:border-alf-dark hover:bg-alf-dark hover:text-white transition-colors"
@@ -343,13 +343,13 @@ export default function HomePage() {
           >
             See how Alf connects your data, deploys AI agents, and automates your workflows.
           </p>
-          <a
-            href="mailto:support@alfpro.ai?subject=Demo request"
+          <Link
+            to="/request-demo"
             className="inline-block px-7 py-3.5 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"
             style={{ fontFamily: "var(--font-marketing-body)" }}
           >
             Request a Demo
-          </a>
+          </Link>
         </div>
       </section>
     </div>

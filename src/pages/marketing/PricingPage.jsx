@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 const TIERS = [
   {
     name: 'Melmac',
@@ -119,13 +121,13 @@ export default function PricingPage() {
                 >
                   {tier.users} &middot; {tier.calls}
                 </div>
-                <a
-                  href="mailto:support@alfpro.ai?subject=Pricing inquiry"
+                <Link
+                  to="/request-demo"
                   className="mt-4 block w-full text-center px-4 py-2.5 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"
                   style={{ fontFamily: "var(--font-marketing-body)" }}
                 >
                   Contact Us
-                </a>
+                </Link>
               </div>
 
               {/* Features */}

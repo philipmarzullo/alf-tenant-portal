@@ -32,13 +32,13 @@ export default function MarketingLayout() {
             >
               Log In
             </Link>
-            <a
-              href="mailto:support@alfpro.ai?subject=Demo request"
+            <Link
+              to="/request-demo"
               className="px-4 py-2 bg-alf-orange text-white text-sm font-medium rounded-lg hover:bg-alf-orange/90 transition-colors"
               style={{ fontFamily: "var(--font-marketing-body)" }}
             >
               Request a Demo
-            </a>
+            </Link>
           </nav>
         </div>
       </header>

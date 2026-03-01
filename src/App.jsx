@@ -59,6 +59,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import MarketingLayout from './pages/marketing/MarketingLayout';
 import HomePage from './pages/marketing/HomePage';
 import PricingPage from './pages/marketing/PricingPage';
+import RequestDemoPage from './pages/marketing/RequestDemoPage';
 
 function LoadingScreen() {
   return (
@@ -210,6 +211,7 @@ export default function App() {
       <Route element={<MarketingLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/request-demo" element={<RequestDemoPage />} />
       </Route>
 
       {/* Auth — no sidebar, public */}
