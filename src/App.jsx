@@ -158,6 +158,7 @@ function AuthGate({ children }) {
   const { loading: authLoading, isConfigured, session } = useAuth();
   const { realUser, realIsSuperAdmin, profileLoading } = useUser();
   const { companyProfile, loading: portalLoading } = useTenantPortal();
+  const { brandLoading } = useBranding();
   const location = useLocation();
 
   if (!isConfigured) return <SetupScreen />;
@@ -166,7 +167,7 @@ function AuthGate({ children }) {
   if (profileLoading) return <LoadingScreen />;
   if (realUser && !realUser.tenant_id) return <NoTenantScreen />;
   if (realUser && !realUser.active) return <DeactivatedScreen />;
-  if (portalLoading) return <LoadingScreen />;
+  if (portalLoading || brandLoading) return <LoadingScreen />;
 
   // Onboarding redirect: draft or missing company profile
   const profileIsDraft = !companyProfile || companyProfile.status === 'draft';

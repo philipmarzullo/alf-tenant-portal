@@ -18,13 +18,24 @@ This is the tenant-facing portal for facility services operations. Each tenant (
 
 The tenant portal has no backend. It calls the alf-platform backend via `VITE_BACKEND_URL` for agent API calls.
 
+## Deployment Modes
+
+This repo supports two deployment modes from the same codebase:
+
+| Mode | `VITE_TENANT_ID` | Behavior |
+|------|-------------------|----------|
+| **Standalone** (A&A) | Set to tenant UUID | Branding loads pre-auth; login page shows tenant brand |
+| **Unified portal** (`portal.alfpro.ai`) | Not set | Login page shows Alf branding (AlfMark + orange accent); tenant resolved post-auth from user profile |
+
+**Unified portal flow:** Login → session → UserContext fetches profile → `setTenantId(profile.tenant_id)` → BrandingContext & TenantPortalProvider refetch with resolved tenant → portal renders with full tenant branding.
+
 ## Env Vars
 
 ```
 VITE_SUPABASE_URL=...              # Supabase project URL
 VITE_SUPABASE_ANON_KEY=...         # Supabase public anon key
 VITE_BACKEND_URL=https://alfpro.ai # Alf backend for agent calls
-VITE_TENANT_ID=<uuid>              # This tenant's ID from alf_tenants
+VITE_TENANT_ID=<uuid>              # (Optional) Tenant ID — omit for unified portal mode
 ```
 
 ## File Ownership

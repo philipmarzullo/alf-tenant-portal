@@ -39,6 +39,8 @@ export function BrandingProvider({ children }) {
         document.documentElement.style.setProperty('--color-dark-nav', ALF_DEFAULTS.sidebarBg);
       }
       document.title = 'alf | Operations Intelligence';
+      const link = document.querySelector("link[rel~='icon']");
+      if (link) link.href = '/favicon.svg';
       setBrand({ ...ALF_DEFAULTS });
       return;
     }
