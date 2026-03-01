@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bot, Download, FileText, Loader2 } from 'lucide-react';
 import { getTool } from '../../data/toolRegistry';
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
 import AgentActionButton from '../../components/shared/AgentActionButton';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useToast } from '../../components/shared/ToastProvider';
@@ -77,7 +78,20 @@ function FormField({ field, value, onChange }) {
 }
 
 export default function ToolPage({ toolKey }) {
-  const tool = getTool(toolKey);
+  const { getToolByKey } = useTenantPortal();
+  const registryTool = getTool(toolKey);
+  const dbTool = getToolByKey(toolKey);
+
+  // Prefer DB tool config over hardcoded registry, normalize to consistent field names
+  const tool = dbTool ? {
+    label: dbTool.name,
+    description: dbTool.description,
+    intakeSchema: dbTool.intake_schema || [],
+    agentKey: dbTool.agent_key,
+    actionKey: dbTool.action_key || registryTool?.actionKey,
+    outputFormat: dbTool.output_format,
+  } : registryTool;
+
   const [form, setForm] = useState({});
   const [result, setResult] = useState(null);
   const [generating, setGenerating] = useState(false);

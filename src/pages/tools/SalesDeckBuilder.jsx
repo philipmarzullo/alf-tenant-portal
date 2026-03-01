@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Presentation, ChevronDown, ChevronUp, Plus, Trash2, Bot, Download, Clock } from 'lucide-react';
 import AgentActionButton from '../../components/shared/AgentActionButton';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
@@ -7,6 +7,7 @@ import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { generateSalesDeckPptx } from '../../utils/salesDeckPptxTemplate';
 import { useBranding } from '../../contexts/BrandingContext';
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
 import { supabase } from '../../lib/supabase';
 
 const VERTICALS = [
@@ -26,7 +27,7 @@ const VERTICALS = [
   'Sports & Entertainment',
 ];
 
-const SERVICE_OPTIONS = [
+const DEFAULT_SERVICE_OPTIONS = [
   'Janitorial — Day Porter',
   'Janitorial — Nightly Cleaning',
   'Janitorial — Deep Clean / Periodic',
@@ -75,7 +76,7 @@ const EMPTY_FORM = {
   emphasisAreas: [],
 };
 
-const EMPHASIS_OPTIONS = [
+const DEFAULT_EMPHASIS_OPTIONS = [
   { key: 'retention', label: '98%+ Client Retention' },
   { key: 'esop', label: 'Employee-Owned (ESOP)' },
   { key: 'peoplefirst', label: 'Core Operating Philosophy' },
@@ -113,6 +114,28 @@ export default function SalesDeckBuilder() {
   const [recentProposals, setRecentProposals] = useState([]);
   const toast = useToast();
   const brand = useBranding();
+  const { companyProfile } = useTenantPortal();
+
+  // Build service options from company profile, fall back to defaults
+  const serviceOptions = useMemo(() => {
+    if (companyProfile?.service_catalog?.length) {
+      return companyProfile.service_catalog.flatMap(cat =>
+        (cat.services || []).map(s => `${cat.category} — ${s}`)
+      );
+    }
+    return DEFAULT_SERVICE_OPTIONS;
+  }, [companyProfile]);
+
+  // Build emphasis options from company profile, fall back to defaults
+  const emphasisOptions = useMemo(() => {
+    if (companyProfile?.differentiators?.length) {
+      return companyProfile.differentiators.map(d => ({
+        key: d.key,
+        label: d.label,
+      }));
+    }
+    return DEFAULT_EMPHASIS_OPTIONS;
+  }, [companyProfile]);
 
   useEffect(() => {
     const tenantId = import.meta.env.VITE_TENANT_ID;
@@ -167,7 +190,7 @@ export default function SalesDeckBuilder() {
       toast('Please enter a company name', 'error');
       return;
     }
-    const emphasisLabels = EMPHASIS_OPTIONS
+    const emphasisLabels = emphasisOptions
       .filter((o) => form.emphasisAreas.includes(o.key))
       .map((o) => o.label);
 
@@ -384,7 +407,7 @@ export default function SalesDeckBuilder() {
           {/* Section 4: Scope of Services */}
           <CollapsibleSection title="Scope of Services" subtitle="What services is the prospect looking for?">
             <div className="grid grid-cols-2 gap-2">
-              {SERVICE_OPTIONS.map((svc) => (
+              {serviceOptions.map((svc) => (
                 <label key={svc} className="flex items-center gap-2.5 cursor-pointer group">
                   <input
                     type="checkbox"
@@ -457,7 +480,7 @@ export default function SalesDeckBuilder() {
           {/* Section 6: Emphasis Areas */}
           <CollapsibleSection title="Differentiators to Emphasize" subtitle="Which company strengths should the proposal highlight?">
             <div className="grid grid-cols-2 gap-2">
-              {EMPHASIS_OPTIONS.map((opt) => (
+              {emphasisOptions.map((opt) => (
                 <label key={opt.key} className="flex items-center gap-2.5 cursor-pointer group">
                   <input
                     type="checkbox"

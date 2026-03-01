@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, Bot, DollarSign, TrendingUp, Clock, HardHat,
@@ -14,41 +14,20 @@ import { useUser } from '../contexts/UserContext';
 import { useBranding } from '../contexts/BrandingContext';
 import { useRBAC } from '../contexts/RBACContext';
 import { useTenantConfig } from '../contexts/TenantConfigContext';
+import { useTenantPortal } from '../contexts/TenantPortalContext';
 import useHomeSummary from '../hooks/useHomeSummary';
 import useOpsIntelligence from '../hooks/useOpsIntelligence';
 import { HEALTH_THRESHOLDS, computeHealth } from '../data/healthThresholds';
 
-// Domain → display colors + labels
-const DOMAIN_COLORS = {
-  operations: '#4B5563',
-  labor: '#009ADE',
-  quality: '#7C3AED',
-  timekeeping: '#0D9488',
-  safety: '#DC2626',
-};
-
-const DOMAIN_LABELS = {
-  operations: 'Operations',
-  labor: 'Labor',
-  quality: 'Quality',
-  timekeeping: 'Timekeeping',
-  safety: 'Safety',
-};
-
-const DOMAIN_PATHS = {
-  operations: '/dashboards',
-  labor: '/dashboards/labor',
-  quality: '/dashboards/quality',
-  timekeeping: '/dashboards/timekeeping',
-  safety: '/dashboards/safety',
-};
-
-const DOMAIN_ICONS = {
-  operations: ClipboardList,
-  labor: DollarSign,
-  quality: Shield,
-  timekeeping: Clock,
-  safety: AlertTriangle,
+// Map icon string identifiers from DB to lucide components for domain cards
+const DOMAIN_ICON_MAP = {
+  'clipboard-list': ClipboardList,
+  'dollar-sign': DollarSign,
+  'shield': Shield,
+  'clock': Clock,
+  'alert-triangle': AlertTriangle,
+  'hard-hat': HardHat,
+  ClipboardList, DollarSign, Shield, Clock, AlertTriangle, HardHat,
 };
 
 // KPI selection per domain per tier — the single most important number
@@ -113,6 +92,25 @@ export default function Dashboard() {
   const { metricTier, rbacLoading, canSeeDomain } = useRBAC();
   const { data: summary, loading, error } = useHomeSummary();
   const { data: opsIntel, loading: opsLoading } = useOpsIntelligence();
+  const { dashboardDomains, getDomainPath } = useTenantPortal();
+
+  // Build domain lookup maps from dynamic config
+  const domainOrder = useMemo(() => dashboardDomains.map(d => d.domain_key), [dashboardDomains]);
+  const domainColors = useMemo(() => {
+    const map = {};
+    dashboardDomains.forEach(d => { map[d.domain_key] = d.color || '#4B5563'; });
+    return map;
+  }, [dashboardDomains]);
+  const domainLabels = useMemo(() => {
+    const map = {};
+    dashboardDomains.forEach(d => { map[d.domain_key] = d.name; });
+    return map;
+  }, [dashboardDomains]);
+  const domainIcons = useMemo(() => {
+    const map = {};
+    dashboardDomains.forEach(d => { map[d.domain_key] = DOMAIN_ICON_MAP[d.icon] || ClipboardList; });
+    return map;
+  }, [dashboardDomains]);
 
   const pageTitle = brand.companyName ? `${brand.companyName} Command Center` : 'Command Center';
 
@@ -190,19 +188,18 @@ export default function Dashboard() {
   }
 
   // === SECTION 1: Company KPIs ===
-  const domainOrder = ['operations', 'labor', 'quality', 'timekeeping', 'safety'];
   const kpiCards = domainOrder
     .filter(d => canSeeDomain(d))
     .map(d => {
       const kpiConfig = DOMAIN_KPI_BY_TIER[d]?.[metricTier] || DOMAIN_KPI_BY_TIER[d]?.operational;
       const value = hero[kpiConfig.key];
-      const Icon = DOMAIN_ICONS[d];
+      const Icon = domainIcons[d] || ClipboardList;
       return {
         domain: d,
-        label: `${DOMAIN_LABELS[d]}: ${kpiConfig.label}`,
+        label: `${domainLabels[d] || d}: ${kpiConfig.label}`,
         value: formatKPIValue(value, kpiConfig.format),
         icon: Icon,
-        color: DOMAIN_COLORS[d],
+        color: domainColors[d] || '#4B5563',
       };
     });
 
@@ -215,8 +212,9 @@ export default function Dashboard() {
     });
 
   // === SECTION 3: Operational Intelligence ===
+  const totalDomains = domainOrder.length;
   const domainsWithData = domainOrder.filter(d => domains[d]?.hasData).length;
-  const dataCoverage = Math.round((domainsWithData / 5) * 100);
+  const dataCoverage = totalDomains > 0 ? Math.round((domainsWithData / totalDomains) * 100) : 0;
 
   return (
     <div>
@@ -254,7 +252,7 @@ export default function Dashboard() {
           {kpiCards.map(card => (
             <button
               key={card.domain}
-              onClick={() => navigate(DOMAIN_PATHS[card.domain])}
+              onClick={() => navigate(getDomainPath(card.domain))}
               className="text-left group"
             >
               <div className="bg-white rounded-lg border border-gray-200 p-5 hover:border-gray-300 hover:shadow-sm transition-all">
@@ -287,13 +285,13 @@ export default function Dashboard() {
             return (
               <button
                 key={card.domain}
-                onClick={() => navigate(DOMAIN_PATHS[card.domain])}
+                onClick={() => navigate(getDomainPath(card.domain))}
                 className="text-left"
               >
                 <div className={`bg-white rounded-lg border p-4 hover:shadow-sm transition-all ${style.border}`}>
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-1 h-8 rounded-full" style={{ backgroundColor: DOMAIN_COLORS[card.domain] }} />
-                    <span className="text-sm font-medium text-dark-text">{DOMAIN_LABELS[card.domain]}</span>
+                    <div className="w-1 h-8 rounded-full" style={{ backgroundColor: domainColors[card.domain] || '#4B5563' }} />
+                    <span className="text-sm font-medium text-dark-text">{domainLabels[card.domain] || card.domain}</span>
                   </div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
@@ -377,7 +375,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="mt-2 text-xs text-secondary-text">
-              {domainsWithData} of 5 departments reporting
+              {domainsWithData} of {totalDomains} departments reporting
             </div>
           </div>
         </div>
@@ -391,7 +389,7 @@ export default function Dashboard() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {attentionItems.slice(0, 6).map((task) => (
-              <TaskCard key={task.id} task={task} onAction={() => navigate(DOMAIN_PATHS[task.dept] || '/dashboards')} />
+              <TaskCard key={task.id} task={task} onAction={() => navigate(getDomainPath(task.dept) || '/dashboards')} />
             ))}
           </div>
           {attentionItems.length > 6 && (

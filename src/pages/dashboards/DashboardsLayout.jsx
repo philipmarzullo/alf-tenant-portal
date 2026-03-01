@@ -5,26 +5,11 @@ import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useDashboardConfigContext } from '../../contexts/DashboardConfigContext';
 import { useUser } from '../../contexts/UserContext';
 import { useRBAC } from '../../contexts/RBACContext';
-import { MODULE_REGISTRY } from '../../data/moduleRegistry';
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import ShareDashboardModal from '../../components/dashboards/ShareDashboardModal';
 import SyncHealthBanner from '../../components/dashboards/SyncHealthBanner';
 import useHomeSummary from '../../hooks/useHomeSummary';
-
-const ALL_TABS = MODULE_REGISTRY.dashboards.pages.map((p) => ({
-  key: p.key,
-  label: p.label,
-  path: p.path,
-}));
-
-// Domain key from path
-const DOMAIN_BY_PATH = {
-  '/dashboards': 'operations',
-  '/dashboards/labor': 'labor',
-  '/dashboards/quality': 'quality',
-  '/dashboards/timekeeping': 'timekeeping',
-  '/dashboards/safety': 'safety',
-};
 
 // Context to pass customize state down to domain dashboards
 const DashboardCustomizeContext = createContext({ isLayoutCustomizing: false, setIsLayoutCustomizing: () => {} });
@@ -43,9 +28,29 @@ export default function DashboardsLayout() {
   const [shareModalLabel, setShareModalLabel] = useState('Operations');
   const [analyticsChatOpen, setAnalyticsChatOpen] = useState(false);
 
+  // Dynamic dashboard domains from tenant config
+  const { dashboardDomains, getDomainPath } = useTenantPortal();
+
+  const allTabs = useMemo(() =>
+    dashboardDomains.map((d) => ({
+      key: d.domain_key,
+      label: d.name,
+      path: getDomainPath(d.domain_key),
+    })),
+    [dashboardDomains, getDomainPath]
+  );
+
+  const domainByPath = useMemo(() => {
+    const map = {};
+    dashboardDomains.forEach((d) => {
+      map[getDomainPath(d.domain_key)] = d.domain_key;
+    });
+    return map;
+  }, [dashboardDomains, getDomainPath]);
+
   // Track current path for share button
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/dashboards';
-  const currentDomain = DOMAIN_BY_PATH[currentPath] || 'operations';
+  const currentDomain = domainByPath[currentPath] || dashboardDomains[0]?.domain_key || 'operations';
 
   // Build data context for analytics agent
   const analyticsContext = useCallback(() => {
@@ -87,21 +92,21 @@ export default function DashboardsLayout() {
 
   const tabs = useMemo(() => {
     const enabledKeys = getEnabledPages('dashboards');
-    let filteredTabs = enabledKeys ? ALL_TABS.filter((t) => enabledKeys.includes(t.key)) : ALL_TABS;
+    let filteredTabs = enabledKeys ? allTabs.filter((t) => enabledKeys.includes(t.key)) : allTabs;
 
     // Add shared tabs for non-admin users
     if (!isAdmin && shares.length > 0) {
       const sharedKeys = new Set(shares.map(s => s.dashboard_key));
       const existingKeys = new Set(filteredTabs.map(t => t.key));
-      const sharedTabs = ALL_TABS.filter(t => sharedKeys.has(t.key) && !existingKeys.has(t.key));
+      const sharedTabs = allTabs.filter(t => sharedKeys.has(t.key) && !existingKeys.has(t.key));
       filteredTabs = [...filteredTabs, ...sharedTabs];
     }
 
     return filteredTabs;
-  }, [getEnabledPages, shares, isAdmin]);
+  }, [getEnabledPages, shares, isAdmin, allTabs]);
 
   function openShareModal() {
-    const tab = ALL_TABS.find(t => t.key === currentDomain);
+    const tab = allTabs.find(t => t.key === currentDomain);
     setShareModalKey(currentDomain);
     setShareModalLabel(tab?.label || currentDomain);
     setShareModalOpen(true);

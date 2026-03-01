@@ -45,7 +45,12 @@ export const STATUS = {
   expired: { label: 'Expired', color: '#9CA3AF', bg: '#F3F4F6', text: '#4B5563' },
 };
 
-export const NAV_ITEMS = [
+/**
+ * Static navigation groups — not driven by tenant data.
+ * WORKSPACES and TOOLS groups are built dynamically by the Sidebar
+ * from tenant_workspaces and tenant_tools via TenantPortalContext.
+ */
+export const STATIC_NAV_GROUPS = [
   {
     group: 'COMMAND CENTER',
     items: [
@@ -53,31 +58,10 @@ export const NAV_ITEMS = [
     ],
   },
   {
-    group: 'WORKSPACES',
-    items: [
-      { label: 'HR', path: '/hr', icon: 'Users', moduleKey: 'hr' },
-      { label: 'Finance', path: '/finance', icon: 'DollarSign', moduleKey: 'finance' },
-      { label: 'Purchasing', path: '/purchasing', icon: 'ShoppingCart', moduleKey: 'purchasing' },
-      { label: 'Sales', path: '/sales', icon: 'Briefcase', moduleKey: 'sales' },
-      { label: 'Operations', path: '/ops', icon: 'HardHat', moduleKey: 'ops' },
-    ],
-  },
-  {
     group: 'ANALYTICS',
     items: [
       { label: 'Dashboards', path: '/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
       { label: 'Action Plans', path: '/dashboards/action-plans', icon: 'ListChecks', moduleKey: 'actionPlans' },
-    ],
-  },
-  {
-    group: 'TOOLS',
-    items: [
-      { label: 'Quarterly Review Builder', path: '/tools/qbu', icon: 'FileBarChart', moduleKey: 'tools', pageKey: 'quarterly-review' },
-      { label: 'Proposal Builder', path: '/tools/sales-deck', icon: 'Presentation', moduleKey: 'tools', pageKey: 'proposal' },
-      { label: 'Transition Plan Builder', path: '/tools/transition-plan', icon: 'ArrowRightLeft', moduleKey: 'tools', pageKey: 'transition-plan' },
-      { label: 'Budget Builder', path: '/tools/budget', icon: 'Calculator', moduleKey: 'tools', pageKey: 'budget' },
-      { label: 'Incident Report', path: '/tools/incident-report', icon: 'ShieldAlert', moduleKey: 'tools', pageKey: 'incident-report' },
-      { label: 'Training Plan', path: '/tools/training-plan', icon: 'GraduationCap', moduleKey: 'tools', pageKey: 'training-plan' },
     ],
   },
   {

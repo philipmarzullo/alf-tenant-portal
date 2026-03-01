@@ -8,6 +8,7 @@ import { TenantConfigProvider } from './contexts/TenantConfigContext';
 import { DashboardConfigProvider } from './contexts/DashboardConfigContext';
 import { RBACProvider } from './contexts/RBACContext';
 import { CustomToolsProvider } from './contexts/CustomToolsContext';
+import { TenantPortalProvider } from './contexts/TenantPortalContext';
 import ToastProvider from './components/shared/ToastProvider';
 import './index.css';
 import App from './App.jsx';
@@ -16,21 +17,23 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <BrandingProvider>
-        <AuthProvider>
-          <UserProvider>
-            <RBACProvider>
-              <TenantConfigProvider>
-                <CustomToolsProvider>
-                  <DashboardConfigProvider>
-                    <ToastProvider>
-                      <App />
-                    </ToastProvider>
-                  </DashboardConfigProvider>
-                </CustomToolsProvider>
-              </TenantConfigProvider>
-            </RBACProvider>
-          </UserProvider>
-        </AuthProvider>
+        <TenantPortalProvider>
+          <AuthProvider>
+            <UserProvider>
+              <RBACProvider>
+                <TenantConfigProvider>
+                  <CustomToolsProvider>
+                    <DashboardConfigProvider>
+                      <ToastProvider>
+                        <App />
+                      </ToastProvider>
+                    </DashboardConfigProvider>
+                  </CustomToolsProvider>
+                </TenantConfigProvider>
+              </RBACProvider>
+            </UserProvider>
+          </AuthProvider>
+        </TenantPortalProvider>
       </BrandingProvider>
     </BrowserRouter>
   </StrictMode>,
