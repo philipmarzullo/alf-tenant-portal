@@ -67,7 +67,12 @@ export async function callAgent(agentKey, actionKey, data, tenantContext) {
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `API error: ${response.status}`);
+    const error = new Error(err.error || `API error: ${response.status}`);
+    error.status = response.status;
+    if (err.limit != null) error.limit = err.limit;
+    if (err.used != null) error.used = err.used;
+    if (err.resets_at) error.resets_at = err.resets_at;
+    throw error;
   }
 
   const result = await response.json();
@@ -116,7 +121,12 @@ export async function chatWithAgent(agentKey, messages, tenantContext, options =
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `API error: ${response.status}`);
+    const error = new Error(err.error || `API error: ${response.status}`);
+    error.status = response.status;
+    if (err.limit != null) error.limit = err.limit;
+    if (err.used != null) error.used = err.used;
+    if (err.resets_at) error.resets_at = err.resets_at;
+    throw error;
   }
 
   const result = await response.json();

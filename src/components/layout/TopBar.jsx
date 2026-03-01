@@ -34,6 +34,25 @@ const BREADCRUMB_MAP = {
   '/portal/admin/automation': ['Admin', 'Automation Insights'],
 };
 
+const ROLE_VIEW_OPTIONS = [
+  { role: 'user', label: 'Standard User', modules: ['dashboards'] },
+  { role: 'manager', label: 'Manager', modules: ['dashboards', 'analytics', 'tools', 'actionPlans'] },
+  { role: 'admin', label: 'Admin', modules: [] }, // admin bypasses module checks
+];
+
+function buildSyntheticRoleUser(opt, realUser) {
+  return {
+    id: `_role_${opt.role}`,
+    name: `${opt.label} View`,
+    role: opt.role,
+    tenant_id: realUser.tenant_id,
+    modules: opt.modules,
+    active: true,
+    _isRoleView: true,
+    _roleLabel: opt.label,
+  };
+}
+
 export default function TopBar({ isMobile, onMenuToggle }) {
   const location = useLocation();
   const crumbs = BREADCRUMB_MAP[location.pathname] || ['Dashboard'];
@@ -116,11 +135,11 @@ export default function TopBar({ isMobile, onMenuToggle }) {
                 }`}
               >
                 <Eye size={14} />
-                <span>{viewingAs ? viewingAs.name : 'View as...'}</span>
+                <span>{viewingAs ? (viewingAs._isRoleView ? viewingAs._roleLabel : viewingAs.name) : 'View as...'}</span>
               </button>
 
               {viewAsOpen && (
-                <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
+                <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-80 overflow-y-auto">
                   {viewingAs && (
                     <button
                       onClick={() => { clearViewingAs(); setViewAsOpen(false); }}
@@ -130,20 +149,43 @@ export default function TopBar({ isMobile, onMenuToggle }) {
                       Exit impersonation
                     </button>
                   )}
-                  {impersonateList.map((user) => (
+
+                  {/* Role view section */}
+                  <div className="px-3 pt-2 pb-1">
+                    <span className="text-[10px] font-semibold text-secondary-text uppercase tracking-wider">View as Role</span>
+                  </div>
+                  {ROLE_VIEW_OPTIONS.map((opt) => (
                     <button
-                      key={user.id}
-                      onClick={() => { setViewingAs(user); setViewAsOpen(false); }}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
-                        viewingAs?.id === user.id ? 'bg-blue-50 text-aa-blue' : 'text-dark-text'
+                      key={opt.role}
+                      onClick={() => { setViewingAs(buildSyntheticRoleUser(opt, realUser)); setViewAsOpen(false); }}
+                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-50 ${
+                        viewingAs?._isRoleView && viewingAs?.role === opt.role ? 'bg-blue-50 text-aa-blue' : 'text-dark-text'
                       }`}
                     >
-                      <span className="truncate">{user.name}</span>
-                      <span className="text-[10px] text-secondary-text capitalize shrink-0 ml-2">{user.role}</span>
+                      {opt.label}
                     </button>
                   ))}
-                  {impersonateList.length === 0 && (
-                    <div className="px-3 py-2 text-xs text-secondary-text">No other active users</div>
+
+                  {/* User list section */}
+                  {impersonateList.length > 0 && (
+                    <>
+                      <div className="border-t border-gray-100 mx-2 my-1" />
+                      <div className="px-3 pt-2 pb-1">
+                        <span className="text-[10px] font-semibold text-secondary-text uppercase tracking-wider">View as User</span>
+                      </div>
+                      {impersonateList.map((user) => (
+                        <button
+                          key={user.id}
+                          onClick={() => { setViewingAs(user); setViewAsOpen(false); }}
+                          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
+                            viewingAs?.id === user.id && !viewingAs?._isRoleView ? 'bg-blue-50 text-aa-blue' : 'text-dark-text'
+                          }`}
+                        >
+                          <span className="truncate">{user.name}</span>
+                          <span className="text-[10px] text-secondary-text capitalize shrink-0 ml-2">{user.role}</span>
+                        </button>
+                      ))}
+                    </>
                   )}
                 </div>
               )}
@@ -158,7 +200,10 @@ export default function TopBar({ isMobile, onMenuToggle }) {
       {viewingAs && (
         <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center justify-between shrink-0">
           <span className="text-xs font-medium text-amber-800">
-            Viewing as <strong>{viewingAs.name}</strong> — <span className="capitalize">{viewingAs.role}</span>
+            {viewingAs._isRoleView
+              ? <>Viewing as role: <strong>{viewingAs._roleLabel}</strong></>
+              : <>Viewing as <strong>{viewingAs.name}</strong> — <span className="capitalize">{viewingAs.role}</span></>
+            }
           </span>
           <button
             onClick={clearViewingAs}
