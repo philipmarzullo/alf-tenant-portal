@@ -331,7 +331,7 @@ export default function HomePage() {
 
         <div className="max-w-3xl mx-auto px-6 text-center relative z-10">
           <h2
-            className="text-3xl md:text-4xl text-white mb-4"
+            className="text-3xl md:text-5xl text-white mb-4 whitespace-normal md:whitespace-nowrap"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
             Automate your back office. Focus on your clients.
