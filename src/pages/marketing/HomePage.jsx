@@ -9,7 +9,7 @@ const TIERS = [
     features: [
       'Command Center Dashboard',
       'Domain Dashboards',
-      'RBAC-Filtered Views',
+      'Role-Based Filtered Views',
       'Dashboard Customization',
       'Data Connectors',
     ],

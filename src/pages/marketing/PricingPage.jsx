@@ -10,7 +10,7 @@ const TIERS = [
     features: [
       { label: 'Command Center Dashboard', included: true },
       { label: 'Domain Dashboards', included: true },
-      { label: 'RBAC-Filtered Views', included: true },
+      { label: 'Role-Based Filtered Views', included: true },
       { label: 'Dashboard Customization', included: true },
       { label: 'Data Connectors', included: true },
       { label: 'Workspace Agents', included: false },
@@ -35,7 +35,7 @@ const TIERS = [
     features: [
       { label: 'Command Center Dashboard', included: true },
       { label: 'Domain Dashboards', included: true },
-      { label: 'RBAC-Filtered Views', included: true },
+      { label: 'Role-Based Filtered Views', included: true },
       { label: 'Dashboard Customization', included: true },
       { label: 'Data Connectors', included: true },
       { label: 'Workspace Agents', included: true },
@@ -60,7 +60,7 @@ const TIERS = [
     features: [
       { label: 'Command Center Dashboard', included: true },
       { label: 'Domain Dashboards', included: true },
-      { label: 'RBAC-Filtered Views', included: true },
+      { label: 'Role-Based Filtered Views', included: true },
       { label: 'Dashboard Customization', included: true },
       { label: 'Data Connectors', included: true },
       { label: 'Workspace Agents', included: true },

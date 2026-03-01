@@ -60,10 +60,6 @@ export default function MarketingLayout() {
             <AlfMark variant="dark" size="md" />
           </div>
           <div className="flex items-center gap-4 text-xs">
-            <span>alfpro.ai</span>
-            <span className="text-white/20">|</span>
-            <a href="mailto:support@alfpro.ai" className="hover:text-white transition-colors">support@alfpro.ai</a>
-            <span className="text-white/20">|</span>
             <span>&copy; 2026 Alf &middot; Operations Intelligence</span>
           </div>
         </div>
