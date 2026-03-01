@@ -169,14 +169,16 @@ function AuthGate({ children }) {
   if (realUser && !realUser.active) return <DeactivatedScreen />;
   if (portalLoading || brandLoading) return <LoadingScreen />;
 
-  // Onboarding redirect: draft or missing company profile
-  const profileIsDraft = !companyProfile || companyProfile.status === 'draft';
-  if (profileIsDraft) {
-    if (realIsSuperAdmin && !location.pathname.startsWith('/onboarding')) {
-      return <Navigate to="/onboarding" replace />;
-    }
-    if (!realIsSuperAdmin) {
-      return <PortalSetupPlaceholder />;
+  // Onboarding redirect: only on unified portal (no VITE_TENANT_ID)
+  if (!isStandalone) {
+    const profileIsDraft = !companyProfile || companyProfile.status === 'draft';
+    if (profileIsDraft) {
+      if (realIsSuperAdmin && !location.pathname.startsWith('/onboarding')) {
+        return <Navigate to="/onboarding" replace />;
+      }
+      if (!realIsSuperAdmin) {
+        return <PortalSetupPlaceholder />;
+      }
     }
   }
 
