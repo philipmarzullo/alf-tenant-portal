@@ -137,8 +137,8 @@ export default function HomePage() {
             className="text-base md:text-lg text-alf-slate max-w-xl mx-auto mb-12 leading-relaxed"
             style={{ fontFamily: "var(--font-marketing-body)" }}
           >
-            Connect your data. Deploy AI agents that understand your business.
-            Automate the work your team does every day.
+            AI agents that learn your operations, automate your back office,
+            and let your team focus on what matters — your clients.
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <Link
@@ -334,14 +334,14 @@ export default function HomePage() {
             className="text-3xl md:text-4xl text-white mb-4"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
-            Ready to see your operations clearly?
+            Automate your back office. Focus on your clients.
           </h2>
           <div className="w-12 h-[3px] bg-alf-orange mx-auto rounded-full mb-6" />
           <p
             className="text-white/50 mb-10 max-w-md mx-auto"
             style={{ fontFamily: "var(--font-marketing-body)" }}
           >
-            See how Alf connects your data, deploys AI agents, and automates your workflows.
+            AI agents handle the operational busywork so your team can focus on delivering for clients.
           </p>
           <Link
             to="/request-demo"
