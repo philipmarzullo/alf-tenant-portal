@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Database, Brain, Zap } from 'lucide-react';
+import { Database, Cog, Zap } from 'lucide-react';
 
 const TIERS = [
   {
@@ -77,7 +77,7 @@ const DIFFERENTIATORS = [
     description: 'Every portal is built from your company profile — departments, services, and differentiators shape what you see.',
   },
   {
-    icon: Brain,
+    icon: Cog,
     title: 'SOP-driven automation',
     description: 'Upload your standard operating procedures and Alf discovers automation opportunities across your workflows.',
   },
