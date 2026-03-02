@@ -413,6 +413,7 @@ export default function AutomationInsightsPage() {
           onGenerateRoadmap={handleGenerateRoadmap}
           onConvertToActions={handleConvertToActions}
           actions={actions}
+          getWorkspaceColor={getWorkspaceColor}
         />
       )}
 
@@ -428,6 +429,7 @@ export default function AutomationInsightsPage() {
           onDeactivateSkill={handleDeactivateSkill}
           onBatchGenerateSkills={handleBatchGenerateSkills}
           onBatchActivateSkills={handleBatchActivateSkills}
+          agentNames={AGENT_NAMES}
         />
       )}
 
@@ -435,6 +437,8 @@ export default function AutomationInsightsPage() {
         <ResponsibilitiesTab
           actions={manualActions}
           onUpdateNotes={handleUpdateNotes}
+          departments={DEPARTMENTS}
+          getWorkspaceColor={getWorkspaceColor}
         />
       )}
 
@@ -444,6 +448,9 @@ export default function AutomationInsightsPage() {
           filterDept={filterDept}
           setFilterDept={setFilterDept}
           onRunWithAgent={(agentKey) => setChatAgent(agentKey)}
+          departments={DEPARTMENTS}
+          agentNames={AGENT_NAMES}
+          getWorkspaceColor={getWorkspaceColor}
         />
       )}
 
@@ -464,6 +471,7 @@ export default function AutomationInsightsPage() {
 function OverviewTab({
   activeDepts, byDept, roadmapByDept, sopDocsByDept, expandedDept, setExpandedDept,
   canSelfService, pipelineBusy, onAnalyze, onGenerateRoadmap, onConvertToActions, actions,
+  getWorkspaceColor,
 }) {
   return (
     <div className="space-y-4">
@@ -643,6 +651,7 @@ function AgentSkillsTab({
   actions, plannedActions, onRunWithAgent,
   canSelfService, pipelineBusy, onGenerateSkill, onActivateSkill, onDeactivateSkill,
   onBatchGenerateSkills, onBatchActivateSkills,
+  agentNames,
 }) {
   // Planned actions that can have skills generated (agent or hybrid)
   const skillableActions = (plannedActions || []).filter(
@@ -724,7 +733,7 @@ function AgentSkillsTab({
                       {action.assignee_type}
                     </span>
                     {action.agent_key && (
-                      <span className="text-[11px] text-secondary-text">{AGENT_NAMES[action.agent_key] || action.agent_key}</span>
+                      <span className="text-[11px] text-secondary-text">{agentNames[action.agent_key] || action.agent_key}</span>
                     )}
                   </div>
                 </div>
@@ -748,7 +757,7 @@ function AgentSkillsTab({
             <div className="flex items-center gap-2">
               <Bot size={16} className="text-aa-blue" />
               <span className="text-sm font-medium text-dark-text">
-                {AGENT_NAMES[agentKey] || agentKey}
+                {agentNames[agentKey] || agentKey}
               </span>
               <span className="text-xs text-secondary-text">
                 {agentActions.filter(a => a.status === 'active').length} active skill{agentActions.filter(a => a.status === 'active').length !== 1 ? 's' : ''}
@@ -832,7 +841,7 @@ function AgentSkillsTab({
 
 /* ─── Your Responsibilities Tab ─── */
 
-function ResponsibilitiesTab({ actions, onUpdateNotes }) {
+function ResponsibilitiesTab({ actions, onUpdateNotes, departments, getWorkspaceColor }) {
   const [editingNotes, setEditingNotes] = useState(null);
   const [noteText, setNoteText] = useState('');
 
@@ -862,7 +871,7 @@ function ResponsibilitiesTab({ actions, onUpdateNotes }) {
       </div>
 
       {Object.entries(byDept).map(([dept, deptActions]) => {
-        const deptInfo = DEPARTMENTS.find(d => d.key === dept);
+        const deptInfo = departments.find(d => d.key === dept);
         const deptColor = getWorkspaceColor(dept);
 
         return (
@@ -962,8 +971,8 @@ function ResponsibilitiesTab({ actions, onUpdateNotes }) {
 
 /* ─── All Actions Tab ─── */
 
-function AllActionsTab({ actions, filterDept, setFilterDept, onRunWithAgent }) {
-  const deptOptions = [{ key: 'all', label: 'All Departments' }, ...DEPARTMENTS];
+function AllActionsTab({ actions, filterDept, setFilterDept, onRunWithAgent, departments, agentNames, getWorkspaceColor }) {
+  const deptOptions = [{ key: 'all', label: 'All Departments' }, ...departments];
 
   const filtered = filterDept === 'all'
     ? actions

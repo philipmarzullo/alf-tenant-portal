@@ -65,12 +65,6 @@ const ICON_MAP = {
 // Tools that produce real deliverables (PPTX, etc.)
 const PRIMARY_TOOLS = new Set(['qbu', 'salesDeck']);
 
-// Admin items that belong in the Automation sub-menu
-const AUTOMATION_PATHS = new Set([
-  '/portal/admin/automation',
-  '/portal/tools/sop-builder',
-  '/portal/admin/automation-preferences',
-]);
 
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {
   const location = useLocation();
@@ -86,8 +80,6 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   // Collapsible state — workspaces open if any workspace is active
   const workspaceActive = workspaces.some(ws => location.pathname.startsWith(getWorkspacePath(ws.department_key)));
   const [workspacesOpen, setWorkspacesOpen] = useState(workspaceActive);
-  const automationActive = AUTOMATION_PATHS.has(location.pathname) || [...AUTOMATION_PATHS].some(p => location.pathname.startsWith(p));
-  const [automationOpen, setAutomationOpen] = useState(automationActive);
   const [quickTemplatesOpen, setQuickTemplatesOpen] = useState(false);
 
   const isActive = (path) => {
@@ -144,12 +136,13 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     };
   }, [tools, getToolPath]);
 
-  // Assemble full nav: command-center section → workspaces → analytics section → tools → admin section
+  // Assemble full nav: command-center → workspaces → analytics → tools → automation → admin
   const allNavGroups = useMemo(() => {
     const commandCenter = dbNavGroups['command-center'];
     const analytics = dbNavGroups['analytics'];
+    const automation = dbNavGroups['automation'];
     const admin = dbNavGroups['admin'];
-    return [commandCenter, dynamicWorkspaces, analytics, dynamicTools, admin].filter(Boolean);
+    return [commandCenter, dynamicWorkspaces, analytics, dynamicTools, automation, admin].filter(Boolean);
   }, [dbNavGroups, dynamicWorkspaces, dynamicTools]);
 
   // Filter nav items by tenant config + user permissions.
@@ -354,31 +347,16 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       );
     }
 
-    // --- ADMIN: split automation sub-menu ---
-    if (group.sectionKey === 'admin' || group.group === 'ADMIN') {
-      const automationItems = group.items.filter(i => AUTOMATION_PATHS.has(i.path));
-      const otherItems = group.items.filter(i => !AUTOMATION_PATHS.has(i.path));
-
+    // --- ADMIN / AUTOMATION: flat list ---
+    if (group.sectionKey === 'admin' || group.group === 'ADMIN' || group.sectionKey === 'automation') {
       return (
-        <div key={group.group} className="mb-4">
+        <div key={group.sectionKey || group.group} className="mb-4">
           {!showCollapsed && (
             <div className="px-4 mb-2 text-[11px] font-semibold tracking-wider text-white/30 uppercase">
               {group.group}
             </div>
           )}
-          {/* Non-automation admin items */}
-          {otherItems.map(item => renderNavItem(item))}
-          {/* Automation sub-menu */}
-          {automationItems.length > 0 && (
-            <>
-              {renderCollapsibleHeader('Automation', 'Zap', automationOpen, () => setAutomationOpen(!automationOpen), automationItems.some(i => !i._tierLocked && isActive(i.path)))}
-              {automationOpen && (
-                <div className="mt-0.5">
-                  {automationItems.map(item => renderNavItem(item, true))}
-                </div>
-              )}
-            </>
-          )}
+          {group.items.map(item => renderNavItem(item))}
         </div>
       );
     }
