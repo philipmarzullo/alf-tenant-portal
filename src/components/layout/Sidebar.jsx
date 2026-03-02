@@ -158,7 +158,10 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
           // Dynamic items from DB are already tenant-gated
           if (item._dynamic) {
             if (isAdmin) return item;
-            return currentUser?.modules?.includes(item.moduleKey) ? item : null;
+            // Check both the group moduleKey ('tools') and the individual pageKey ('qbu', 'sop-builder')
+            if (currentUser?.modules?.includes(item.moduleKey)) return item;
+            if (item.pageKey && currentUser?.modules?.includes(item.pageKey)) return item;
+            return null;
           }
 
           // Static items: check tenant module config

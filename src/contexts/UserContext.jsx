@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext';
 import { useTenantId } from './TenantIdContext';
 import { supabase } from '../lib/supabase';
 import { setApiTenantId } from '../agents/api';
+import { TOOL_MODULE_KEYS } from '../data/users';
 
 const UserContext = createContext(null);
 
@@ -104,7 +105,12 @@ export function UserProvider({ children }) {
       if (!currentUser) return false;
       if (!moduleKey) return true;
       if (currentUser.role === 'admin' || currentUser.role === 'super-admin') return true;
-      return currentUser.modules.includes(moduleKey);
+      if (currentUser.modules.includes(moduleKey)) return true;
+      // 'tools' group check: grant access if user has any individual tool module
+      if (moduleKey === 'tools') {
+        return currentUser.modules.some(m => TOOL_MODULE_KEYS.has(m));
+      }
+      return false;
     },
     [currentUser],
   );

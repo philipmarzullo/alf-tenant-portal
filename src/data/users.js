@@ -9,3 +9,8 @@ export const MODULE_DEFINITIONS = [
   { key: 'sop-builder', label: 'SOP Builder', group: 'TOOLS', path: '/tools/sop-builder' },
   { key: 'admin', label: 'Admin', group: 'ADMIN', path: '/admin' },
 ];
+
+// Individual tool module keys — used to expand 'tools' group check
+export const TOOL_MODULE_KEYS = new Set(
+  MODULE_DEFINITIONS.filter(m => m.group === 'TOOLS').map(m => m.key)
+);
