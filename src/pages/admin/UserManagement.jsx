@@ -8,10 +8,11 @@ import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, getFreshToken } from '../../lib/supabase';
 import { useTenantId } from '../../contexts/TenantIdContext';
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
-const EMPTY_FORM = { name: '', email: '', title: '', role: 'user', modules: [], active: true, password: '' };
+const EMPTY_FORM = { name: '', email: '', title: '', role: 'user', modules: [], active: true, password: '', allowedDashboards: null };
 
 const TIER_BADGES = {
   operational: { label: 'Operational', style: 'bg-gray-100 text-gray-700' },
@@ -23,6 +24,7 @@ export default function UserManagement() {
   const { currentUser, allUsers, refreshUsers } = useUser();
   const { session, resetPassword } = useAuth();
   const { tenantId } = useTenantId();
+  const { dashboardDomains } = useTenantPortal();
   const [panelOpen, setPanelOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -102,6 +104,7 @@ export default function UserManagement() {
       modules: [...user.modules],
       active: user.active,
       password: '',
+      allowedDashboards: user.allowed_dashboards ?? null,
     });
     setSelectedTemplateId(user.dashboard_template_id || '');
     setSaveError(null);
@@ -151,6 +154,7 @@ export default function UserManagement() {
         modules,
         active: form.active,
         dashboard_template_id: selectedTemplateId || null,
+        allowed_dashboards: modules.includes('dashboards') ? (form.allowedDashboards ?? []) : null,
       };
 
       const { error } = await supabase
@@ -221,6 +225,14 @@ export default function UserManagement() {
           setSaving(false);
           return;
         }
+
+        // Set allowed_dashboards on the newly created profile
+        if (modules.includes('dashboards') && result.userId) {
+          await supabase
+            .from('profiles')
+            .update({ allowed_dashboards: form.allowedDashboards ?? [] })
+            .eq('id', result.userId);
+        }
       } catch (err) {
         setSaveError(
           'Could not reach the admin-create-user Edge Function: ' + err.message
@@ -244,12 +256,15 @@ export default function UserManagement() {
   };
 
   const toggleModule = (key) => {
-    setForm((prev) => ({
-      ...prev,
-      modules: prev.modules.includes(key)
-        ? prev.modules.filter((m) => m !== key)
-        : [...prev.modules, key],
-    }));
+    setForm((prev) => {
+      const removing = prev.modules.includes(key);
+      const updated = { ...prev, modules: removing ? prev.modules.filter((m) => m !== key) : [...prev.modules, key] };
+      // When dashboards is unchecked, clear allowedDashboards; when checked, default to all
+      if (key === 'dashboards') {
+        updated.allowedDashboards = removing ? null : [];
+      }
+      return updated;
+    });
   };
 
   const toggleSite = (jobId) => {
@@ -550,8 +565,54 @@ export default function UserManagement() {
           {(form.role === 'admin' || form.role === 'super-admin') && (
             <div className="bg-purple-50 rounded-lg px-4 py-3">
               <p className="text-sm text-purple-700">
-                Admins automatically have access to all modules.
+                Admins automatically have access to all modules and dashboards.
               </p>
+            </div>
+          )}
+
+          {/* Dashboard Access — shown when dashboards module is enabled for non-admin roles */}
+          {isNonAdminRole && form.modules.includes('dashboards') && dashboardDomains.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-dark-text mb-2">Dashboard Access</label>
+              <label className="flex items-center gap-2.5 cursor-pointer group mb-2">
+                <input
+                  type="checkbox"
+                  checked={Array.isArray(form.allowedDashboards) && form.allowedDashboards.length === 0}
+                  onChange={() => setForm((prev) => ({ ...prev, allowedDashboards: [] }))}
+                  className="w-4 h-4 rounded border-gray-300 text-aa-blue focus:ring-aa-blue"
+                />
+                <span className="text-sm text-dark-text group-hover:text-aa-blue transition-colors font-medium">
+                  All Dashboards
+                </span>
+              </label>
+              <div className="space-y-1.5 pl-1">
+                {dashboardDomains.map((d) => {
+                  const isAll = Array.isArray(form.allowedDashboards) && form.allowedDashboards.length === 0;
+                  const isChecked = isAll || (Array.isArray(form.allowedDashboards) && form.allowedDashboards.includes(d.domain_key));
+                  return (
+                    <label key={d.domain_key} className="flex items-center gap-2.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        disabled={isAll}
+                        onChange={() => {
+                          setForm((prev) => {
+                            const current = prev.allowedDashboards || [];
+                            const next = current.includes(d.domain_key)
+                              ? current.filter((k) => k !== d.domain_key)
+                              : [...current, d.domain_key];
+                            return { ...prev, allowedDashboards: next };
+                          });
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 text-aa-blue focus:ring-aa-blue disabled:opacity-50"
+                      />
+                      <span className={`text-sm transition-colors ${isAll ? 'text-secondary-text' : 'text-dark-text group-hover:text-aa-blue'}`}>
+                        {d.name}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           )}
 

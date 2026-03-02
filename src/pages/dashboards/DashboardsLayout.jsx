@@ -1,5 +1,5 @@
 import { useMemo, useCallback, createContext, useContext, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Settings2, Share2, Bot } from 'lucide-react';
 import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useDashboardConfigContext } from '../../contexts/DashboardConfigContext';
@@ -91,9 +91,12 @@ export default function DashboardsLayout() {
   }, [summary, currentDomain, metricTier, allowedDomains]);
 
   const tabs = useMemo(() => {
-    // Module-on = all pages available; shared dashboards add extras for non-admins
-    let filteredTabs = [...allTabs];
+    // Admins see all tabs; non-admins filtered by allowedDomains from RBAC
+    let filteredTabs = isAdmin
+      ? [...allTabs]
+      : allTabs.filter(t => allowedDomains.includes(t.key));
 
+    // Shared dashboards can add extras for non-admins
     if (!isAdmin && shares.length > 0) {
       const sharedKeys = new Set(shares.map(s => s.dashboard_key));
       const existingKeys = new Set(filteredTabs.map(t => t.key));
@@ -102,7 +105,17 @@ export default function DashboardsLayout() {
     }
 
     return filteredTabs;
-  }, [shares, isAdmin, allTabs]);
+  }, [shares, isAdmin, allTabs, allowedDomains]);
+
+  // Redirect if user lands on /portal/dashboards but default domain (first tab) isn't allowed
+  const location = useLocation();
+  const isDefaultRoute = location.pathname === '/portal/dashboards' || location.pathname === '/portal/dashboards/';
+  const defaultDomainKey = dashboardDomains[0]?.domain_key;
+  const needsRedirect = !isAdmin && isDefaultRoute && tabs.length > 0 && defaultDomainKey && !allowedDomains.includes(defaultDomainKey);
+
+  if (needsRedirect) {
+    return <Navigate to={tabs[0].path} replace />;
+  }
 
   function openShareModal() {
     const tab = allTabs.find(t => t.key === currentDomain);
