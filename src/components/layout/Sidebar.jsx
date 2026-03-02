@@ -5,7 +5,7 @@ import {
   FileBarChart, Presentation, Settings, UserCog, Briefcase,
   BookOpen, Zap, BarChart3, ChevronLeft, ChevronRight, LogOut,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
-  Wrench, ClipboardList, FileText, Package, Star, MessageSquare, Cable, SlidersHorizontal,
+  Wrench, ClipboardList, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
   Lock, TrendingUp,
 } from 'lucide-react';
@@ -29,7 +29,7 @@ const ICON_MAP = {
   FileBarChart, Presentation, Settings, UserCog, Briefcase,
   BookOpen, Zap, BarChart3,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
-  Wrench, ClipboardList, FileText, Package, Star, MessageSquare, Cable, SlidersHorizontal,
+  Wrench, ClipboardList, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
   // kebab-case (used in tenant_workspaces and tenant_tools from DB)
   'clipboard-list': ClipboardList,

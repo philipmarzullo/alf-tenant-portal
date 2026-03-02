@@ -1,12 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Copy, Check } from 'lucide-react';
+import { X, Send, Bot, User, Copy, Check, FileEdit, ShieldCheck, Zap } from 'lucide-react';
 import { chatWithAgent } from '../../agents/api';
+import SimpleMarkdown from './SimpleMarkdown';
+
+const MODE_BADGE = {
+  draft: { label: 'Draft Mode', icon: FileEdit, color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  review: { label: 'Review Required', icon: ShieldCheck, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  automated: { label: 'Automated', icon: Zap, color: 'bg-green-50 text-green-700 border-green-200' },
+};
 
 export default function AgentChatPanel({ open, onClose, agentKey, agentName, context, systemPromptSuffix }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState(null);
+  const [skillModes, setSkillModes] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -16,6 +24,7 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
         role: 'assistant',
         content: `I'm the ${agentName}. I can answer questions about ${context || 'this workspace'}. How can I help?`,
       }]);
+      setSkillModes(null);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open, agentName, context]);
@@ -36,11 +45,21 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
     try {
       const apiMessages = updated
         .filter((m) => m.role === 'user' || m.role === 'assistant')
-        .slice(1) // skip the initial greeting
+        .slice(1)
         .map((m) => ({ role: m.role, content: m.content }));
 
-      const response = await chatWithAgent(agentKey, apiMessages, null, { systemPromptSuffix });
-      setMessages((prev) => [...prev, { role: 'assistant', content: response }]);
+      const response = await chatWithAgent(agentKey, apiMessages, null, {
+        systemPromptSuffix,
+        includeExecutionContext: true,
+      });
+
+      // Handle object response with execution context
+      const text = typeof response === 'string' ? response : response.text;
+      if (typeof response === 'object' && response.execution_context) {
+        setSkillModes(response.execution_context.skills);
+      }
+
+      setMessages((prev) => [...prev, { role: 'assistant', content: text }]);
     } catch (err) {
       setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
     } finally {
@@ -55,6 +74,14 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
   };
 
   if (!open) return null;
+
+  // Determine the dominant execution mode for badge display
+  const dominantMode = skillModes?.length
+    ? skillModes.every(s => s.mode === 'automated') ? 'automated'
+      : skillModes.some(s => s.mode === 'draft') ? 'draft'
+      : 'review'
+    : null;
+  const badge = dominantMode ? MODE_BADGE[dominantMode] : null;
 
   return (
     <>
@@ -71,9 +98,17 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
               <div className="text-[11px] text-secondary-text">{context}</div>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            {badge && (
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${badge.color}`}>
+                <badge.icon size={10} />
+                {badge.label}
+              </span>
+            )}
+            <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -93,7 +128,11 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
                       : 'bg-gray-50 text-dark-text'
                   }`}
                 >
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  {msg.role === 'assistant' ? (
+                    <SimpleMarkdown content={msg.content} />
+                  ) : (
+                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                  )}
                 </div>
                 {msg.role === 'assistant' && i > 0 && (
                   <button

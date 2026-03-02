@@ -77,7 +77,10 @@ export default function ActionPlansPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ dateFrom: '2025-01-01', dateTo: '2025-12-31' }),
+        body: JSON.stringify({
+          dateFrom: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          dateTo: new Date().toISOString().slice(0, 10),
+        }),
       });
 
       const json = await res.json();

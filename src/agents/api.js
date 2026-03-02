@@ -130,7 +130,14 @@ export async function chatWithAgent(agentKey, messages, tenantContext, options =
   }
 
   const result = await response.json();
-  return result.content?.[0]?.text || 'No response generated.';
+  const text = result.content?.[0]?.text || 'No response generated.';
+
+  // If caller wants execution context (skill modes), return an object
+  if (options.includeExecutionContext && result.execution_context) {
+    return { text, execution_context: result.execution_context };
+  }
+
+  return text;
 }
 
 function getMockResponse(agentKey, actionKey, data, tenantContext) {
