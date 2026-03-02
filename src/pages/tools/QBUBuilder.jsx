@@ -10,7 +10,7 @@ import { getQBUHistory, saveQBU, getQBUById, deleteQBU } from '../../data/qbuHis
 import { generateQBUPptx } from '../../utils/qbuPptxTemplate';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useBranding } from '../../contexts/BrandingContext';
-import { useTenantConfig } from '../../contexts/TenantConfigContext';
+// Module-level gating only — all tools features available when module is on
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -245,9 +245,8 @@ export default function QBUBuilder() {
     getQBUHistory().then(setHistory);
   }, []);
   const [generating, setGenerating] = useState(false);
-  const { hasAction } = useTenantConfig();
-  const hasCustomIntake = hasAction('tools', 'qbu-custom-intake');
-  const [mode, setMode] = useState(hasCustomIntake ? 'upload' : 'manual');
+  const hasCustomIntake = true; // all features available when module is on
+  const [mode, setMode] = useState('upload');
   const [excelFile, setExcelFile] = useState(null);
   const [excelParsed, setExcelParsed] = useState(false);
   const [parseWarnings, setParseWarnings] = useState([]);

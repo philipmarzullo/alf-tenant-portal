@@ -42,56 +42,12 @@ export function TenantConfigProvider({ children }) {
     return () => { cancelled = true; };
   }, [realUser?.tenant_id]);
 
-  // Is the module present in tenant config at all?
+  // Module-on / module-off — the only permission check needed.
+  // If a module is present in module_config, all its pages and actions are available.
   const tenantHasModule = useCallback(
     (moduleKey) => {
-      // If no config loaded yet, allow everything (backwards compat)
-      if (!moduleConfig) return true;
+      if (!moduleConfig) return true; // backwards compat
       return moduleKey in moduleConfig;
-    },
-    [moduleConfig],
-  );
-
-  // Is a specific page enabled for this module?
-  const hasPage = useCallback(
-    (moduleKey, pageKey) => {
-      if (!moduleConfig) return true; // backwards compat
-      const mod = moduleConfig[moduleKey];
-      if (!mod) return false;
-      return mod.pages?.includes(pageKey) ?? false;
-    },
-    [moduleConfig],
-  );
-
-  // Is a specific agent action enabled for this module?
-  const hasAction = useCallback(
-    (moduleKey, actionKey) => {
-      if (!moduleConfig) return true; // backwards compat
-      const mod = moduleConfig[moduleKey];
-      if (!mod) return false;
-      return mod.actions?.includes(actionKey) ?? false;
-    },
-    [moduleConfig],
-  );
-
-  // Returns the array of enabled page keys for a module
-  const getEnabledPages = useCallback(
-    (moduleKey) => {
-      if (!moduleConfig) return null; // null = show all (backwards compat)
-      const mod = moduleConfig[moduleKey];
-      if (!mod) return [];
-      return mod.pages || [];
-    },
-    [moduleConfig],
-  );
-
-  // Returns the array of enabled action keys for a module
-  const getEnabledActions = useCallback(
-    (moduleKey) => {
-      if (!moduleConfig) return null;
-      const mod = moduleConfig[moduleKey];
-      if (!mod) return [];
-      return mod.actions || [];
     },
     [moduleConfig],
   );
@@ -102,12 +58,8 @@ export function TenantConfigProvider({ children }) {
       tenantPlan,
       configLoading,
       tenantHasModule,
-      hasPage,
-      hasAction,
-      getEnabledPages,
-      getEnabledActions,
     }),
-    [moduleConfig, tenantPlan, configLoading, tenantHasModule, hasPage, hasAction, getEnabledPages, getEnabledActions],
+    [moduleConfig, tenantPlan, configLoading, tenantHasModule],
   );
 
   return (

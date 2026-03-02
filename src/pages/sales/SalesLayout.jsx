@@ -1,11 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Bot } from 'lucide-react';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
-import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { MODULE_REGISTRY } from '../../data/moduleRegistry';
 
-const ALL_TABS = MODULE_REGISTRY.sales.pages.map((p) => ({
+const tabs = MODULE_REGISTRY.sales.pages.map((p) => ({
   key: p.key,
   label: p.label,
   path: p.path,
@@ -13,13 +12,6 @@ const ALL_TABS = MODULE_REGISTRY.sales.pages.map((p) => ({
 
 export default function SalesLayout() {
   const [chatOpen, setChatOpen] = useState(false);
-  const { getEnabledPages } = useTenantConfig();
-
-  const tabs = useMemo(() => {
-    const enabledKeys = getEnabledPages('sales');
-    if (!enabledKeys) return ALL_TABS;
-    return ALL_TABS.filter((t) => enabledKeys.includes(t.key));
-  }, [getEnabledPages]);
 
   return (
     <div>

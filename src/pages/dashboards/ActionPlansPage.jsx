@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, Zap, CheckCircle, Clock, AlertTriangle, XCircle, ChevronDown, ChevronRight, BarChart3 } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
-import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useTenantId } from '../../contexts/TenantIdContext';
+import { useUser } from '../../contexts/UserContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const PRIORITY_BADGE = {
@@ -27,9 +27,9 @@ const STATUS_TRANSITIONS = {
 };
 
 export default function ActionPlansPage() {
-  const { hasAction } = useTenantConfig();
   const { tenantId } = useTenantId();
-  const canGenerate = hasAction('dashboards', 'generateActionPlan');
+  const { isAdmin } = useUser();
+  const canGenerate = isAdmin;
 
   const [actions, setActions] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -5,7 +5,6 @@ import { getFreshToken } from '../../lib/supabase';
 import { DEPT_COLORS } from '../../data/constants';
 import MetricCard from '../../components/shared/MetricCard';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
-import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useUser } from '../../contexts/UserContext';
 import { useTenantId } from '../../contexts/TenantIdContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
@@ -77,10 +76,9 @@ async function sopAnalysisFetch(path, body) {
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function AutomationInsightsPage() {
-  const { hasAction } = useTenantConfig();
   const { isAdmin } = useUser();
   const { tenantId } = useTenantId();
-  const canSelfService = isAdmin && hasAction('automation', 'selfServicePipeline');
+  const canSelfService = isAdmin;
 
   const [analyses, setAnalyses] = useState([]);
   const [roadmaps, setRoadmaps] = useState([]);

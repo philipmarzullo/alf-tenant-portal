@@ -18,7 +18,7 @@ export function useDashboardCustomizeContext() {
 }
 
 export default function DashboardsLayout() {
-  const { getEnabledPages, tenantHasModule } = useTenantConfig();
+  const { tenantHasModule } = useTenantConfig();
   const { shares } = useDashboardConfigContext();
   const { isAdmin } = useUser();
   const { metricTier, allowedDomains } = useRBAC();
@@ -91,10 +91,9 @@ export default function DashboardsLayout() {
   }, [summary, currentDomain, metricTier, allowedDomains]);
 
   const tabs = useMemo(() => {
-    const enabledKeys = getEnabledPages('dashboards');
-    let filteredTabs = enabledKeys ? allTabs.filter((t) => enabledKeys.includes(t.key)) : allTabs;
+    // Module-on = all pages available; shared dashboards add extras for non-admins
+    let filteredTabs = [...allTabs];
 
-    // Add shared tabs for non-admin users
     if (!isAdmin && shares.length > 0) {
       const sharedKeys = new Set(shares.map(s => s.dashboard_key));
       const existingKeys = new Set(filteredTabs.map(t => t.key));
@@ -103,7 +102,7 @@ export default function DashboardsLayout() {
     }
 
     return filteredTabs;
-  }, [getEnabledPages, shares, isAdmin, allTabs]);
+  }, [shares, isAdmin, allTabs]);
 
   function openShareModal() {
     const tab = allTabs.find(t => t.key === currentDomain);

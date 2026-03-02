@@ -3,11 +3,11 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, DollarSign, ShoppingCart, HardHat,
   FileBarChart, Presentation, Settings, UserCog, Briefcase,
-  BookOpen, Zap, BarChart3, ChevronLeft, ChevronRight, LogOut,
+  BookOpen, Zap, BarChart3, ChevronLeft, ChevronRight, ChevronDown, LogOut,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
   Wrench, ClipboardList, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
-  Lock, TrendingUp,
+  Lock, TrendingUp, Layers, Bot,
 } from 'lucide-react';
 import { STATIC_NAV_GROUPS } from '../../data/constants';
 import { MODULE_REGISTRY } from '../../data/moduleRegistry';
@@ -31,6 +31,7 @@ const ICON_MAP = {
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
   Wrench, ClipboardList, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
+  Layers, Bot,
   // kebab-case (used in tenant_workspaces and tenant_tools from DB)
   'clipboard-list': ClipboardList,
   'users': Users,
@@ -63,16 +64,34 @@ const ICON_MAP = {
   'trending-up': TrendingUp,
 };
 
+// Tools that produce real deliverables (PPTX, etc.)
+const PRIMARY_TOOLS = new Set(['qbu', 'salesDeck']);
+
+// Admin items that belong in the Automation sub-menu
+const AUTOMATION_ADMIN_KEYS = new Set(['automation', 'sop-builder', 'automation-preferences']);
+const AUTOMATION_PATHS = new Set([
+  '/portal/admin/automation',
+  '/portal/tools/sop-builder',
+  '/portal/admin/automation-preferences',
+]);
+
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {
   const location = useLocation();
   const { currentUser, isSuperAdmin, isAdmin } = useUser();
   const { signOut } = useAuth();
-  const { tenantHasModule, hasPage } = useTenantConfig();
+  const { tenantHasModule } = useTenantConfig();
   const brand = useBranding();
   const { customTools } = useCustomTools();
   const { workspaces, tools, getWorkspacePath, getToolPath } = useTenantPortal();
   const { hasFeature, requiredTierLabel } = useTierAccess();
   const [upgradeModal, setUpgradeModal] = useState(null);
+
+  // Collapsible state — workspaces open if any workspace is active
+  const workspaceActive = workspaces.some(ws => location.pathname.startsWith(getWorkspacePath(ws.department_key)));
+  const [workspacesOpen, setWorkspacesOpen] = useState(workspaceActive);
+  const automationActive = AUTOMATION_PATHS.has(location.pathname) || [...AUTOMATION_PATHS].some(p => location.pathname.startsWith(p));
+  const [automationOpen, setAutomationOpen] = useState(automationActive);
+  const [quickTemplatesOpen, setQuickTemplatesOpen] = useState(false);
 
   const isActive = (path) => {
     if (path === '/portal') return location.pathname === '/portal';
@@ -91,18 +110,22 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     })),
   }), [workspaces, getWorkspacePath]);
 
-  // Build dynamic TOOLS group from tenant_tools
-  const dynamicTools = useMemo(() => ({
-    group: 'TOOLS',
-    items: tools.map((t) => ({
+  // Build dynamic TOOLS group from tenant_tools — split into primary + templates
+  const dynamicTools = useMemo(() => {
+    const allTools = tools.map((t) => ({
       label: t.name,
       path: getToolPath(t.tool_key),
       icon: t.icon || 'Wrench',
       moduleKey: 'tools',
       pageKey: t.tool_key,
       _dynamic: true,
-    })),
-  }), [tools, getToolPath]);
+      _primary: PRIMARY_TOOLS.has(t.tool_key),
+    }));
+    return {
+      group: 'TOOLS',
+      items: allTools,
+    };
+  }, [tools, getToolPath]);
 
   // Assemble full nav: COMMAND CENTER, dynamic WORKSPACES, ANALYTICS, dynamic TOOLS, ADMIN
   const allNavGroups = useMemo(() => {
@@ -113,7 +136,6 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   }, [dynamicWorkspaces, dynamicTools]);
 
   // Filter nav items by tenant config + user permissions.
-  // Tier-locked items are kept visible (grayed + lock icon) instead of hidden.
   const filteredNav = allNavGroups
     .map((group) => {
       let items = group.items
@@ -131,13 +153,12 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
 
           // Static items: check tenant module config
           if (!tenantHasModule(item.moduleKey)) {
-            // Module not enabled — is it locked by tier? Show it locked.
             if (!hasFeature(item.moduleKey)) {
               return { ...item, _tierLocked: true };
             }
-            return null; // Not tier-locked, just admin-disabled — hide
+            return null;
           }
-          if (item.pageKey && !hasPage(item.moduleKey, item.pageKey)) return null;
+          // Per-page gating removed — if module is on, all pages are available
           if (isAdmin) return item;
           return currentUser?.modules?.includes(item.moduleKey) ? item : null;
         })
@@ -176,6 +197,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
           icon: t.icon || 'Wrench',
           moduleKey: 'tools',
           _custom: true,
+          _primary: true, // custom tools are primary
         }));
         items = [...items, ...customItems];
       }
@@ -188,8 +210,174 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     ? currentUser.name.split(' ').map((n) => n[0]).join('').toUpperCase()
     : '?';
 
-  // On mobile: always show full-width sidebar (not collapsed)
   const showCollapsed = !isMobile && collapsed;
+
+  // --- Rendering helpers ---
+
+  function renderNavItem(item, indent = false) {
+    const Icon = ICON_MAP[item.icon];
+
+    if (item._tierLocked) {
+      return (
+        <button
+          key={item.path || item._lockedModule}
+          onClick={() => setUpgradeModal({
+            featureLabel: item.label,
+            requiredTierLabel: requiredTierLabel(item._lockedModule || item.moduleKey),
+          })}
+          className={`flex items-center gap-3 ${indent ? 'pl-8 pr-4' : 'px-4'} py-2 mx-2 rounded-md text-sm text-white/20 cursor-pointer hover:bg-white/5 transition-colors w-full text-left`}
+        >
+          {Icon && <Icon size={indent ? 15 : 18} />}
+          {!showCollapsed && (
+            <>
+              <span className="flex-1">{item.label}</span>
+              <Lock size={12} className="text-white/15" />
+            </>
+          )}
+        </button>
+      );
+    }
+
+    const active = isActive(item.path);
+    return (
+      <NavLink
+        key={item.path}
+        to={item.path}
+        onClick={() => isMobile && onMobileClose?.()}
+        className={`flex items-center gap-3 ${indent ? 'pl-8 pr-4' : 'px-4'} py-2 mx-2 rounded-md text-sm transition-colors relative ${
+          active
+            ? 'bg-white/10 text-white'
+            : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+        }`}
+      >
+        {active && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r bg-aa-blue" />
+        )}
+        {Icon && <Icon size={indent ? 15 : 18} />}
+        {!showCollapsed && <span>{item.label}</span>}
+      </NavLink>
+    );
+  }
+
+  function renderCollapsibleHeader(label, icon, isOpen, onToggleOpen, hasActiveChild) {
+    const Icon = ICON_MAP[icon] || Layers;
+    return (
+      <button
+        onClick={onToggleOpen}
+        className={`flex items-center gap-3 px-4 py-2 mx-2 rounded-md text-sm transition-colors w-full text-left ${
+          hasActiveChild
+            ? 'text-white/80'
+            : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+        }`}
+      >
+        <Icon size={18} />
+        {!showCollapsed && (
+          <>
+            <span className="flex-1">{label}</span>
+            <ChevronDown
+              size={14}
+              className={`text-white/30 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`}
+            />
+          </>
+        )}
+      </button>
+    );
+  }
+
+  function renderGroup(group) {
+    // --- WORKSPACES: collapsible ---
+    if (group.group === 'WORKSPACES') {
+      const anyActive = group.items.some(item => !item._tierLocked && isActive(item.path));
+      return (
+        <div key={group.group} className="mb-4">
+          {!showCollapsed && (
+            <div className="px-4 mb-2 text-[11px] font-semibold tracking-wider text-white/30 uppercase">
+              {group.group}
+            </div>
+          )}
+          {renderCollapsibleHeader('Workspaces', 'Briefcase', workspacesOpen, () => setWorkspacesOpen(!workspacesOpen), anyActive)}
+          {workspacesOpen && (
+            <div className="mt-0.5">
+              {group.items.map(item => renderNavItem(item, true))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- TOOLS: split primary vs quick templates ---
+    if (group.group === 'TOOLS') {
+      const primaryTools = group.items.filter(i => i._primary);
+      const templateTools = group.items.filter(i => !i._primary && !i._tierLocked);
+      const lockedTools = group.items.filter(i => i._tierLocked);
+
+      return (
+        <div key={group.group} className="mb-4">
+          {!showCollapsed && (
+            <div className="px-4 mb-2 text-[11px] font-semibold tracking-wider text-white/30 uppercase">
+              {group.group}
+            </div>
+          )}
+          {/* Primary tools (real output) — always visible */}
+          {primaryTools.map(item => renderNavItem(item))}
+          {/* Locked tools */}
+          {lockedTools.map(item => renderNavItem(item))}
+          {/* Quick templates — collapsible */}
+          {templateTools.length > 0 && (
+            <>
+              {renderCollapsibleHeader('Quick Templates', 'FileText', quickTemplatesOpen, () => setQuickTemplatesOpen(!quickTemplatesOpen), templateTools.some(i => isActive(i.path)))}
+              {quickTemplatesOpen && (
+                <div className="mt-0.5">
+                  {templateTools.map(item => renderNavItem(item, true))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // --- ADMIN: split automation sub-menu ---
+    if (group.group === 'ADMIN') {
+      const automationItems = group.items.filter(i => AUTOMATION_PATHS.has(i.path));
+      const otherItems = group.items.filter(i => !AUTOMATION_PATHS.has(i.path));
+
+      return (
+        <div key={group.group} className="mb-4">
+          {!showCollapsed && (
+            <div className="px-4 mb-2 text-[11px] font-semibold tracking-wider text-white/30 uppercase">
+              {group.group}
+            </div>
+          )}
+          {/* Non-automation admin items */}
+          {otherItems.map(item => renderNavItem(item))}
+          {/* Automation sub-menu */}
+          {automationItems.length > 0 && (
+            <>
+              {renderCollapsibleHeader('Automation', 'Zap', automationOpen, () => setAutomationOpen(!automationOpen), automationItems.some(i => !i._tierLocked && isActive(i.path)))}
+              {automationOpen && (
+                <div className="mt-0.5">
+                  {automationItems.map(item => renderNavItem(item, true))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // --- Default group rendering ---
+    return (
+      <div key={group.group} className="mb-4">
+        {!showCollapsed && (
+          <div className="px-4 mb-2 text-[11px] font-semibold tracking-wider text-white/30 uppercase">
+            {group.group}
+          </div>
+        )}
+        {group.items.map(item => renderNavItem(item))}
+      </div>
+    );
+  }
 
   const sidebar = (
     <aside
@@ -228,59 +416,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4">
-        {filteredNav.map((group) => (
-          <div key={group.group} className="mb-4">
-            {!showCollapsed && (
-              <div className="px-4 mb-2 text-[11px] font-semibold tracking-wider text-white/30 uppercase">
-                {group.group}
-              </div>
-            )}
-            {group.items.map((item) => {
-              const Icon = ICON_MAP[item.icon];
-
-              if (item._tierLocked) {
-                return (
-                  <button
-                    key={item.path || item._lockedModule}
-                    onClick={() => setUpgradeModal({
-                      featureLabel: item.label,
-                      requiredTierLabel: requiredTierLabel(item._lockedModule || item.moduleKey),
-                    })}
-                    className="flex items-center gap-3 px-4 py-2.5 mx-2 rounded-md text-sm text-white/20 cursor-pointer hover:bg-white/5 transition-colors w-full text-left"
-                  >
-                    {Icon && <Icon size={18} />}
-                    {!showCollapsed && (
-                      <>
-                        <span className="flex-1">{item.label}</span>
-                        <Lock size={12} className="text-white/15" />
-                      </>
-                    )}
-                  </button>
-                );
-              }
-
-              const active = isActive(item.path);
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => isMobile && onMobileClose?.()}
-                  className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-md text-sm transition-colors relative ${
-                    active
-                      ? 'bg-white/10 text-white'
-                      : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-                  }`}
-                >
-                  {active && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r bg-aa-blue" />
-                  )}
-                  {Icon && <Icon size={18} />}
-                  {!showCollapsed && <span>{item.label}</span>}
-                </NavLink>
-              );
-            })}
-          </div>
-        ))}
+        {filteredNav.map(group => renderGroup(group))}
       </nav>
 
       {/* User info + logout */}
@@ -325,7 +461,6 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
 
   return (
     <>
-      {/* Backdrop — mobile only */}
       {isMobile && mobileOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40"

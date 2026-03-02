@@ -7,7 +7,6 @@ import PageWrapper from './components/layout/PageWrapper';
 import useMediaQuery from './hooks/useMediaQuery';
 import { useUser } from './contexts/UserContext';
 import { useAuth } from './contexts/AuthContext';
-import { useTenantConfig } from './contexts/TenantConfigContext';
 import { useBranding } from './contexts/BrandingContext';
 import { useTenantPortal } from './contexts/TenantPortalContext';
 import AlfMark from './components/shared/AlfMark';
@@ -187,9 +186,8 @@ function AuthGate({ children }) {
   return children;
 }
 
-function ProtectedRoute({ moduleKey, pageKey, adminOnly, superAdminOnly, children }) {
+function ProtectedRoute({ moduleKey, adminOnly, superAdminOnly, children }) {
   const { hasModule, isAdmin, isSuperAdmin } = useUser();
-  const { hasPage } = useTenantConfig();
   const { hasFeature, requiredTierLabel } = useTierAccess();
 
   if (superAdminOnly && !isSuperAdmin) return <Navigate to="/portal" replace />;
@@ -201,7 +199,6 @@ function ProtectedRoute({ moduleKey, pageKey, adminOnly, superAdminOnly, childre
   }
 
   if (moduleKey && !hasModule(moduleKey)) return <Navigate to="/portal" replace />;
-  if (moduleKey && pageKey && !hasPage(moduleKey, pageKey)) return <Navigate to="/portal" replace />;
   return children;
 }
 
@@ -265,11 +262,11 @@ export default function App() {
                       }
                     >
                       <Route index element={<HROverview />} />
-                      <Route path="benefits" element={<ProtectedRoute moduleKey="hr" pageKey="benefits"><Benefits /></ProtectedRoute>} />
-                      <Route path="pay-rates" element={<ProtectedRoute moduleKey="hr" pageKey="pay-rates"><PayRateChanges /></ProtectedRoute>} />
-                      <Route path="leave" element={<ProtectedRoute moduleKey="hr" pageKey="leave"><LeaveManagement /></ProtectedRoute>} />
-                      <Route path="unemployment" element={<ProtectedRoute moduleKey="hr" pageKey="unemployment"><Unemployment /></ProtectedRoute>} />
-                      <Route path="union-calendar" element={<ProtectedRoute moduleKey="hr" pageKey="union-calendar"><UnionCalendar /></ProtectedRoute>} />
+                      <Route path="benefits" element={<ProtectedRoute moduleKey="hr"><Benefits /></ProtectedRoute>} />
+                      <Route path="pay-rates" element={<ProtectedRoute moduleKey="hr"><PayRateChanges /></ProtectedRoute>} />
+                      <Route path="leave" element={<ProtectedRoute moduleKey="hr"><LeaveManagement /></ProtectedRoute>} />
+                      <Route path="unemployment" element={<ProtectedRoute moduleKey="hr"><Unemployment /></ProtectedRoute>} />
+                      <Route path="union-calendar" element={<ProtectedRoute moduleKey="hr"><UnionCalendar /></ProtectedRoute>} />
                     </Route>
 
                     <Route
@@ -308,9 +305,9 @@ export default function App() {
                       }
                     >
                       <Route index element={<SalesOverview />} />
-                      <Route path="contracts" element={<ProtectedRoute moduleKey="sales" pageKey="contracts"><SalesContracts /></ProtectedRoute>} />
-                      <Route path="apc" element={<ProtectedRoute moduleKey="sales" pageKey="apc"><APCTracker /></ProtectedRoute>} />
-                      <Route path="tbi" element={<ProtectedRoute moduleKey="sales" pageKey="tbi"><TBITracker /></ProtectedRoute>} />
+                      <Route path="contracts" element={<ProtectedRoute moduleKey="sales"><SalesContracts /></ProtectedRoute>} />
+                      <Route path="apc" element={<ProtectedRoute moduleKey="sales"><APCTracker /></ProtectedRoute>} />
+                      <Route path="tbi" element={<ProtectedRoute moduleKey="sales"><TBITracker /></ProtectedRoute>} />
                     </Route>
 
                     <Route
@@ -338,11 +335,11 @@ export default function App() {
                       }
                     />
 
-                    {/* Tools — gated by "tools" module + per-tool pageKey */}
+                    {/* Tools — gated by "tools" module */}
                     <Route
                       path="tools/qbu"
                       element={
-                        <ProtectedRoute moduleKey="tools" pageKey="quarterly-review">
+                        <ProtectedRoute moduleKey="tools">
                           <QBUBuilder />
                         </ProtectedRoute>
                       }
@@ -350,7 +347,7 @@ export default function App() {
                     <Route
                       path="tools/sales-deck"
                       element={
-                        <ProtectedRoute moduleKey="tools" pageKey="proposal">
+                        <ProtectedRoute moduleKey="tools">
                           <SalesDeckBuilder />
                         </ProtectedRoute>
                       }
@@ -358,7 +355,7 @@ export default function App() {
                     <Route
                       path="tools/transition-plan"
                       element={
-                        <ProtectedRoute moduleKey="tools" pageKey="transition-plan">
+                        <ProtectedRoute moduleKey="tools">
                           <ToolPage toolKey="transitionPlan" />
                         </ProtectedRoute>
                       }
@@ -366,7 +363,7 @@ export default function App() {
                     <Route
                       path="tools/budget"
                       element={
-                        <ProtectedRoute moduleKey="tools" pageKey="budget">
+                        <ProtectedRoute moduleKey="tools">
                           <ToolPage toolKey="budget" />
                         </ProtectedRoute>
                       }
@@ -374,7 +371,7 @@ export default function App() {
                     <Route
                       path="tools/incident-report"
                       element={
-                        <ProtectedRoute moduleKey="tools" pageKey="incident-report">
+                        <ProtectedRoute moduleKey="tools">
                           <ToolPage toolKey="incidentReport" />
                         </ProtectedRoute>
                       }
@@ -382,7 +379,7 @@ export default function App() {
                     <Route
                       path="tools/training-plan"
                       element={
-                        <ProtectedRoute moduleKey="tools" pageKey="training-plan">
+                        <ProtectedRoute moduleKey="tools">
                           <ToolPage toolKey="trainingPlan" />
                         </ProtectedRoute>
                       }
