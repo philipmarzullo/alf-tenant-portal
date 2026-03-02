@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, Bot, DollarSign, TrendingUp, Clock, HardHat,
   ClipboardList, Shield, CheckCircle, Loader2, ArrowRight,
-  Cpu, Zap, BarChart3, Database, Lock,
+  Cpu, Zap, BarChart3, Database, Lock, FileText,
 } from 'lucide-react';
 import MetricCard from '../components/shared/MetricCard';
 import TaskCard from '../components/shared/TaskCard';
@@ -20,6 +20,7 @@ import { useTenantPortal } from '../contexts/TenantPortalContext';
 import useHomeSummary from '../hooks/useHomeSummary';
 import useOpsIntelligence from '../hooks/useOpsIntelligence';
 import { HEALTH_THRESHOLDS, computeHealth } from '../data/healthThresholds';
+import { MODULE_DEFINITIONS, TOOL_MODULE_KEYS } from '../data/users';
 
 // Map icon string identifiers from DB to lucide components for domain cards
 const DOMAIN_ICON_MAP = {
@@ -61,6 +62,36 @@ const DOMAIN_KPI_BY_TIER = {
   },
 };
 
+// Workspace module keys — used to detect tool-only users
+const WORKSPACE_KEYS = new Set(
+  MODULE_DEFINITIONS.filter(m => m.group === 'WORKSPACES').map(m => m.key)
+);
+
+// Info for tool cards shown to tool-only users
+const TOOL_INFO = {
+  qbu: {
+    label: 'Quarterly Review Builder',
+    description: 'Build data-driven quarterly business reviews',
+    icon: BarChart3,
+    color: '#3B82F6',
+    path: '/portal/tools/qbu',
+  },
+  salesDeck: {
+    label: 'Proposal Builder',
+    description: 'Create professional sales proposals and presentations',
+    icon: FileText,
+    color: '#8B5CF6',
+    path: '/portal/tools/sales-deck',
+  },
+  'sop-builder': {
+    label: 'SOP Builder',
+    description: 'Create, upload, and manage Standard Operating Procedures',
+    icon: ClipboardList,
+    color: '#059669',
+    path: '/portal/tools/sop-builder',
+  },
+};
+
 const STATUS_STYLES = {
   green:  { dot: 'bg-green-500', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
   yellow: { dot: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
@@ -88,7 +119,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
   const [analyticsChatOpen, setAnalyticsChatOpen] = useState(false);
-  const { isAdmin } = useUser();
+  const { isAdmin, currentUser } = useUser();
   const { tenantHasModule } = useTenantConfig();
   const brand = useBranding();
   const { metricTier, rbacLoading, canSeeDomain } = useRBAC();
@@ -163,6 +194,69 @@ export default function Dashboard() {
       <div className="text-center py-20">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
           <p className="text-sm text-red-700">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Tool-only users: no workspace modules, only tool modules
+  const isToolOnlyUser = currentUser && !isAdmin &&
+    !currentUser.modules?.some(m => WORKSPACE_KEYS.has(m));
+
+  if (isToolOnlyUser) {
+    const userTools = (currentUser.modules || [])
+      .filter(m => TOOL_MODULE_KEYS.has(m))
+      .map(m => TOOL_INFO[m])
+      .filter(Boolean);
+
+    return (
+      <div>
+        <OnboardingBanner />
+        <div className="mb-6">
+          <h1 className="text-2xl font-light text-dark-text">{pageTitle}</h1>
+          {currentUser.full_name && (
+            <p className="text-sm text-secondary-text mt-1">
+              Welcome, {currentUser.full_name.split(' ')[0]}
+            </p>
+          )}
+        </div>
+
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
+            Your Tools
+          </h2>
+          {userTools.length > 0 ? (
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {userTools.map(tool => (
+                <button
+                  key={tool.path}
+                  onClick={() => navigate(tool.path)}
+                  className="text-left group"
+                >
+                  <div className="bg-white rounded-lg border border-gray-200 p-6 hover:border-gray-300 hover:shadow-sm transition-all">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 rounded-lg" style={{ backgroundColor: `${tool.color}10` }}>
+                        <tool.icon size={24} style={{ color: tool.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-base font-medium text-dark-text mb-1">{tool.label}</div>
+                        <div className="text-sm text-secondary-text">{tool.description}</div>
+                        <div className="mt-3 flex items-center gap-1 text-xs text-secondary-text group-hover:text-aa-blue transition-colors">
+                          Open tool <ArrowRight size={12} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+              <p className="text-sm text-secondary-text">
+                No tools have been assigned to your account yet. Contact your administrator for access.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
