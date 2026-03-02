@@ -150,10 +150,19 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     .map((group) => {
       let items = group.items
         .map((item) => {
-          if (!item.moduleKey) return item;
+          // Role-gated items — check before moduleKey
           if (item.superAdminOnly) return isSuperAdmin ? item : null;
+          if (item.adminOnly) return isAdmin ? item : null;
+
+          if (!item.moduleKey) {
+            // Items in the admin section default to admin-only
+            if (group.sectionKey === 'admin' || group.group === 'ADMIN') {
+              return isAdmin ? item : null;
+            }
+            return item;
+          }
           if (item.moduleKey === 'superAdmin') return isSuperAdmin ? item : null;
-          if (item.moduleKey === 'admin' || item.adminOnly) return isAdmin ? item : null;
+          if (item.moduleKey === 'admin') return isAdmin ? item : null;
 
           // Dynamic items from DB are already tenant-gated
           if (item._dynamic) {
