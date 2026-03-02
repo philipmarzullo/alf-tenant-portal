@@ -1,17 +1,15 @@
-// Common facility services departments — always shown as options
+// 10 most common departments in companies with 20–500 employees
 export const COMMON_DEPARTMENTS = [
   { key: 'operations', label: 'Operations' },
-  { key: 'janitorial', label: 'Janitorial' },
-  { key: 'maintenance', label: 'Maintenance' },
-  { key: 'grounds', label: 'Grounds & Landscaping' },
-  { key: 'safety', label: 'Safety' },
-  { key: 'quality', label: 'Quality Assurance' },
   { key: 'hr', label: 'Human Resources' },
-  { key: 'finance', label: 'Finance' },
-  { key: 'training', label: 'Training' },
-  { key: 'purchasing', label: 'Purchasing & Supply Chain' },
-  { key: 'environmental', label: 'Environmental Services' },
+  { key: 'finance', label: 'Finance & Accounting' },
+  { key: 'sales', label: 'Sales' },
+  { key: 'marketing', label: 'Marketing' },
+  { key: 'it', label: 'IT / Technology' },
+  { key: 'customer-service', label: 'Customer Service' },
   { key: 'admin', label: 'Administration' },
+  { key: 'logistics', label: 'Logistics & Supply Chain' },
+  { key: 'compliance', label: 'Legal & Compliance' },
 ];
 
 // SOP roles — what the SOP does within a department

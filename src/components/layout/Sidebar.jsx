@@ -63,7 +63,7 @@ const ICON_MAP = {
 };
 
 // Tools that produce real deliverables (PPTX, etc.)
-const PRIMARY_TOOLS = new Set(['qbu', 'salesDeck']);
+const PRIMARY_TOOLS = new Set(['qbu', 'salesDeck', 'sop-builder']);
 
 
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {
