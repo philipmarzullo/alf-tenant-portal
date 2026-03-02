@@ -400,7 +400,7 @@ export default function App() {
                     <Route
                       path="tools/sop-builder"
                       element={
-                        <ProtectedRoute moduleKey="automation">
+                        <ProtectedRoute moduleKey="tools">
                           <SOPBuilder />
                         </ProtectedRoute>
                       }
@@ -408,7 +408,7 @@ export default function App() {
                     <Route
                       path="tools/sop-builder/new"
                       element={
-                        <ProtectedRoute moduleKey="automation">
+                        <ProtectedRoute moduleKey="tools">
                           <SOPEditorPage />
                         </ProtectedRoute>
                       }
@@ -416,7 +416,7 @@ export default function App() {
                     <Route
                       path="tools/sop-builder/edit/:id"
                       element={
-                        <ProtectedRoute moduleKey="automation">
+                        <ProtectedRoute moduleKey="tools">
                           <SOPEditorPage />
                         </ProtectedRoute>
                       }

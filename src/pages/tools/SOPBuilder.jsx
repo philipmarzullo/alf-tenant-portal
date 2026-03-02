@@ -8,6 +8,7 @@ import { buildDocumentPath } from '../../utils/storagePaths';
 import { useTenantId } from '../../contexts/TenantIdContext';
 import { useTenantPortal } from '../../contexts/TenantPortalContext';
 import DeptBadge from '../../components/shared/DeptBadge';
+import { SOP_ROLES, buildDepartmentList } from '../../data/sopConstants';
 
 const STATUS_BADGES = {
   draft: { label: 'Draft', cls: 'bg-gray-100 text-gray-600' },
@@ -28,7 +29,9 @@ export default function SOPBuilder() {
 
   // Upload modal state
   const [showUpload, setShowUpload] = useState(false);
-  const [uploadDept, setUploadDept] = useState(workspaces[0]?.department_key || 'ops');
+  const [uploadDept, setUploadDept] = useState('operations');
+  const [uploadRole, setUploadRole] = useState('standard-procedure');
+  const [customDept, setCustomDept] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
@@ -36,11 +39,9 @@ export default function SOPBuilder() {
   const [deleting, setDeleting] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const departments = useMemo(() => [
-    ...workspaces.map(ws => ({ key: ws.department_key, label: ws.name })),
-    { key: 'admin', label: 'Admin' },
-    { key: 'general', label: 'General' },
-  ], [workspaces]);
+  const departments = useMemo(() => buildDepartmentList(workspaces), [workspaces]);
+
+  const effectiveDept = uploadDept === '__custom__' ? customDept.trim().toLowerCase().replace(/\s+/g, '-') : uploadDept;
 
   useEffect(() => {
     loadDocuments();
@@ -108,7 +109,8 @@ export default function SOPBuilder() {
         const fileType = file.name.toLowerCase().endsWith('.pdf') ? 'pdf'
           : file.name.toLowerCase().endsWith('.docx') ? 'docx' : 'txt';
 
-        const storagePath = buildDocumentPath(tenantId, uploadDept, file.name);
+        const dept = effectiveDept || 'operations';
+        const storagePath = buildDocumentPath(tenantId, dept, file.name);
         const { error: uploadErr } = await supabase.storage
           .from('tenant-documents')
           .upload(storagePath, file);
@@ -119,7 +121,7 @@ export default function SOPBuilder() {
           .from('tenant_documents')
           .insert({
             tenant_id: tenantId,
-            department: uploadDept,
+            department: dept,
             doc_type: 'sop',
             file_name: file.name,
             file_type: fileType,
@@ -131,6 +133,7 @@ export default function SOPBuilder() {
             status: result.warning ? 'failed' : 'extracted',
             status_detail: result.warning || null,
             created_via: 'upload',
+            structured_content: { sop_role: uploadRole },
           });
 
         if (insertErr) throw insertErr;
@@ -262,17 +265,41 @@ export default function SOPBuilder() {
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
               <h2 className="text-lg font-semibold text-dark-text mb-4">Upload SOP Documents</h2>
 
-              <div className="mb-4">
-                <label className="block text-xs font-medium text-secondary-text mb-1">Department</label>
-                <select
-                  value={uploadDept}
-                  onChange={(e) => setUploadDept(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue bg-white"
-                >
-                  {departments.map((d) => (
-                    <option key={d.key} value={d.key}>{d.label}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="block text-xs font-medium text-secondary-text mb-1">Department</label>
+                  <select
+                    value={uploadDept}
+                    onChange={(e) => setUploadDept(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue bg-white"
+                  >
+                    {departments.map((d) => (
+                      <option key={d.key} value={d.key}>{d.label}</option>
+                    ))}
+                    <option value="__custom__">+ Custom Department</option>
+                  </select>
+                  {uploadDept === '__custom__' && (
+                    <input
+                      type="text"
+                      value={customDept}
+                      onChange={(e) => setCustomDept(e.target.value)}
+                      placeholder="Enter department name..."
+                      className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-secondary-text mb-1">SOP Role</label>
+                  <select
+                    value={uploadRole}
+                    onChange={(e) => setUploadRole(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue bg-white"
+                  >
+                    {SOP_ROLES.map((r) => (
+                      <option key={r.key} value={r.key}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div
@@ -338,6 +365,7 @@ export default function SOPBuilder() {
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Title</th>
                 <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Department</th>
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Role</th>
                 <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Status</th>
                 <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Created</th>
                 <th className="text-right text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Actions</th>
@@ -347,6 +375,8 @@ export default function SOPBuilder() {
               {documents.map(doc => {
                 const status = getStatus(doc);
                 const isBuilderCreated = doc.created_via === 'builder';
+                const roleKey = doc.structured_content?.sop_role;
+                const roleLabel = SOP_ROLES.find(r => r.key === roleKey)?.label;
 
                 return (
                   <tr key={doc.id} className="hover:bg-gray-50">
@@ -355,6 +385,13 @@ export default function SOPBuilder() {
                     </td>
                     <td className="px-4 py-3">
                       <DeptBadge dept={doc.department} />
+                    </td>
+                    <td className="px-4 py-3">
+                      {roleLabel && (
+                        <span className="text-[11px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-medium">
+                          {roleLabel}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${status.cls}`}>

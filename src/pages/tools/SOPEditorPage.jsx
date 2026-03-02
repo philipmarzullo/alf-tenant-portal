@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { useTenantId } from '../../contexts/TenantIdContext';
 import { useTenantPortal } from '../../contexts/TenantPortalContext';
 import InlineAgentChat from '../../components/shared/InlineAgentChat';
+import { SOP_ROLES, buildDepartmentList } from '../../data/sopConstants';
 
 const SECTIONS = [
   { key: 'purpose', label: 'Purpose' },
@@ -18,11 +19,12 @@ const SECTIONS = [
   { key: 'references', label: 'References' },
 ];
 
-function buildSuffix(title, department, activeSection) {
+function buildSuffix(title, department, sopRole, activeSection) {
   const sectionLabel = SECTIONS.find(s => s.key === activeSection)?.label || activeSection;
+  const roleLabel = SOP_ROLES.find(r => r.key === sopRole)?.label || sopRole || 'Standard Procedure';
   return `You are an SOP Expert Assistant helping create Standard Operating Procedures for facility services operations.
 
-Current SOP: ${title || 'Untitled'} | Department: ${department || 'Not set'} | Active Section: ${sectionLabel}
+Current SOP: ${title || 'Untitled'} | Department: ${department || 'Not set'} | Role: ${roleLabel} | Active Section: ${sectionLabel}
 
 SOP Writing Guidelines:
 - Purpose: Clear statement of why this procedure exists
@@ -44,8 +46,9 @@ Standards:
 }
 
 function renderToMarkdown(structured) {
+  const roleLabel = SOP_ROLES.find(r => r.key === structured.sop_role)?.label || '';
   const lines = [`# ${structured.title}`];
-  lines.push(`**Version:** ${structured.version} | **Effective Date:** ${structured.effectiveDate}`);
+  lines.push(`**Version:** ${structured.version} | **Effective Date:** ${structured.effectiveDate}${roleLabel ? ` | **Type:** ${roleLabel}` : ''}`);
   lines.push('');
   for (const section of structured.sections) {
     if (section.content?.trim()) {
@@ -65,7 +68,9 @@ export default function SOPEditorPage() {
   const chatRef = useRef(null);
 
   const [title, setTitle] = useState('');
-  const [department, setDepartment] = useState(workspaces[0]?.department_key || 'ops');
+  const [department, setDepartment] = useState('operations');
+  const [customDept, setCustomDept] = useState('');
+  const [sopRole, setSopRole] = useState('standard-procedure');
   const [version, setVersion] = useState('1.0');
   const [sections, setSections] = useState(
     SECTIONS.map(s => ({ key: s.key, label: s.label, content: '' }))
@@ -77,6 +82,9 @@ export default function SOPEditorPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(!!id);
   const [docId, setDocId] = useState(id || null);
+
+  const departments = useMemo(() => buildDepartmentList(workspaces), [workspaces]);
+  const effectiveDept = department === '__custom__' ? customDept.trim().toLowerCase().replace(/\s+/g, '-') : department;
 
   // Load existing document when editing
   useEffect(() => {
@@ -98,7 +106,8 @@ export default function SOPEditorPage() {
       if (sc) {
         setTitle(sc.title || data.file_name || '');
         setVersion(sc.version || '1.0');
-        setDepartment(data.department || 'ops');
+        setDepartment(data.department || 'operations');
+        if (sc.sop_role) setSopRole(sc.sop_role);
         if (sc.sections?.length) {
           setSections(sc.sections.map(s => ({
             key: s.key,
@@ -108,7 +117,7 @@ export default function SOPEditorPage() {
         }
       } else {
         setTitle(data.file_name || '');
-        setDepartment(data.department || 'ops');
+        setDepartment(data.department || 'operations');
       }
       setDocId(data.id);
       setLoading(false);
@@ -119,13 +128,14 @@ export default function SOPEditorPage() {
   const structuredContent = useMemo(() => ({
     title,
     version,
+    sop_role: sopRole,
     effectiveDate: new Date().toISOString().split('T')[0],
     sections,
-  }), [title, version, sections]);
+  }), [title, version, sopRole, sections]);
 
   const systemPromptSuffix = useMemo(
-    () => buildSuffix(title, department, activeSection),
-    [title, department, activeSection]
+    () => buildSuffix(title, effectiveDept, sopRole, activeSection),
+    [title, effectiveDept, sopRole, activeSection]
   );
 
   function updateSection(key, content) {
@@ -151,9 +161,10 @@ export default function SOPEditorPage() {
     setSaving(true);
     setSaved(false);
 
+    const dept = effectiveDept || 'operations';
     const payload = {
       tenant_id: tenantId,
-      department,
+      department: dept,
       doc_type: 'sop',
       file_name: `${title.trim()}.md`,
       file_type: 'md',
@@ -194,9 +205,10 @@ export default function SOPEditorPage() {
     setPublishing(true);
 
     const markdown = renderToMarkdown(structuredContent);
+    const dept = effectiveDept || 'operations';
     const payload = {
       tenant_id: tenantId,
-      department,
+      department: dept,
       doc_type: 'sop',
       file_name: `${title.trim()}.md`,
       file_type: 'md',
@@ -258,16 +270,36 @@ export default function SOPEditorPage() {
           className="flex-1 min-w-[200px] text-lg font-medium text-dark-text bg-transparent border-b border-transparent hover:border-gray-300 focus:border-aa-blue focus:outline-none px-1 py-0.5"
         />
 
+        <div className="flex items-center gap-2">
+          <select
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue bg-white"
+          >
+            {departments.map(d => (
+              <option key={d.key} value={d.key}>{d.label}</option>
+            ))}
+            <option value="__custom__">+ Custom</option>
+          </select>
+          {department === '__custom__' && (
+            <input
+              type="text"
+              value={customDept}
+              onChange={(e) => setCustomDept(e.target.value)}
+              placeholder="Dept name..."
+              className="w-28 px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
+            />
+          )}
+        </div>
+
         <select
-          value={department}
-          onChange={(e) => setDepartment(e.target.value)}
+          value={sopRole}
+          onChange={(e) => setSopRole(e.target.value)}
           className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue bg-white"
         >
-          {workspaces.map(ws => (
-            <option key={ws.department_key} value={ws.department_key}>{ws.name}</option>
+          {SOP_ROLES.map(r => (
+            <option key={r.key} value={r.key}>{r.label}</option>
           ))}
-          <option value="admin">Admin</option>
-          <option value="general">General</option>
         </select>
 
         <div className="flex items-center gap-1">
