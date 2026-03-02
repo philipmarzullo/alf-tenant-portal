@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Copy, Check, FileEdit, ShieldCheck, Zap } from 'lucide-react';
+import { X, Send, Bot, User, Copy, Check, FileEdit, ShieldCheck, Zap, MessageSquarePlus, Upload, CheckCircle, XCircle } from 'lucide-react';
 import { chatWithAgent } from '../../agents/api';
+import { supabase } from '../../lib/supabase';
+import { useTenantId } from '../../contexts/TenantIdContext';
+import { useUser } from '../../contexts/UserContext';
+import { buildDocumentPath } from '../../utils/storagePaths';
 import SimpleMarkdown from './SimpleMarkdown';
 
 const MODE_BADGE = {
@@ -10,6 +14,8 @@ const MODE_BADGE = {
 };
 
 export default function AgentChatPanel({ open, onClose, agentKey, agentName, context, systemPromptSuffix }) {
+  const { tenantId } = useTenantId();
+  const { currentUser } = useUser();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,6 +23,13 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
   const [skillModes, setSkillModes] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  // Teach Agent
+  const [showTeach, setShowTeach] = useState(false);
+  const [teachText, setTeachText] = useState('');
+  const [teachFile, setTeachFile] = useState(null);
+  const [teachSubmitting, setTeachSubmitting] = useState(false);
+  const [teachResult, setTeachResult] = useState(null);
+  const teachFileRef = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -67,6 +80,56 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
     }
   };
 
+  const handleTeachSubmit = async () => {
+    if (!teachText.trim()) return;
+    setTeachSubmitting(true);
+    setTeachResult(null);
+
+    try {
+      let fileFields = {};
+      if (teachFile) {
+        const { extractText } = await import('../../utils/docExtractor.js');
+        const result = await extractText(teachFile);
+        const fileType = teachFile.name.split('.').pop().toLowerCase();
+        const storagePath = buildDocumentPath(tenantId, 'instructions', teachFile.name);
+        const { error: uploadErr } = await supabase.storage
+          .from('tenant-documents')
+          .upload(storagePath, teachFile);
+        if (uploadErr) throw uploadErr;
+        fileFields = {
+          file_name: teachFile.name,
+          file_type: fileType,
+          file_size: teachFile.size,
+          storage_path: storagePath,
+          extracted_text: result.text || null,
+        };
+      }
+
+      const { error: insertErr } = await supabase
+        .from('agent_instructions')
+        .insert({
+          tenant_id: tenantId,
+          agent_key: agentKey,
+          instruction_text: teachText.trim(),
+          source: 'tenant',
+          status: 'pending',
+          created_by: currentUser.id,
+          ...fileFields,
+        });
+
+      if (insertErr) throw insertErr;
+
+      setTeachResult('success');
+      setTeachText('');
+      setTeachFile(null);
+      setTimeout(() => { setTeachResult(null); setShowTeach(false); }, 2500);
+    } catch (err) {
+      setTeachResult('error');
+      setTimeout(() => setTeachResult(null), 3000);
+    }
+    setTeachSubmitting(false);
+  };
+
   const handleCopy = (text, idx) => {
     navigator.clipboard.writeText(text);
     setCopiedIdx(idx);
@@ -105,11 +168,67 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
                 {badge.label}
               </span>
             )}
+            <button
+              onClick={() => setShowTeach(!showTeach)}
+              className={`p-1 transition-colors ${showTeach ? 'text-aa-blue' : 'text-gray-400 hover:text-gray-600'}`}
+              title="Teach this agent"
+            >
+              <MessageSquarePlus size={18} />
+            </button>
             <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
               <X size={18} />
             </button>
           </div>
         </div>
+
+        {/* Teach Agent inline form */}
+        {showTeach && (
+          <div className="border-b border-gray-200 px-4 py-3 space-y-2 bg-sky-50/50 shrink-0">
+            <div className="text-xs font-semibold text-dark-text">Teach this Agent</div>
+            <textarea
+              value={teachText}
+              onChange={(e) => setTeachText(e.target.value)}
+              rows={2}
+              className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue resize-none bg-white"
+              placeholder='e.g., "Always greet by name" or "Stop suggesting overtime"'
+            />
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1 text-[11px] text-secondary-text cursor-pointer hover:text-dark-text transition-colors">
+                <Upload size={12} />
+                {teachFile ? teachFile.name : 'Attach file'}
+                <input
+                  ref={teachFileRef}
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  onChange={(e) => { if (e.target.files[0]) setTeachFile(e.target.files[0]); e.target.value = ''; }}
+                  className="hidden"
+                />
+              </label>
+              {teachFile && (
+                <button onClick={() => setTeachFile(null)} className="text-gray-400 hover:text-red-500">
+                  <X size={12} />
+                </button>
+              )}
+              <button
+                onClick={handleTeachSubmit}
+                disabled={teachSubmitting || !teachText.trim()}
+                className="ml-auto px-3 py-1 bg-aa-blue text-white text-xs font-medium rounded-lg hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
+              >
+                {teachSubmitting ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+            {teachResult === 'success' && (
+              <div className="flex items-center gap-1 text-xs text-green-600">
+                <CheckCircle size={12} /> Instruction submitted for review
+              </div>
+            )}
+            {teachResult === 'error' && (
+              <div className="flex items-center gap-1 text-xs text-red-500">
+                <XCircle size={12} /> Failed to submit
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
