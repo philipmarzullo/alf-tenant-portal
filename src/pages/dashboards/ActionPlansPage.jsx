@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Zap, CheckCircle, Clock, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
+import { Loader2, Zap, CheckCircle, Clock, AlertTriangle, XCircle, ChevronDown, ChevronRight, BarChart3 } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useTenantId } from '../../contexts/TenantIdContext';
@@ -37,6 +37,7 @@ export default function ActionPlansPage() {
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   const loadActions = useCallback(async () => {
     try {
@@ -212,7 +213,29 @@ export default function ActionPlansPage() {
                           Owner: {action.metric_snapshot.suggested_owner_role}
                         </span>
                       )}
+                      {action.metric_snapshot && Object.keys(action.metric_snapshot).filter(k => k !== 'suggested_owner_role').length > 0 && (
+                        <button
+                          onClick={() => setExpandedId(expandedId === action.id ? null : action.id)}
+                          className="inline-flex items-center gap-1 text-xs text-secondary-text hover:text-dark-text transition-colors"
+                        >
+                          <BarChart3 size={11} />
+                          {expandedId === action.id ? 'Hide' : 'View'} metrics
+                          {expandedId === action.id ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                        </button>
+                      )}
                     </div>
+                    {expandedId === action.id && action.metric_snapshot && (
+                      <div className="mt-3 bg-gray-50 rounded-lg p-3 text-xs text-secondary-text space-y-1">
+                        {Object.entries(action.metric_snapshot)
+                          .filter(([k]) => k !== 'suggested_owner_role')
+                          .map(([key, val]) => (
+                            <div key={key} className="flex justify-between">
+                              <span className="text-dark-text font-medium">{key.replace(/_/g, ' ')}</span>
+                              <span>{typeof val === 'number' ? val.toLocaleString() : String(val)}</span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">

@@ -1,6 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Copy, Check, MessageSquareText } from 'lucide-react';
 import { chatWithAgent } from '../../agents/api';
+import SimpleMarkdown from '../../components/shared/SimpleMarkdown';
+
+const STARTERS = [
+  'Which sites have the highest overtime ratios this month?',
+  'Give me a labor budget vs actual summary across all sites.',
+  'Are there any quality score drops I should worry about?',
+  'Summarize safety incidents and trends over the last 3 months.',
+  'What are the top 5 sites by revenue, and how do their costs compare?',
+  'Show me work ticket backlog by priority and category.',
+];
 
 export default function AnalyticsChatPage() {
   const [messages, setMessages] = useState([
@@ -47,6 +57,22 @@ export default function AnalyticsChatPage() {
     }
   };
 
+  const handleStarter = (text) => {
+    setInput(text);
+    // Trigger send on next tick so input state is updated
+    setTimeout(() => {
+      setInput('');
+      const userMsg = { role: 'user', content: text };
+      setMessages(prev => [...prev, userMsg]);
+      setLoading(true);
+      const apiMessages = [{ role: 'user', content: text }];
+      chatWithAgent('analytics', apiMessages)
+        .then(response => setMessages(prev => [...prev, { role: 'assistant', content: response }]))
+        .catch(err => setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]))
+        .finally(() => setLoading(false));
+    }, 0);
+  };
+
   const handleCopy = (text, idx) => {
     navigator.clipboard.writeText(text);
     setCopiedIdx(idx);
@@ -87,7 +113,11 @@ export default function AnalyticsChatPage() {
                     : 'bg-gray-50 text-dark-text'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                {msg.role === 'assistant' ? (
+                  <SimpleMarkdown content={msg.content} />
+                ) : (
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                )}
               </div>
               {msg.role === 'assistant' && i > 0 && (
                 <button
@@ -105,6 +135,20 @@ export default function AnalyticsChatPage() {
             )}
           </div>
         ))}
+
+        {messages.length === 1 && !loading && (
+          <div className="flex flex-wrap gap-2 ml-11">
+            {STARTERS.map((s) => (
+              <button
+                key={s}
+                onClick={() => handleStarter(s)}
+                className="px-3 py-1.5 text-xs text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-full hover:bg-aa-blue/10 transition-colors text-left"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
 
         {loading && (
           <div className="flex gap-3">
