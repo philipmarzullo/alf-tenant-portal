@@ -3,6 +3,7 @@ import MetricCard from '../../components/shared/MetricCard';
 import StatusBadge from '../../components/shared/StatusBadge';
 import DataTable from '../../components/shared/DataTable';
 import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
+import SampleDataBanner from '../../components/shared/SampleDataBanner';
 
 const METRICS = [
   { label: 'Active Employees', value: '2,147', icon: Users },
@@ -34,6 +35,7 @@ const columns = [
 export default function HROverview() {
   return (
     <div>
+      <SampleDataBanner />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {METRICS.map((m) => (
           <MetricCard key={m.label} {...m} />

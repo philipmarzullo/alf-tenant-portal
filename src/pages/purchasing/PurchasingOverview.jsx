@@ -8,6 +8,7 @@ import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { reorderAlerts } from '../../data/mock/purchasingMocks';
 import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
+import SampleDataBanner from '../../components/shared/SampleDataBanner';
 
 const METRICS = [
   { label: 'Open POs', value: '18', icon: ShoppingCart },
@@ -29,6 +30,7 @@ export default function PurchasingOverview() {
 
   return (
     <div>
+      <SampleDataBanner />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">Purchasing Workspace</h1>
         <button

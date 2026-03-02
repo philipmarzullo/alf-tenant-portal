@@ -10,6 +10,7 @@ import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { vpSummary, getOpsSummaryMetrics } from '../../data/mock/operationsMocks';
 import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
+import SampleDataBanner from '../../components/shared/SampleDataBanner';
 
 const summary = getOpsSummaryMetrics();
 
@@ -86,6 +87,7 @@ export default function OpsOverview() {
 
   return (
     <div>
+      <SampleDataBanner />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">Operations Workspace</h1>
         <button

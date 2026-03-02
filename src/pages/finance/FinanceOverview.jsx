@@ -10,6 +10,7 @@ import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
 import { arAging } from '../../data/mock/financeMocks';
 import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
+import SampleDataBanner from '../../components/shared/SampleDataBanner';
 
 const METRICS = [
   { label: 'Outstanding AR', value: '$842,300', icon: DollarSign },
@@ -45,6 +46,7 @@ export default function FinanceOverview() {
 
   return (
     <div>
+      <SampleDataBanner />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <h1 className="text-2xl font-light text-dark-text">Finance Workspace</h1>
         <button

@@ -2,6 +2,7 @@ import { DollarSign, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
 import MetricCard from '../../components/shared/MetricCard';
 import StatusBadge from '../../components/shared/StatusBadge';
 import WorkspaceActionItems from '../../components/shared/WorkspaceActionItems';
+import SampleDataBanner from '../../components/shared/SampleDataBanner';
 import { contracts, getSalesMetrics, daysUntilExpiry, getUrgencyTier } from '../../data/mock/salesMocks';
 
 const fmt = (n) => {
@@ -35,6 +36,7 @@ export default function SalesOverview() {
 
   return (
     <div>
+      <SampleDataBanner />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {METRICS.map((m) => (
           <MetricCard key={m.label} {...m} />
