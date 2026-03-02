@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Users, DollarSign, Briefcase, HardHat, Loader, CheckCircle, XCircle, AlertTriangle, Mail, Link as LinkIcon, Sparkles, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, DollarSign, Briefcase, HardHat, Loader, CheckCircle, XCircle, AlertTriangle, Mail, Link as LinkIcon, Sparkles, X, Bot, Zap } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useTenantId } from '../../contexts/TenantIdContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
-// ─── Action inventory ────────────────────────────────────────────────────────
+// ─── Fallback built-in actions (used when no DB actions exist) ───────────────
 
 const RISK_RECOMMENDED = { low: 'automated', medium: 'review', high: 'review' };
 
-const WORKSPACES = [
+const BUILTIN_WORKSPACES = [
   {
     key: 'hr',
     label: 'HR',
@@ -51,7 +51,17 @@ const WORKSPACES = [
   },
 ];
 
-const ICONS = { Users, DollarSign, Briefcase, HardHat };
+const DEPT_LABELS = {
+  hr: 'HR', finance: 'Finance', purchasing: 'Purchasing',
+  sales: 'Sales', ops: 'Operations', admin: 'Admin', general: 'General',
+};
+
+const DEPT_ICONS = {
+  hr: 'Users', finance: 'DollarSign', purchasing: 'Briefcase',
+  sales: 'Briefcase', ops: 'HardHat', admin: 'Zap', general: 'Bot',
+};
+
+const ICONS = { Users, DollarSign, Briefcase, HardHat, Zap, Bot };
 
 const RISK_STYLES = {
   low: { label: 'Low', bg: 'bg-green-100', text: 'text-green-700' },
@@ -77,6 +87,38 @@ async function authHeaders() {
 
 function prefKey(action) {
   return `${action.agentKey}:${action.actionKey}:${action.integration}`;
+}
+
+/** Convert DB automation_actions into workspace groups. */
+function buildWorkspacesFromActions(dbActions) {
+  const byDept = {};
+
+  for (const a of dbActions) {
+    const dept = a.department || a.agent_key || 'general';
+    if (!byDept[dept]) byDept[dept] = [];
+
+    // Map assignee_type to risk level
+    const risk = a.assignee_type === 'agent' ? 'low'
+      : a.assignee_type === 'human' ? 'high'
+      : 'medium';
+
+    byDept[dept].push({
+      agentKey: a.agent_key || dept,
+      actionKey: a.id,         // use DB id as action_key
+      label: a.title,
+      integration: 'agent_skill',
+      risk,
+      source: 'sop',           // marks as SOP-derived
+      description: a.description,
+    });
+  }
+
+  return Object.entries(byDept).map(([dept, actions]) => ({
+    key: dept,
+    label: DEPT_LABELS[dept] || dept.charAt(0).toUpperCase() + dept.slice(1),
+    icon: DEPT_ICONS[dept] || 'Bot',
+    actions,
+  }));
 }
 
 // ─── Execution Stats ─────────────────────────────────────────────────────────
@@ -143,7 +185,8 @@ function PromotionBanner({ pref, onAccept, onDismiss, accepting }) {
 
 function ModeSelector({ action, currentMode, msConnected, saving, onSelect }) {
   const modes = ['draft', 'review', 'automated'];
-  const locked = !msConnected;
+  const isSkill = action.integration === 'agent_skill';
+  const locked = !isSkill && !msConnected;
   const isHighRiskAuto = action.risk === 'high' && currentMode === 'automated';
 
   return (
@@ -197,8 +240,8 @@ function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onMode
   const [expanded, setExpanded] = useState(true);
   const Icon = ICONS[workspace.icon] || Users;
 
-  // Count actions with promotion recommendations
   const promoCount = workspace.actions.filter(a => preferences[prefKey(a)]?.auto_promote_eligible).length;
+  const hasSopActions = workspace.actions.some(a => a.source === 'sop');
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -210,6 +253,11 @@ function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onMode
           <Icon size={18} className="text-secondary-text" />
           <span className="text-sm font-semibold text-dark-text">{workspace.label}</span>
           <span className="text-xs text-secondary-text">{workspace.actions.length} actions</span>
+          {hasSopActions && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+              SOP-derived
+            </span>
+          )}
           {promoCount > 0 && (
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
               {promoCount} recommendation{promoCount > 1 ? 's' : ''}
@@ -225,8 +273,8 @@ function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onMode
             const key = prefKey(action);
             const pref = preferences[key];
             const currentMode = pref?.execution_mode || 'draft';
-            const riskStyle = RISK_STYLES[action.risk];
-            const recommended = RISK_RECOMMENDED[action.risk];
+            const riskStyle = RISK_STYLES[action.risk] || RISK_STYLES.medium;
+            const recommended = RISK_RECOMMENDED[action.risk] || 'review';
             const isSaving = savingKey === key;
             const isPromoting = promotingKey === key;
 
@@ -242,14 +290,20 @@ function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onMode
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${riskStyle.bg} ${riskStyle.text}`}>
                         {riskStyle.label}
                       </span>
+                      {action.source === 'sop' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600">Skill</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-secondary-text mb-1">
                       <span className="flex items-center gap-1">
-                        <Mail size={11} />
-                        Email
+                        {action.integration === 'agent_skill' ? <Bot size={11} /> : <Mail size={11} />}
+                        {action.integration === 'agent_skill' ? 'Agent Skill' : 'Email'}
                       </span>
                       <span>Alf recommends: <span className="font-medium">{MODE_LABELS[recommended]}</span></span>
                     </div>
+                    {action.description && (
+                      <p className="text-[11px] text-secondary-text mb-1 line-clamp-1">{action.description}</p>
+                    )}
                     <ExecutionStats pref={pref} />
                   </div>
                   <div className="shrink-0 flex items-center gap-2">
@@ -284,23 +338,48 @@ export default function AutomationPreferencesPage() {
   const navigate = useNavigate();
   const { tenantId } = useTenantId();
   const [preferences, setPreferences] = useState({});
+  const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState(null);
   const [promotingKey, setPromotingKey] = useState(null);
   const [msStatus, setMsStatus] = useState(null);
   const [msLoading, setMsLoading] = useState(true);
 
-  async function loadPreferences() {
+  async function loadData() {
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/automation-preferences/${tenantId}`, { headers });
-      if (!res.ok) throw new Error('Failed to load');
-      const data = await res.json();
-      const map = {};
-      data.forEach(p => { map[`${p.agent_key}:${p.action_key}:${p.integration_type}`] = p; });
-      setPreferences(map);
+
+      // Load preferences and DB actions in parallel
+      const [prefsRes, actionsRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/automation-preferences/${tenantId}`, { headers }),
+        fetch(`${BACKEND_URL}/api/sop-analysis/actions?status=active`, { headers }),
+      ]);
+
+      // Parse preferences
+      if (prefsRes.ok) {
+        const data = await prefsRes.json();
+        const map = {};
+        data.forEach(p => { map[`${p.agent_key}:${p.action_key}:${p.integration_type}`] = p; });
+        setPreferences(map);
+      }
+
+      // Parse DB actions and build workspaces
+      let dbWorkspaces = [];
+      if (actionsRes.ok) {
+        const { actions: dbActions } = await actionsRes.json();
+        if (dbActions?.length > 0) {
+          dbWorkspaces = buildWorkspacesFromActions(dbActions);
+        }
+      }
+
+      // Merge: DB-derived workspaces first, then built-in workspaces
+      // Avoid duplicating departments that exist in both
+      const dbDepts = new Set(dbWorkspaces.map(w => w.key));
+      const builtinFiltered = BUILTIN_WORKSPACES.filter(w => !dbDepts.has(w.key));
+      setWorkspaces([...dbWorkspaces, ...builtinFiltered]);
     } catch (err) {
       console.error('[automation-preferences] Load error:', err.message);
+      setWorkspaces(BUILTIN_WORKSPACES);
     } finally {
       setLoading(false);
     }
@@ -324,7 +403,7 @@ export default function AutomationPreferencesPage() {
   }
 
   useEffect(() => {
-    loadPreferences();
+    loadData();
     loadMsStatus();
   }, []);
 
@@ -357,7 +436,7 @@ export default function AutomationPreferencesPage() {
       setPreferences(prev => ({ ...prev, [key]: saved }));
     } catch (err) {
       console.error('[automation-preferences] Save error:', err.message);
-      loadPreferences();
+      loadData();
     } finally {
       setSavingKey(null);
     }
@@ -416,7 +495,7 @@ export default function AutomationPreferencesPage() {
       setPreferences(prev => ({ ...prev, [key]: saved }));
     } catch (err) {
       console.error('[automation-preferences] Dismiss error:', err.message);
-      loadPreferences();
+      loadData();
     } finally {
       setPromotingKey(null);
     }
@@ -456,7 +535,7 @@ export default function AutomationPreferencesPage() {
               <div>
                 <span className="text-sm font-medium text-dark-text">Microsoft 365: Not connected</span>
                 <span className="text-xs text-secondary-text ml-2">
-                  All actions locked to Draft mode.
+                  Email actions locked to Draft mode. Agent skills can be configured independently.
                 </span>
               </div>
             </div>
@@ -481,7 +560,7 @@ export default function AutomationPreferencesPage() {
         )}
 
         {/* ── Workspace Groups ── */}
-        {!loading && WORKSPACES.map(ws => (
+        {!loading && workspaces.map(ws => (
           <WorkspaceGroup
             key={ws.key}
             workspace={ws}
@@ -495,11 +574,22 @@ export default function AutomationPreferencesPage() {
           />
         ))}
 
+        {/* ── Empty state ── */}
+        {!loading && workspaces.length === 0 && (
+          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+            <Zap size={32} className="text-gray-300 mx-auto mb-3" />
+            <div className="text-sm text-secondary-text">No automation actions available.</div>
+            <div className="text-xs text-secondary-text mt-1">
+              Active agent skills and email actions will appear here once configured.
+            </div>
+          </div>
+        )}
+
         {/* ── Footer note ── */}
-        {!loading && (
+        {!loading && workspaces.length > 0 && (
           <p className="text-xs text-secondary-text pt-2">
-            Default: all actions start in Draft mode. Connecting Microsoft 365 unlocks Review & Send and Automated modes.
-            After {WORKSPACES[0]?.actions[0] ? '10' : ''} consecutive approvals without edits, Alf recommends switching to Automated.
+            Default: all actions start in Draft mode. Connecting Microsoft 365 unlocks Review & Send and Automated modes for email actions.
+            Agent skills can be configured independently. After 10 consecutive approvals without edits, Alf recommends switching to Automated.
             Changes are saved immediately and logged to the activity log.
           </p>
         )}

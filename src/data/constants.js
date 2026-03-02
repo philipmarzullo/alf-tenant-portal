@@ -62,6 +62,7 @@ export const STATIC_NAV_GROUPS = [
     items: [
       { label: 'Dashboards', path: '/portal/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
       { label: 'Action Plans', path: '/portal/dashboards/action-plans', icon: 'ListChecks', moduleKey: 'actionPlans' },
+      { label: 'Analytics Chat', path: '/portal/analytics', icon: 'MessageSquareText', moduleKey: 'analytics' },
     ],
   },
   {
@@ -70,6 +71,7 @@ export const STATIC_NAV_GROUPS = [
       { label: 'User Management', path: '/portal/admin/users', icon: 'UserCog', moduleKey: 'admin' },
       { label: 'Knowledge Base', path: '/portal/admin/knowledge', icon: 'BookOpen', moduleKey: 'knowledge' },
       { label: 'Automation Insights', path: '/portal/admin/automation', icon: 'Zap', moduleKey: 'automation' },
+      { label: 'SOP Builder', path: '/portal/tools/sop-builder', icon: 'FileText', moduleKey: 'automation' },
       { label: 'Role Templates', path: '/portal/admin/role-templates', icon: 'ShieldCheck', moduleKey: 'admin' },
       { label: 'Tool Builder', path: '/portal/tools/custom/builder', icon: 'Wrench', moduleKey: 'admin' },
       { label: 'Automation Preferences', path: '/portal/admin/automation-preferences', icon: 'SlidersHorizontal', moduleKey: 'superAdmin' },

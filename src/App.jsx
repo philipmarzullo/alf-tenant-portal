@@ -35,6 +35,7 @@ import TBITracker from './pages/sales/TBITracker';
 import QBUBuilder from './pages/tools/QBUBuilder';
 import SalesDeckBuilder from './pages/tools/SalesDeckBuilder';
 import ToolPage from './pages/tools/ToolPage';
+import SOPBuilder from './pages/tools/SOPBuilder';
 import CustomToolBuilder from './pages/tools/CustomToolBuilder';
 import CustomToolPage from './pages/tools/CustomToolPage';
 import KnowledgePage from './pages/admin/KnowledgePage';
@@ -51,6 +52,7 @@ import QualityDashboard from './pages/dashboards/QualityDashboard';
 import TimekeepingDashboard from './pages/dashboards/TimekeepingDashboard';
 import SafetyDashboard from './pages/dashboards/SafetyDashboard';
 import ActionPlansPage from './pages/dashboards/ActionPlansPage';
+import AnalyticsChatPage from './pages/analytics/AnalyticsChatPage';
 
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
@@ -327,6 +329,15 @@ export default function App() {
                       <Route path="action-plans" element={<ProtectedRoute moduleKey="actionPlans"><ActionPlansPage /></ProtectedRoute>} />
                     </Route>
 
+                    <Route
+                      path="analytics"
+                      element={
+                        <ProtectedRoute moduleKey="analytics">
+                          <AnalyticsChatPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
                     {/* Tools — gated by "tools" module + per-tool pageKey */}
                     <Route
                       path="tools/qbu"
@@ -373,6 +384,14 @@ export default function App() {
                       element={
                         <ProtectedRoute moduleKey="tools" pageKey="training-plan">
                           <ToolPage toolKey="trainingPlan" />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/sop-builder"
+                      element={
+                        <ProtectedRoute moduleKey="automation">
+                          <SOPBuilder />
                         </ProtectedRoute>
                       }
                     />

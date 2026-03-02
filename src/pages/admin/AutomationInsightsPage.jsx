@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, Zap, ChevronRight, FileText, Bot, User, Clock, Filter, MessageSquare, CheckCircle, Play } from 'lucide-react';
+import { Loader2, Zap, ChevronRight, FileText, Bot, User, Clock, Filter, MessageSquare, CheckCircle, Play, XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getFreshToken } from '../../lib/supabase';
 import { DEPT_COLORS } from '../../data/constants';
@@ -235,6 +235,19 @@ export default function AutomationInsightsPage() {
     }
   }
 
+  async function handleDeactivateSkill(actionId) {
+    setPipelineBusy(`deactivate-${actionId}`);
+    setPipelineError(null);
+    try {
+      await sopAnalysisFetch('/deactivate-skill', { action_id: actionId });
+      await loadData();
+    } catch (err) {
+      setPipelineError(err.message);
+    } finally {
+      setPipelineBusy(null);
+    }
+  }
+
   async function handleBatchActivateSkills(actionIds) {
     setPipelineBusy('batch-activate');
     setPipelineError(null);
@@ -418,6 +431,7 @@ export default function AutomationInsightsPage() {
           pipelineBusy={pipelineBusy}
           onGenerateSkill={handleGenerateSkill}
           onActivateSkill={handleActivateSkill}
+          onDeactivateSkill={handleDeactivateSkill}
           onBatchGenerateSkills={handleBatchGenerateSkills}
           onBatchActivateSkills={handleBatchActivateSkills}
         />
@@ -633,7 +647,7 @@ function OverviewTab({
 
 function AgentSkillsTab({
   actions, plannedActions, onRunWithAgent,
-  canSelfService, pipelineBusy, onGenerateSkill, onActivateSkill,
+  canSelfService, pipelineBusy, onGenerateSkill, onActivateSkill, onDeactivateSkill,
   onBatchGenerateSkills, onBatchActivateSkills,
 }) {
   // Planned actions that can have skills generated (agent or hybrid)
@@ -792,13 +806,25 @@ function AgentSkillsTab({
                     </button>
                   )}
                   {action.status === 'active' && (
-                    <button
-                      onClick={() => onRunWithAgent(agentKey)}
-                      className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-aa-blue/30 text-aa-blue hover:bg-aa-blue/5 transition-colors flex items-center gap-1"
-                    >
-                      <Bot size={12} />
-                      Run
-                    </button>
+                    <>
+                      <button
+                        onClick={() => onRunWithAgent(agentKey)}
+                        className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-aa-blue/30 text-aa-blue hover:bg-aa-blue/5 transition-colors flex items-center gap-1"
+                      >
+                        <Bot size={12} />
+                        Run
+                      </button>
+                      {canSelfService && (
+                        <button
+                          onClick={() => onDeactivateSkill(action.id)}
+                          disabled={!!pipelineBusy}
+                          className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors flex items-center gap-1"
+                        >
+                          {pipelineBusy === `deactivate-${action.id}` ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+                          Deactivate
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
