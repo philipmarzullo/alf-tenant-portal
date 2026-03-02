@@ -9,8 +9,6 @@ import {
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
   Lock, TrendingUp, Layers, Bot,
 } from 'lucide-react';
-import { STATIC_NAV_GROUPS } from '../../data/constants';
-import { MODULE_REGISTRY } from '../../data/moduleRegistry';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenantConfig } from '../../contexts/TenantConfigContext';
@@ -68,7 +66,6 @@ const ICON_MAP = {
 const PRIMARY_TOOLS = new Set(['qbu', 'salesDeck']);
 
 // Admin items that belong in the Automation sub-menu
-const AUTOMATION_ADMIN_KEYS = new Set(['automation', 'sop-builder', 'automation-preferences']);
 const AUTOMATION_PATHS = new Set([
   '/portal/admin/automation',
   '/portal/tools/sop-builder',
@@ -82,7 +79,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   const { tenantHasModule } = useTenantConfig();
   const brand = useBranding();
   const { customTools } = useCustomTools();
-  const { workspaces, tools, getWorkspacePath, getToolPath } = useTenantPortal();
+  const { workspaces, tools, navSections, moduleRegistry, getWorkspacePath, getToolPath } = useTenantPortal();
   const { hasFeature, requiredTierLabel } = useTierAccess();
   const [upgradeModal, setUpgradeModal] = useState(null);
 
@@ -97,6 +94,26 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     if (path === '/portal') return location.pathname === '/portal';
     return location.pathname.startsWith(path);
   };
+
+  // Build nav section items from DB nav sections
+  const dbNavGroups = useMemo(() => {
+    const groups = {};
+    for (const section of navSections) {
+      groups[section.section_key] = {
+        group: section.label.toUpperCase(),
+        sectionKey: section.section_key,
+        items: (section.items || []).map(item => ({
+          label: item.label,
+          path: item.path,
+          icon: item.icon,
+          moduleKey: item.module_key || null,
+          adminOnly: item.admin_only || false,
+          superAdminOnly: item.super_admin_only || false,
+        })),
+      };
+    }
+    return groups;
+  }, [navSections]);
 
   // Build dynamic WORKSPACES group from tenant_workspaces
   const dynamicWorkspaces = useMemo(() => ({
@@ -127,13 +144,13 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     };
   }, [tools, getToolPath]);
 
-  // Assemble full nav: COMMAND CENTER, dynamic WORKSPACES, ANALYTICS, dynamic TOOLS, ADMIN
+  // Assemble full nav: command-center section → workspaces → analytics section → tools → admin section
   const allNavGroups = useMemo(() => {
-    const commandCenter = STATIC_NAV_GROUPS.find((g) => g.group === 'COMMAND CENTER');
-    const analytics = STATIC_NAV_GROUPS.find((g) => g.group === 'ANALYTICS');
-    const admin = STATIC_NAV_GROUPS.find((g) => g.group === 'ADMIN');
+    const commandCenter = dbNavGroups['command-center'];
+    const analytics = dbNavGroups['analytics'];
+    const admin = dbNavGroups['admin'];
     return [commandCenter, dynamicWorkspaces, analytics, dynamicTools, admin].filter(Boolean);
-  }, [dynamicWorkspaces, dynamicTools]);
+  }, [dbNavGroups, dynamicWorkspaces, dynamicTools]);
 
   // Filter nav items by tenant config + user permissions.
   const filteredNav = allNavGroups
@@ -141,9 +158,9 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       let items = group.items
         .map((item) => {
           if (!item.moduleKey) return item;
+          if (item.superAdminOnly) return isSuperAdmin ? item : null;
           if (item.moduleKey === 'superAdmin') return isSuperAdmin ? item : null;
-          if (item.moduleKey === 'admin') return isAdmin ? item : null;
-          if (item.adminOnly && !isAdmin) return null;
+          if (item.moduleKey === 'admin' || item.adminOnly) return isAdmin ? item : null;
 
           // Dynamic items from DB are already tenant-gated
           if (item._dynamic) {
@@ -166,16 +183,16 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
 
       // Inject locked placeholders for empty dynamic groups
       if (group.group === 'WORKSPACES' && items.length === 0) {
-        const workspaceModules = ['hr', 'finance', 'purchasing', 'sales', 'ops'];
-        const lockedWorkspaces = workspaceModules
-          .filter(m => !hasFeature(m))
-          .map(m => ({
-            label: MODULE_REGISTRY[m]?.label || m,
-            path: `/portal/${m}`,
-            icon: MODULE_REGISTRY[m]?.icon || 'ClipboardList',
-            _tierLocked: true,
-            _lockedModule: m,
-          }));
+        const workspaceModules = moduleRegistry
+          .filter(m => m.module_type === 'workspace')
+          .filter(m => !hasFeature(m.module_key));
+        const lockedWorkspaces = workspaceModules.map(m => ({
+          label: m.label,
+          path: `/portal/${m.module_key}`,
+          icon: m.icon || 'ClipboardList',
+          _tierLocked: true,
+          _lockedModule: m.module_key,
+        }));
         items = lockedWorkspaces;
       }
 
@@ -338,7 +355,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     }
 
     // --- ADMIN: split automation sub-menu ---
-    if (group.group === 'ADMIN') {
+    if (group.sectionKey === 'admin' || group.group === 'ADMIN') {
       const automationItems = group.items.filter(i => AUTOMATION_PATHS.has(i.path));
       const otherItems = group.items.filter(i => !AUTOMATION_PATHS.has(i.path));
 

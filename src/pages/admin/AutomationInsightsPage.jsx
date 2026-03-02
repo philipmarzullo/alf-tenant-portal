@@ -1,32 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Loader2, Zap, ChevronRight, FileText, Bot, User, Clock, Filter, MessageSquare, CheckCircle, Play, XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getFreshToken } from '../../lib/supabase';
-import { DEPT_COLORS } from '../../data/constants';
 import MetricCard from '../../components/shared/MetricCard';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useUser } from '../../contexts/UserContext';
 import { useTenantId } from '../../contexts/TenantIdContext';
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
-
-const DEPARTMENTS = [
-  { key: 'hr', label: 'HR' },
-  { key: 'finance', label: 'Finance' },
-  { key: 'purchasing', label: 'Purchasing' },
-  { key: 'sales', label: 'Sales' },
-  { key: 'ops', label: 'Ops' },
-  { key: 'admin', label: 'Admin' },
-  { key: 'general', label: 'General' },
-];
-
-const AGENT_NAMES = {
-  hr: 'HR Coordinator',
-  finance: 'Finance Agent',
-  purchasing: 'Purchasing Agent',
-  sales: 'Sales Agent',
-  ops: 'Operations Agent',
-  admin: 'Admin Agent',
-};
 
 const PRIORITY_BADGE = {
   'quick-win': 'bg-green-50 text-green-700',
@@ -78,7 +59,22 @@ async function sopAnalysisFetch(path, body) {
 export default function AutomationInsightsPage() {
   const { isAdmin } = useUser();
   const { tenantId } = useTenantId();
+  const { workspaces, agents, getWorkspaceColor } = useTenantPortal();
   const canSelfService = isAdmin;
+
+  // Derive departments and agent names from context
+  const DEPARTMENTS = useMemo(() =>
+    workspaces.map(ws => ({ key: ws.department_key, label: ws.name })),
+    [workspaces]
+  );
+
+  const AGENT_NAMES = useMemo(() => {
+    const map = {};
+    for (const agent of agents) {
+      map[agent.agent_key] = agent.name;
+    }
+    return map;
+  }, [agents]);
 
   const [analyses, setAnalyses] = useState([]);
   const [roadmaps, setRoadmaps] = useState([]);
@@ -493,7 +489,7 @@ function OverviewTab({
         const roadmap = roadmapByDept[dept.key];
         const isExpanded = expandedDept === dept.key;
         const deptSopDocs = sopDocsByDept[dept.key] || [];
-        const deptColor = DEPT_COLORS[dept.key] || '#6B7280';
+        const deptColor = getWorkspaceColor(dept.key);
 
         // Find unanalyzed SOPs (docs not yet in analyses)
         const analyzedDocIds = new Set(deptAnalyses.map(a => a.document_id));
@@ -867,7 +863,7 @@ function ResponsibilitiesTab({ actions, onUpdateNotes }) {
 
       {Object.entries(byDept).map(([dept, deptActions]) => {
         const deptInfo = DEPARTMENTS.find(d => d.key === dept);
-        const deptColor = DEPT_COLORS[dept] || '#6B7280';
+        const deptColor = getWorkspaceColor(dept);
 
         return (
           <div key={dept} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -1011,7 +1007,7 @@ function AllActionsTab({ actions, filterDept, setFilterDept, onRunWithAgent }) {
         ) : (
           <div className="divide-y divide-gray-100">
             {visible.map(action => {
-              const deptColor = DEPT_COLORS[action.department] || '#6B7280';
+              const deptColor = getWorkspaceColor(action.department);
               return (
                 <div
                   key={action.id}

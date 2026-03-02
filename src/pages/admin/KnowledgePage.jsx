@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Loader2, Upload, FileText, Trash2,
   ChevronDown, ChevronUp, XCircle, CheckCircle,
@@ -6,17 +6,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { buildDocumentPath, formatFileSize } from '../../utils/storagePaths';
 import { useTenantId } from '../../contexts/TenantIdContext';
-
-const DEPARTMENTS = [
-  { key: 'all', label: 'All' },
-  { key: 'hr', label: 'HR' },
-  { key: 'finance', label: 'Finance' },
-  { key: 'purchasing', label: 'Purchasing' },
-  { key: 'sales', label: 'Sales' },
-  { key: 'ops', label: 'Ops' },
-  { key: 'admin', label: 'Admin' },
-  { key: 'general', label: 'General' },
-];
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
 
 const DOC_TYPES = [
   { key: 'sop', label: 'SOP' },
@@ -109,6 +99,16 @@ function DocumentTextPreview({ docId }) {
 
 export default function KnowledgePage() {
   const { tenantId } = useTenantId();
+  const { workspaces } = useTenantPortal();
+
+  // Derive departments from workspaces dynamically
+  const DEPARTMENTS = useMemo(() => [
+    { key: 'all', label: 'All' },
+    ...workspaces.map(ws => ({ key: ws.department_key, label: ws.name })),
+    { key: 'admin', label: 'Admin' },
+    { key: 'general', label: 'General' },
+  ], [workspaces]);
+
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

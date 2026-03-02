@@ -1,7 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { TOOL_REGISTRY } from '../data/toolRegistry';
-import { MODULE_REGISTRY } from '../data/moduleRegistry';
 import { useTenantId } from './TenantIdContext';
 
 const TenantPortalContext = createContext(null);
@@ -27,83 +25,25 @@ const WORKSPACE_PATH_OVERRIDES = {
   operations: '/portal/ops',
 };
 
-/**
- * Build hardcoded workspace fallbacks from MODULE_REGISTRY.
- */
-function buildWorkspaceFallbacks() {
-  const workspacePages = MODULE_REGISTRY.hr ? ['hr', 'finance', 'purchasing', 'sales', 'ops'] : [];
-  return workspacePages.map((key, i) => ({
-    department_key: key,
-    name: MODULE_REGISTRY[key]?.label || key,
-    icon: MODULE_REGISTRY[key]?.icon || 'ClipboardList',
-    description: MODULE_REGISTRY[key]?.description || '',
-    sort_order: i,
-    is_active: true,
-    _fallback: true,
-  }));
-}
-
-/**
- * Build hardcoded tool fallbacks from TOOL_REGISTRY.
- */
-function buildToolFallbacks() {
-  return Object.values(TOOL_REGISTRY).map((t, i) => ({
-    tool_key: t.key,
-    name: t.label,
-    description: t.description || '',
-    icon: t.icon || 'Wrench',
-    agent_key: t.agentKey,
-    action_key: t.actionKey,
-    intake_schema: t.intakeSchema || null,
-    output_format: t.outputFormat || 'document',
-    sort_order: i,
-    is_active: true,
-    _fallback: true,
-  }));
-}
-
-/**
- * Default domain metadata for fallback rendering (colors + icons).
- */
-const DOMAIN_DEFAULTS = {
-  operations: { color: '#4B5563', icon: 'clipboard-list' },
-  labor: { color: '#009ADE', icon: 'dollar-sign' },
-  quality: { color: '#7C3AED', icon: 'shield' },
-  timekeeping: { color: '#0D9488', icon: 'clock' },
-  safety: { color: '#DC2626', icon: 'alert-triangle' },
-};
-
-/**
- * Build hardcoded dashboard domain fallbacks from MODULE_REGISTRY.
- */
-function buildDomainFallbacks() {
-  const pages = MODULE_REGISTRY.dashboards?.pages || [];
-  return pages.map((p, i) => ({
-    domain_key: p.key,
-    name: p.label,
-    description: '',
-    color: DOMAIN_DEFAULTS[p.key]?.color || '#4B5563',
-    icon: DOMAIN_DEFAULTS[p.key]?.icon || 'clipboard-list',
-    sort_order: i,
-    is_active: true,
-    _fallback: true,
-  }));
-}
-
 export function TenantPortalProvider({ children }) {
   const { tenantId } = useTenantId();
   const [workspaces, setWorkspaces] = useState([]);
   const [tools, setTools] = useState([]);
   const [dashboardDomains, setDashboardDomains] = useState([]);
   const [companyProfile, setCompanyProfile] = useState(null);
+  const [navSections, setNavSections] = useState([]);
+  const [moduleRegistry, setModuleRegistry] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!supabase || !tenantId) {
-      // No DB available — use hardcoded fallbacks
-      setWorkspaces(buildWorkspaceFallbacks());
-      setTools(buildToolFallbacks());
-      setDashboardDomains(buildDomainFallbacks());
+      setWorkspaces([]);
+      setTools([]);
+      setDashboardDomains([]);
+      setNavSections([]);
+      setModuleRegistry([]);
+      setAgents([]);
       setLoading(false);
       return;
     }
@@ -112,7 +52,7 @@ export function TenantPortalProvider({ children }) {
     let cancelled = false;
 
     async function fetchAll() {
-      const [wsRes, toolsRes, domainsRes, profileRes] = await Promise.all([
+      const [wsRes, toolsRes, domainsRes, profileRes, navRes, moduleRes, agentsRes] = await Promise.all([
         supabase
           .from('tenant_workspaces')
           .select('*')
@@ -136,31 +76,46 @@ export function TenantPortalProvider({ children }) {
           .select('*')
           .eq('tenant_id', tenantId)
           .single(),
+        supabase
+          .from('tenant_nav_sections')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .order('sort_order'),
+        supabase
+          .from('tenant_module_registry')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .order('sort_order'),
+        supabase
+          .from('tenant_agents')
+          .select('id, agent_key, name, workspace_id, is_active, knowledge_scopes')
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true),
       ]);
 
       if (cancelled) return;
 
-      // Use DB data if available, otherwise fall back to hardcoded
-      setWorkspaces(
-        wsRes.data?.length ? wsRes.data : buildWorkspaceFallbacks()
-      );
-      setTools(
-        toolsRes.data?.length ? toolsRes.data : buildToolFallbacks()
-      );
-      setDashboardDomains(
-        domainsRes.data?.length ? domainsRes.data : buildDomainFallbacks()
-      );
+      setWorkspaces(wsRes.data || []);
+      setTools(toolsRes.data || []);
+      setDashboardDomains(domainsRes.data || []);
       setCompanyProfile(profileRes.data || null);
+      setNavSections(navRes.data || []);
+      setModuleRegistry(moduleRes.data || []);
+      setAgents(agentsRes.data || []);
       setLoading(false);
     }
 
     fetchAll().catch((err) => {
       if (cancelled) return;
       console.error('Failed to fetch tenant portal data:', err);
-      // Degrade to fallbacks
-      setWorkspaces(buildWorkspaceFallbacks());
-      setTools(buildToolFallbacks());
-      setDashboardDomains(buildDomainFallbacks());
+      setWorkspaces([]);
+      setTools([]);
+      setDashboardDomains([]);
+      setNavSections([]);
+      setModuleRegistry([]);
+      setAgents([]);
       setLoading(false);
     });
 
@@ -191,21 +146,27 @@ export function TenantPortalProvider({ children }) {
     [],
   );
 
-  /** Re-fetch all portal data (workspaces, tools, domains, profile) from DB */
+  /** Re-fetch all portal data from DB */
   const refreshAll = useCallback(async () => {
     if (!supabase || !tenantId) return;
     setLoading(true);
     try {
-      const [wsRes, toolsRes, domainsRes, profileRes] = await Promise.all([
+      const [wsRes, toolsRes, domainsRes, profileRes, navRes, moduleRes, agentsRes] = await Promise.all([
         supabase.from('tenant_workspaces').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
         supabase.from('tenant_tools').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
         supabase.from('tenant_dashboard_domains').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
         supabase.from('tenant_company_profiles').select('*').eq('tenant_id', tenantId).single(),
+        supabase.from('tenant_nav_sections').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
+        supabase.from('tenant_module_registry').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
+        supabase.from('tenant_agents').select('id, agent_key, name, workspace_id, is_active, knowledge_scopes').eq('tenant_id', tenantId).eq('is_active', true),
       ]);
-      setWorkspaces(wsRes.data?.length ? wsRes.data : buildWorkspaceFallbacks());
-      setTools(toolsRes.data?.length ? toolsRes.data : buildToolFallbacks());
-      setDashboardDomains(domainsRes.data?.length ? domainsRes.data : buildDomainFallbacks());
+      setWorkspaces(wsRes.data || []);
+      setTools(toolsRes.data || []);
+      setDashboardDomains(domainsRes.data || []);
       setCompanyProfile(profileRes.data || null);
+      setNavSections(navRes.data || []);
+      setModuleRegistry(moduleRes.data || []);
+      setAgents(agentsRes.data || []);
     } catch (err) {
       console.error('Failed to refresh tenant portal data:', err);
     } finally {
@@ -224,6 +185,17 @@ export function TenantPortalProvider({ children }) {
     [dashboardDomains],
   );
 
+  /**
+   * Get workspace color by department_key, with neutral gray fallback.
+   */
+  const getWorkspaceColor = useCallback(
+    (deptKey) => {
+      const ws = workspaces.find(w => w.department_key === deptKey);
+      return ws?.color || '#6B7280';
+    },
+    [workspaces],
+  );
+
   const value = useMemo(
     () => ({
       workspaces,
@@ -231,6 +203,9 @@ export function TenantPortalProvider({ children }) {
       dashboardDomains,
       companyProfile,
       profileStatus,
+      navSections,
+      moduleRegistry,
+      agents,
       loading,
       refreshAll,
       getToolByKey,
@@ -238,8 +213,9 @@ export function TenantPortalProvider({ children }) {
       getWorkspacePath,
       getToolPath,
       getDomainPath,
+      getWorkspaceColor,
     }),
-    [workspaces, tools, dashboardDomains, companyProfile, profileStatus, loading, refreshAll, getToolByKey, getDomainByKey, getWorkspacePath, getToolPath, getDomainPath],
+    [workspaces, tools, dashboardDomains, companyProfile, profileStatus, navSections, moduleRegistry, agents, loading, refreshAll, getToolByKey, getDomainByKey, getWorkspacePath, getToolPath, getDomainPath, getWorkspaceColor],
   );
 
   return (

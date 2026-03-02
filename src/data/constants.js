@@ -8,22 +8,6 @@ export const BRAND = {
   darkNav: '#1B2133',
 };
 
-export const DEPT_COLORS = {
-  hr: '#009ADE',
-  finance: '#0D9488',
-  purchasing: '#7C3AED',
-  ops: '#4B5563',
-  sales: '#F59E0B',
-  admin: '#E12F2C',
-  tools: '#0284C7',
-  // Analytics domain colors (used by home dashboard attention items)
-  operations: '#4B5563',
-  labor: '#009ADE',
-  quality: '#7C3AED',
-  timekeeping: '#0D9488',
-  safety: '#DC2626',
-};
-
 export const STATUS = {
   complete: { label: 'Complete', color: '#16A34A', bg: '#DCFCE7', text: '#166534' },
   inProgress: { label: 'In Progress', color: '#009ADE', bg: '#DBEAFE', text: '#1E40AF' },
@@ -44,39 +28,3 @@ export const STATUS = {
   inRenewal: { label: 'In Renewal', color: '#009ADE', bg: '#DBEAFE', text: '#1E40AF' },
   expired: { label: 'Expired', color: '#9CA3AF', bg: '#F3F4F6', text: '#4B5563' },
 };
-
-/**
- * Static navigation groups — not driven by tenant data.
- * WORKSPACES and TOOLS groups are built dynamically by the Sidebar
- * from tenant_workspaces and tenant_tools via TenantPortalContext.
- */
-export const STATIC_NAV_GROUPS = [
-  {
-    group: 'COMMAND CENTER',
-    items: [
-      { label: 'Command Center', path: '/portal', icon: 'LayoutDashboard', moduleKey: null },
-    ],
-  },
-  {
-    group: 'ANALYTICS',
-    items: [
-      { label: 'Dashboards', path: '/portal/dashboards', icon: 'BarChart3', moduleKey: 'dashboards' },
-      { label: 'Action Plans', path: '/portal/dashboards/action-plans', icon: 'ListChecks', moduleKey: 'actionPlans' },
-      { label: 'Analytics Chat', path: '/portal/analytics', icon: 'MessageSquareText', moduleKey: 'analytics' },
-    ],
-  },
-  {
-    group: 'ADMIN',
-    items: [
-      { label: 'User Management', path: '/portal/admin/users', icon: 'UserCog', moduleKey: 'admin' },
-      { label: 'Knowledge Base', path: '/portal/admin/knowledge', icon: 'BookOpen', moduleKey: 'knowledge' },
-      { label: 'Automation Insights', path: '/portal/admin/automation', icon: 'Zap', moduleKey: 'automation' },
-      { label: 'SOP Builder', path: '/portal/tools/sop-builder', icon: 'FileText', moduleKey: 'automation' },
-      { label: 'Role Templates', path: '/portal/admin/role-templates', icon: 'ShieldCheck', moduleKey: 'admin' },
-      { label: 'Tool Builder', path: '/portal/tools/custom/builder', icon: 'Wrench', moduleKey: 'admin' },
-      { label: 'Automation Preferences', path: '/portal/admin/automation-preferences', icon: 'SlidersHorizontal', moduleKey: 'superAdmin' },
-      { label: 'Connections', path: '/portal/admin/connections', icon: 'Cable', moduleKey: 'superAdmin' },
-      { label: 'Settings', path: '/portal/admin/settings', icon: 'Settings', moduleKey: 'superAdmin' },
-    ],
-  },
-];

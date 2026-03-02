@@ -44,21 +44,21 @@ export const OWNERSHIP_MODELS = [
  * Common department templates. Each industry maps to a subset of these.
  */
 const ALL_DEPARTMENTS = {
-  operations: { name: 'Operations', description: 'Day-to-day operational management', icon: 'clipboard-list' },
-  hr: { name: 'Human Resources', description: 'People management, hiring, and benefits', icon: 'users' },
-  finance: { name: 'Finance', description: 'Financial planning, budgets, and accounting', icon: 'dollar-sign' },
-  sales: { name: 'Sales', description: 'Business development and client acquisition', icon: 'trending-up' },
-  purchasing: { name: 'Purchasing', description: 'Procurement and vendor management', icon: 'shopping-cart' },
-  safety: { name: 'Safety', description: 'Workplace safety and compliance', icon: 'shield' },
-  quality: { name: 'Quality', description: 'Quality assurance and inspection', icon: 'check-circle' },
-  training: { name: 'Training', description: 'Employee development and onboarding', icon: 'book-open' },
-  it: { name: 'IT', description: 'Technology infrastructure and support', icon: 'monitor' },
-  marketing: { name: 'Marketing', description: 'Brand management and communications', icon: 'megaphone' },
-  legal: { name: 'Legal', description: 'Legal compliance and contract management', icon: 'scale' },
-  facilities: { name: 'Facilities', description: 'Building and grounds management', icon: 'building' },
-  logistics: { name: 'Logistics', description: 'Supply chain and distribution', icon: 'truck' },
-  engineering: { name: 'Engineering', description: 'Technical engineering and maintenance', icon: 'wrench' },
-  customer_service: { name: 'Customer Service', description: 'Client support and satisfaction', icon: 'headphones' },
+  operations: { name: 'Operations', description: 'Day-to-day operational management', icon: 'clipboard-list', color: '#009ADE' },
+  hr: { name: 'Human Resources', description: 'People management, hiring, and benefits', icon: 'users', color: '#7C3AED' },
+  finance: { name: 'Finance', description: 'Financial planning, budgets, and accounting', icon: 'dollar-sign', color: '#16A34A' },
+  sales: { name: 'Sales', description: 'Business development and client acquisition', icon: 'trending-up', color: '#2563EB' },
+  purchasing: { name: 'Purchasing', description: 'Procurement and vendor management', icon: 'shopping-cart', color: '#D97706' },
+  safety: { name: 'Safety', description: 'Workplace safety and compliance', icon: 'shield', color: '#DC2626' },
+  quality: { name: 'Quality', description: 'Quality assurance and inspection', icon: 'check-circle', color: '#7C3AED' },
+  training: { name: 'Training', description: 'Employee development and onboarding', icon: 'book-open', color: '#0D9488' },
+  it: { name: 'IT', description: 'Technology infrastructure and support', icon: 'monitor', color: '#6366F1' },
+  marketing: { name: 'Marketing', description: 'Brand management and communications', icon: 'megaphone', color: '#EC4899' },
+  legal: { name: 'Legal', description: 'Legal compliance and contract management', icon: 'scale', color: '#78716C' },
+  facilities: { name: 'Facilities', description: 'Building and grounds management', icon: 'building', color: '#0891B2' },
+  logistics: { name: 'Logistics', description: 'Supply chain and distribution', icon: 'truck', color: '#EA580C' },
+  engineering: { name: 'Engineering', description: 'Technical engineering and maintenance', icon: 'wrench', color: '#4F46E5' },
+  customer_service: { name: 'Customer Service', description: 'Client support and satisfaction', icon: 'headphones', color: '#059669' },
 };
 
 const INDUSTRY_DEPARTMENTS = {

@@ -1,6 +1,6 @@
 import { Bot, ChevronDown, ChevronRight } from 'lucide-react';
 import StatusBadge from '../shared/StatusBadge';
-import { DEPT_COLORS } from '../../data/constants';
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
 import { hasOverride } from '../../agents/overrides';
 
 /**
@@ -8,7 +8,8 @@ import { hasOverride } from '../../agents/overrides';
  * Shows agent name, status, model, stats, and modified/dirty badges.
  */
 export default function AgentCard({ agent, stats, isOpen, isDirty, onClick }) {
-  const deptColor = DEPT_COLORS[agent.department] || DEPT_COLORS.ops;
+  const { getWorkspaceColor } = useTenantPortal();
+  const deptColor = getWorkspaceColor(agent.department);
   const isModified = hasOverride(agent.key);
 
   return (
