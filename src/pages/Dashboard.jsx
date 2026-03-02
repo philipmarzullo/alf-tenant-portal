@@ -191,28 +191,46 @@ export default function Dashboard() {
   }
 
   // === SECTION 1: Company KPIs ===
-  const kpiCards = domainOrder
-    .filter(d => canSeeDomain(d))
-    .map(d => {
-      const kpiConfig = DOMAIN_KPI_BY_TIER[d]?.[metricTier] || DOMAIN_KPI_BY_TIER[d]?.operational;
-      const value = hero[kpiConfig.key];
-      const Icon = domainIcons[d] || ClipboardList;
-      return {
-        domain: d,
-        label: `${domainLabels[d] || d}: ${kpiConfig.label}`,
-        value: formatKPIValue(value, kpiConfig.format),
-        icon: Icon,
-        color: domainColors[d] || '#4B5563',
-      };
-    });
+  const isDynamic = !!summary?.isDynamic;
+
+  const kpiCards = isDynamic
+    ? // Dynamic path: render hero metrics from tenant_metrics config
+      (summary.heroMetrics || []).map(m => {
+        const Icon = DOMAIN_ICON_MAP[m.icon] || domainIcons[m.domain] || ClipboardList;
+        return {
+          domain: m.domain || 'operations',
+          label: m.label,
+          value: formatKPIValue(m.value, m.format === 'percent' ? 'percent' : m.format === 'currency' ? 'number' : 'number'),
+          icon: Icon,
+          color: m.color || domainColors[m.domain] || '#4B5563',
+        };
+      })
+    : // Legacy path: hardcoded domain KPIs
+      domainOrder
+        .filter(d => canSeeDomain(d))
+        .map(d => {
+          const kpiConfig = DOMAIN_KPI_BY_TIER[d]?.[metricTier] || DOMAIN_KPI_BY_TIER[d]?.operational;
+          const value = hero[kpiConfig.key];
+          const Icon = domainIcons[d] || ClipboardList;
+          return {
+            domain: d,
+            label: `${domainLabels[d] || d}: ${kpiConfig.label}`,
+            value: formatKPIValue(value, kpiConfig.format),
+            icon: Icon,
+            color: domainColors[d] || '#4B5563',
+          };
+        });
 
   // === SECTION 2: Department Health ===
-  const healthCards = domainOrder
-    .filter(d => canSeeDomain(d))
-    .map(d => {
-      const health = computeHealth(d, hero);
-      return { domain: d, ...health };
-    });
+  // Dynamic tenants skip hardcoded health — thresholds are handled via attention items
+  const healthCards = isDynamic
+    ? []
+    : domainOrder
+        .filter(d => canSeeDomain(d))
+        .map(d => {
+          const health = computeHealth(d, hero);
+          return { domain: d, ...health };
+        });
 
   // === SECTION 3: Operational Intelligence ===
   const totalDomains = domainOrder.length;
@@ -287,8 +305,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ─── Section 2: Department Health ─── */}
-      <div className="mb-8">
+      {/* ─── Section 2: Department Health (legacy only) ─── */}
+      {healthCards.length > 0 && <div className="mb-8">
         <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
           Department Health
         </h2>
@@ -318,7 +336,7 @@ export default function Dashboard() {
             );
           })}
         </div>
-      </div>
+      </div>}
 
       {/* ─── Section 3: Operational Intelligence ─── */}
       <div className="mb-8">

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
@@ -51,6 +51,7 @@ import QualityDashboard from './pages/dashboards/QualityDashboard';
 import TimekeepingDashboard from './pages/dashboards/TimekeepingDashboard';
 import SafetyDashboard from './pages/dashboards/SafetyDashboard';
 import ActionPlansPage from './pages/dashboards/ActionPlansPage';
+import DynamicDashboard from './pages/dashboards/DynamicDashboard';
 import AnalyticsChatPage from './pages/analytics/AnalyticsChatPage';
 
 import LoginPage from './pages/auth/LoginPage';
@@ -61,6 +62,15 @@ import MarketingLayout from './pages/marketing/MarketingLayout';
 import HomePage from './pages/marketing/HomePage';
 import PricingPage from './pages/marketing/PricingPage';
 import RequestDemoPage from './pages/marketing/RequestDemoPage';
+
+/**
+ * Catch-all route for dynamic dashboard domains.
+ * Renders DynamicDashboard for any domain_key beyond the 5 legacy defaults.
+ */
+function DynamicDomainRoute() {
+  const { domain } = useParams();
+  return <DynamicDashboard domain={domain} />;
+}
 
 function LoadingScreen() {
   return (
@@ -324,6 +334,8 @@ export default function App() {
                       <Route path="timekeeping" element={<TimekeepingDashboard />} />
                       <Route path="safety" element={<SafetyDashboard />} />
                       <Route path="action-plans" element={<ProtectedRoute moduleKey="actionPlans"><ActionPlansPage /></ProtectedRoute>} />
+                      {/* Dynamic domain catch-all for tenant-configured domains beyond the 5 defaults */}
+                      <Route path=":domain" element={<DynamicDomainRoute />} />
                     </Route>
 
                     <Route
