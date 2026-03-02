@@ -35,6 +35,7 @@ import QBUBuilder from './pages/tools/QBUBuilder';
 import SalesDeckBuilder from './pages/tools/SalesDeckBuilder';
 import ToolPage from './pages/tools/ToolPage';
 import SOPBuilder from './pages/tools/SOPBuilder';
+import SOPEditorPage from './pages/tools/SOPEditorPage';
 import CustomToolBuilder from './pages/tools/CustomToolBuilder';
 import CustomToolPage from './pages/tools/CustomToolPage';
 import KnowledgePage from './pages/admin/KnowledgePage';
@@ -401,6 +402,22 @@ export default function App() {
                       element={
                         <ProtectedRoute moduleKey="automation">
                           <SOPBuilder />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/sop-builder/new"
+                      element={
+                        <ProtectedRoute moduleKey="automation">
+                          <SOPEditorPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/sop-builder/edit/:id"
+                      element={
+                        <ProtectedRoute moduleKey="automation">
+                          <SOPEditorPage />
                         </ProtectedRoute>
                       }
                     />

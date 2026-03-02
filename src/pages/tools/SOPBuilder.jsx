@@ -1,804 +1,415 @@
-import { useState, useEffect, useCallback } from 'react';
-import { FileText, ChevronRight, CheckCircle, Loader2, Zap, Bot, ArrowRight, ArrowLeft, AlertCircle, Play } from 'lucide-react';
-import { supabase, getFreshToken } from '../../lib/supabase';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  FileText, Plus, Upload, Loader2, Trash2, Pencil, XCircle, CheckCircle,
+} from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { buildDocumentPath } from '../../utils/storagePaths';
 import { useTenantId } from '../../contexts/TenantIdContext';
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
+import DeptBadge from '../../components/shared/DeptBadge';
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
+const STATUS_BADGES = {
+  draft: { label: 'Draft', cls: 'bg-gray-100 text-gray-600' },
+  extracted: { label: 'Published', cls: 'bg-green-50 text-green-700' },
+  failed: { label: 'Failed', cls: 'bg-red-50 text-red-700' },
+};
 
-const STEPS = [
-  { key: 'select', label: 'Select SOPs', description: 'Choose documents to analyze' },
-  { key: 'analyze', label: 'Analyze', description: 'AI analyzes each SOP' },
-  { key: 'roadmap', label: 'Roadmap', description: 'Generate department roadmap' },
-  { key: 'actions', label: 'Actions', description: 'Convert to trackable actions' },
-  { key: 'skills', label: 'Skills', description: 'Generate & activate agent skills' },
-];
+export default function SOPBuilder() {
+  const navigate = useNavigate();
+  const { tenantId } = useTenantId();
+  const { workspaces } = useTenantPortal();
+  const fileInputRef = useRef(null);
 
-// ─── API helper ──────────────────────────────────────────────────────────────
-
-async function sopFetch(path, body) {
-  const token = await getFreshToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(`${BACKEND_URL}/api/sop-analysis${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  });
-
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
-}
-
-// ─── Step Indicator ──────────────────────────────────────────────────────────
-
-function StepIndicator({ currentStep, completedSteps }) {
-  return (
-    <div className="flex items-center gap-1 mb-8">
-      {STEPS.map((step, idx) => {
-        const isCompleted = completedSteps.has(step.key);
-        const isCurrent = currentStep === step.key;
-        const isPast = STEPS.findIndex(s => s.key === currentStep) > idx;
-
-        return (
-          <div key={step.key} className="flex items-center gap-1 flex-1">
-            <div className="flex items-center gap-2 flex-1">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-medium ${
-                isCompleted ? 'bg-green-500 text-white'
-                : isCurrent ? 'bg-aa-blue text-white'
-                : isPast ? 'bg-green-100 text-green-700'
-                : 'bg-gray-100 text-secondary-text'
-              }`}>
-                {isCompleted ? <CheckCircle size={14} /> : idx + 1}
-              </div>
-              <div className="min-w-0 hidden sm:block">
-                <div className={`text-xs font-medium truncate ${isCurrent ? 'text-dark-text' : 'text-secondary-text'}`}>
-                  {step.label}
-                </div>
-              </div>
-            </div>
-            {idx < STEPS.length - 1 && (
-              <ChevronRight size={14} className="text-gray-300 shrink-0 mx-1" />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Step 1: Select SOPs ─────────────────────────────────────────────────────
-
-function SelectStep({ tenantId, selected, setSelected, onNext }) {
-  const [docs, setDocs] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [existingAnalyses, setExistingAnalyses] = useState({});
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  // Upload modal state
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadDept, setUploadDept] = useState(workspaces[0]?.department_key || 'ops');
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  // Delete state
+  const [deleting, setDeleting] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const departments = useMemo(() => [
+    ...workspaces.map(ws => ({ key: ws.department_key, label: ws.name })),
+    { key: 'admin', label: 'Admin' },
+    { key: 'general', label: 'General' },
+  ], [workspaces]);
 
   useEffect(() => {
-    async function load() {
-      const { data: allDocs } = await supabase
-        .from('tenant_documents')
-        .select('id, file_name, department, doc_type, char_count, created_at')
-        .eq('tenant_id', tenantId)
-        .eq('status', 'extracted')
-        .order('department')
-        .order('file_name');
-
-      setDocs(allDocs || []);
-
-      // Check which docs already have analyses
-      const { data: analyses } = await supabase
-        .from('sop_analyses')
-        .select('document_id, status')
-        .eq('tenant_id', tenantId);
-
-      const map = {};
-      for (const a of (analyses || [])) {
-        map[a.document_id] = a.status;
-      }
-      setExistingAnalyses(map);
-      setLoading(false);
-    }
-    load();
+    loadDocuments();
   }, [tenantId]);
 
-  const toggle = (id) => {
-    setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
+  async function loadDocuments() {
+    setLoading(true);
+    const { data, error: err } = await supabase
+      .from('tenant_documents')
+      .select('id, file_name, department, doc_type, status, created_at, structured_content, created_via')
+      .eq('tenant_id', tenantId)
+      .eq('doc_type', 'sop')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
-  const selectAll = () => {
-    const unanalyzed = docs.filter(d => !existingAnalyses[d.id] || existingAnalyses[d.id] === 'failed');
-    setSelected(unanalyzed.map(d => d.id));
-  };
+    if (err) {
+      setError(err.message);
+    } else {
+      setDocuments(data || []);
+    }
+    setLoading(false);
+  }
+
+  function getTitle(doc) {
+    if (doc.structured_content?.title) return doc.structured_content.title;
+    return doc.file_name || 'Untitled SOP';
+  }
+
+  function getStatus(doc) {
+    if (doc.status === 'extracted') return STATUS_BADGES.extracted;
+    if (doc.status === 'failed') return STATUS_BADGES.failed;
+    return STATUS_BADGES.draft;
+  }
+
+  async function handleFiles(files) {
+    const validFiles = Array.from(files).filter((f) => {
+      const name = f.name.toLowerCase();
+      return name.endsWith('.pdf') || name.endsWith('.docx') || name.endsWith('.txt');
+    });
+
+    if (validFiles.length === 0) {
+      setError('No supported files selected. Upload PDF, DOCX, or TXT files.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
+    if (validFiles.some((f) => f.size > 20 * 1024 * 1024)) {
+      setError('One or more files exceed the 20 MB limit.');
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+    setSuccess(null);
+
+    const { extractText } = await import('../../utils/docExtractor.js');
+
+    let uploaded = 0;
+    let failed = 0;
+
+    for (const file of validFiles) {
+      try {
+        const result = await extractText(file);
+        const fileType = file.name.toLowerCase().endsWith('.pdf') ? 'pdf'
+          : file.name.toLowerCase().endsWith('.docx') ? 'docx' : 'txt';
+
+        const storagePath = buildDocumentPath(tenantId, uploadDept, file.name);
+        const { error: uploadErr } = await supabase.storage
+          .from('tenant-documents')
+          .upload(storagePath, file);
+
+        if (uploadErr) throw uploadErr;
+
+        const { error: insertErr } = await supabase
+          .from('tenant_documents')
+          .insert({
+            tenant_id: tenantId,
+            department: uploadDept,
+            doc_type: 'sop',
+            file_name: file.name,
+            file_type: fileType,
+            file_size: file.size,
+            storage_path: storagePath,
+            page_count: result.pageCount || null,
+            extracted_text: result.text,
+            char_count: result.text.length,
+            status: result.warning ? 'failed' : 'extracted',
+            status_detail: result.warning || null,
+            created_via: 'upload',
+          });
+
+        if (insertErr) throw insertErr;
+        uploaded++;
+      } catch (err) {
+        console.error(`Failed to upload ${file.name}:`, err);
+        failed++;
+      }
+    }
+
+    setUploading(false);
+    setShowUpload(false);
+
+    if (uploaded > 0) {
+      setSuccess(`${uploaded} SOP${uploaded > 1 ? 's' : ''} uploaded${failed > 0 ? ` (${failed} failed)` : ''}`);
+      setTimeout(() => setSuccess(null), 4000);
+      loadDocuments();
+    }
+    if (failed > 0 && uploaded === 0) {
+      setError(`Failed to upload ${failed} file${failed > 1 ? 's' : ''}`);
+      setTimeout(() => setError(null), 4000);
+    }
+  }
+
+  async function handleDelete(docId) {
+    setDeleting(docId);
+    try {
+      const { error: updateErr } = await supabase
+        .from('tenant_documents')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', docId);
+
+      if (updateErr) throw updateErr;
+      setDocuments((prev) => prev.filter((d) => d.id !== docId));
+      setSuccess('SOP deleted');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err.message);
+    }
+    setDeleting(null);
+    setConfirmDelete(null);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 size={20} className="text-aa-blue animate-spin" />
+      <div className="flex items-center justify-center py-20">
+        <Loader2 size={24} className="text-aa-blue animate-spin" />
       </div>
     );
   }
 
-  if (docs.length === 0) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-        <FileText size={32} className="text-gray-300 mx-auto mb-3" />
-        <div className="text-sm text-secondary-text">No extracted documents found.</div>
-        <div className="text-xs text-secondary-text mt-1">
-          Upload SOPs in the Knowledge Base first. Documents must be extracted before analysis.
-        </div>
-      </div>
-    );
-  }
-
-  // Group by department
-  const byDept = {};
-  for (const d of docs) {
-    const dept = d.department || 'general';
-    if (!byDept[dept]) byDept[dept] = [];
-    byDept[dept].push(d);
-  }
-
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-secondary-text">
-          Select SOP documents to analyze. Already-analyzed documents are marked.
-        </p>
-        <button onClick={selectAll} className="text-xs font-medium text-aa-blue hover:text-aa-blue/80">
-          Select unanalyzed
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        {Object.entries(byDept).map(([dept, deptDocs]) => (
-          <div key={dept} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-              <span className="text-xs font-semibold text-secondary-text uppercase">{dept}</span>
-              <span className="text-xs text-secondary-text ml-2">({deptDocs.length} docs)</span>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {deptDocs.map(doc => {
-                const analysisStatus = existingAnalyses[doc.id];
-                const isSelected = selected.includes(doc.id);
-                const alreadyCompleted = analysisStatus === 'completed';
-
-                return (
-                  <label key={doc.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggle(doc.id)}
-                      className="rounded border-gray-300 text-aa-blue focus:ring-aa-blue"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-dark-text truncate">{doc.file_name}</div>
-                      <div className="text-xs text-secondary-text">
-                        {doc.doc_type} · {(doc.char_count || 0).toLocaleString()} chars
-                      </div>
-                    </div>
-                    {alreadyCompleted && (
-                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-green-50 text-green-700">Analyzed</span>
-                    )}
-                    {analysisStatus === 'failed' && (
-                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-50 text-red-700">Failed</span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex justify-end mt-6">
-        <button
-          onClick={onNext}
-          disabled={selected.length === 0}
-          className="px-4 py-2 text-sm font-medium rounded-lg bg-aa-blue text-white hover:bg-aa-blue/90 disabled:opacity-40 flex items-center gap-2"
-        >
-          Analyze {selected.length} Document{selected.length !== 1 ? 's' : ''}
-          <ArrowRight size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Step 2: Analyze ─────────────────────────────────────────────────────────
-
-function AnalyzeStep({ tenantId, selectedDocs, results, setResults, onNext, onBack }) {
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState(null);
-
-  async function runAnalysis() {
-    setRunning(true);
-    setError(null);
-    try {
-      const data = await sopFetch('/analyze', { document_ids: selectedDocs });
-      setResults(data.results || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setRunning(false);
-    }
-  }
-
-  useEffect(() => {
-    if (results.length === 0 && selectedDocs.length > 0) {
-      runAnalysis();
-    }
-  }, []);
-
-  const completed = results.filter(r => r.status === 'completed');
-  const failed = results.filter(r => r.status === 'failed');
-
-  return (
-    <div>
-      {running && (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <Loader2 size={24} className="text-aa-blue animate-spin mx-auto mb-3" />
-          <div className="text-sm text-dark-text">Analyzing {selectedDocs.length} document{selectedDocs.length !== 1 ? 's' : ''}...</div>
-          <div className="text-xs text-secondary-text mt-1">This may take a minute per document.</div>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-            <div>
-              <div className="text-sm font-medium text-red-800">Analysis failed</div>
-              <div className="text-xs text-red-700 mt-0.5">{error}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!running && results.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle size={16} className="text-green-500" />
-            <span className="text-sm text-dark-text">
-              {completed.length} of {results.length} analyzed successfully
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {results.map((r, idx) => (
-              <div key={idx} className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-dark-text">
-                    {r.analysis?.summary ? r.analysis.summary.slice(0, 80) : `Document ${idx + 1}`}
-                  </span>
-                  {r.status === 'completed' ? (
-                    <span className="text-[11px] px-1.5 py-0.5 rounded bg-green-50 text-green-700">Completed</span>
-                  ) : (
-                    <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-50 text-red-700">Failed</span>
-                  )}
-                </div>
-                {r.analysis && (
-                  <div className="flex items-center gap-4 text-xs text-secondary-text">
-                    <span>Score: {r.analysis.automation_score}/100</span>
-                    <span>Manual steps: {r.analysis.manual_steps?.length || 0}</span>
-                    <span>Candidates: {r.analysis.automation_candidates?.length || 0}</span>
-                    <span>Readiness: {r.analysis.automation_readiness}</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-between mt-6">
-            <button onClick={onBack} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-secondary-text hover:text-dark-text flex items-center gap-2">
-              <ArrowLeft size={14} /> Back
-            </button>
-            <button
-              onClick={onNext}
-              disabled={completed.length === 0}
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-aa-blue text-white hover:bg-aa-blue/90 disabled:opacity-40 flex items-center gap-2"
-            >
-              Generate Roadmap <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Step 3: Roadmap ─────────────────────────────────────────────────────────
-
-function RoadmapStep({ tenantId, analysisResults, roadmapData, setRoadmapData, onNext, onBack }) {
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Determine departments from completed analyses
-  const departments = [...new Set(
-    analysisResults
-      .filter(r => r.status === 'completed' && r.analysis)
-      .map(r => r.analysis?.department || 'ops')
-  )];
-
-  async function generateRoadmap() {
-    setRunning(true);
-    setError(null);
-    const results = [];
-    try {
-      for (const dept of departments) {
-        const data = await sopFetch('/roadmap', { department: dept });
-        results.push({ department: dept, ...data });
-      }
-      setRoadmapData(results);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setRunning(false);
-    }
-  }
-
-  useEffect(() => {
-    if (roadmapData.length === 0 && departments.length > 0) {
-      generateRoadmap();
-    }
-  }, []);
-
-  return (
-    <div>
-      {running && (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <Loader2 size={24} className="text-aa-blue animate-spin mx-auto mb-3" />
-          <div className="text-sm text-dark-text">Generating roadmap for {departments.join(', ')}...</div>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-            <div className="text-sm text-red-700">{error}</div>
-          </div>
-        </div>
-      )}
-
-      {!running && roadmapData.length > 0 && (
-        <div>
-          {roadmapData.map((rm, idx) => (
-            <div key={idx} className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-dark-text capitalize">{rm.department} Roadmap</h3>
-                {rm.roadmap?.overall_automation_score && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-aa-blue/10 text-aa-blue font-medium">
-                    Score: {rm.roadmap.overall_automation_score}
-                  </span>
-                )}
-              </div>
-              {rm.roadmap?.summary && (
-                <p className="text-xs text-secondary-text mb-3">{rm.roadmap.summary}</p>
-              )}
-              {rm.roadmap?.phases?.map((phase, pi) => (
-                <div key={pi} className="mb-2">
-                  <div className="text-xs font-medium text-dark-text mb-1">{phase.label}</div>
-                  <div className="space-y-1">
-                    {phase.items?.map((item, ii) => (
-                      <div key={ii} className="text-xs text-secondary-text pl-3 border-l-2 border-gray-200">
-                        {item.description}
-                        {item.estimated_time_saved && (
-                          <span className="text-aa-blue ml-2">({item.estimated_time_saved})</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              {rm.roadmap?.total_estimated_monthly_time_saved && (
-                <div className="text-xs font-medium text-green-700 mt-2">
-                  Est. monthly savings: {rm.roadmap.total_estimated_monthly_time_saved}
-                </div>
-              )}
-            </div>
-          ))}
-
-          <div className="flex justify-between mt-6">
-            <button onClick={onBack} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-secondary-text hover:text-dark-text flex items-center gap-2">
-              <ArrowLeft size={14} /> Back
-            </button>
-            <button
-              onClick={onNext}
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-aa-blue text-white hover:bg-aa-blue/90 flex items-center gap-2"
-            >
-              Convert to Actions <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Step 4: Actions ─────────────────────────────────────────────────────────
-
-function ActionsStep({ tenantId, roadmapData, actionsData, setActionsData, onNext, onBack }) {
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState(null);
-
-  async function convertToActions() {
-    setRunning(true);
-    setError(null);
-    const allActions = [];
-    try {
-      for (const rm of roadmapData) {
-        if (rm.roadmap_id) {
-          const data = await sopFetch('/convert-to-actions', { roadmap_id: rm.roadmap_id });
-          allActions.push(...(data.actions || []));
-        }
-      }
-      setActionsData(allActions);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setRunning(false);
-    }
-  }
-
-  useEffect(() => {
-    if (actionsData.length === 0 && roadmapData.length > 0) {
-      convertToActions();
-    }
-  }, []);
-
-  const byType = {
-    agent: actionsData.filter(a => a.assignee_type === 'agent'),
-    hybrid: actionsData.filter(a => a.assignee_type === 'hybrid'),
-    human: actionsData.filter(a => a.assignee_type === 'human'),
-  };
-
-  const TYPE_LABELS = { agent: 'Agent', hybrid: 'Hybrid', human: 'Manual' };
-  const TYPE_COLORS = {
-    agent: 'bg-green-50 text-green-700',
-    hybrid: 'bg-blue-50 text-blue-700',
-    human: 'bg-gray-100 text-gray-600',
-  };
-
-  return (
-    <div>
-      {running && (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <Loader2 size={24} className="text-aa-blue animate-spin mx-auto mb-3" />
-          <div className="text-sm text-dark-text">Classifying roadmap items into actions...</div>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-            <div className="text-sm text-red-700">{error}</div>
-          </div>
-        </div>
-      )}
-
-      {!running && actionsData.length > 0 && (
-        <div>
-          <div className="flex items-center gap-4 mb-4">
-            <span className="text-sm text-dark-text font-medium">{actionsData.length} actions created</span>
-            {Object.entries(byType).map(([type, items]) => items.length > 0 && (
-              <span key={type} className={`text-[11px] px-1.5 py-0.5 rounded ${TYPE_COLORS[type]}`}>
-                {TYPE_LABELS[type]}: {items.length}
-              </span>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
-            {actionsData.map(action => (
-              <div key={action.id} className="px-4 py-3 flex items-start gap-3">
-                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                  action.assignee_type === 'agent' ? 'bg-green-500'
-                  : action.assignee_type === 'hybrid' ? 'bg-blue-500'
-                  : 'bg-gray-400'
-                }`} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-dark-text">{action.title}</div>
-                  <div className="text-xs text-secondary-text mt-0.5">{action.description}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={`text-[11px] px-1.5 py-0.5 rounded ${TYPE_COLORS[action.assignee_type] || ''}`}>
-                      {TYPE_LABELS[action.assignee_type] || action.assignee_type}
-                    </span>
-                    {action.agent_key && (
-                      <span className="text-[11px] text-secondary-text">{action.agent_key} agent</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-between mt-6">
-            <button onClick={onBack} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-secondary-text hover:text-dark-text flex items-center gap-2">
-              <ArrowLeft size={14} /> Back
-            </button>
-            <button
-              onClick={onNext}
-              disabled={byType.agent.length === 0 && byType.hybrid.length === 0}
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-aa-blue text-white hover:bg-aa-blue/90 disabled:opacity-40 flex items-center gap-2"
-            >
-              Generate Skills <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Step 5: Skills ──────────────────────────────────────────────────────────
-
-function SkillsStep({ tenantId, actionsData, onBack }) {
-  const [skills, setSkills] = useState([]);
-  const [generating, setGenerating] = useState(null);
-  const [activating, setActivating] = useState(null);
-  const [error, setError] = useState(null);
-  const [refreshedActions, setRefreshedActions] = useState([]);
-
-  // Use refreshed data if available, otherwise use original
-  const displayActions = refreshedActions.length > 0 ? refreshedActions : actionsData;
-  const skillableActions = displayActions.filter(a =>
-    (a.assignee_type === 'agent' || a.assignee_type === 'hybrid') && a.status !== 'manual'
-  );
-
-  async function refreshActions() {
-    const token = await getFreshToken();
-    const res = await fetch(`${BACKEND_URL}/api/sop-analysis/actions?status=`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      const { actions } = await res.json();
-      // Filter to only our pipeline actions
-      const ids = new Set(actionsData.map(a => a.id));
-      setRefreshedActions(actions.filter(a => ids.has(a.id)));
-    }
-  }
-
-  async function handleGenerateSkill(actionId) {
-    setGenerating(actionId);
-    setError(null);
-    try {
-      await sopFetch('/generate-skill', { action_id: actionId });
-      await refreshActions();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setGenerating(null);
-    }
-  }
-
-  async function handleActivateSkill(actionId) {
-    setActivating(actionId);
-    setError(null);
-    try {
-      await sopFetch('/activate-skill', { action_id: actionId });
-      await refreshActions();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setActivating(null);
-    }
-  }
-
-  async function handleGenerateAll() {
-    const planned = skillableActions.filter(a => a.status === 'planned');
-    setError(null);
-    for (const action of planned) {
-      setGenerating(action.id);
-      try {
-        await sopFetch('/generate-skill', { action_id: action.id });
-      } catch (err) {
-        setError(err.message);
-        break;
-      }
-    }
-    setGenerating(null);
-    await refreshActions();
-  }
-
-  const STATUS_BADGES = {
-    planned: { label: 'Planned', cls: 'bg-gray-100 text-gray-600' },
-    skill_generating: { label: 'Generating...', cls: 'bg-blue-50 text-blue-700' },
-    ready_for_review: { label: 'Ready', cls: 'bg-amber-50 text-amber-700' },
-    active: { label: 'Active', cls: 'bg-green-50 text-green-700' },
-  };
-
-  const plannedCount = skillableActions.filter(a => a.status === 'planned').length;
-  const readyCount = skillableActions.filter(a => a.status === 'ready_for_review').length;
-  const activeCount = skillableActions.filter(a => a.status === 'active').length;
-
-  return (
-    <div>
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-            <div className="text-sm text-red-700">{error}</div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-dark-text font-medium">{skillableActions.length} skill-eligible actions</span>
-          {activeCount > 0 && <span className="text-[11px] px-1.5 py-0.5 rounded bg-green-50 text-green-700">{activeCount} active</span>}
-          {readyCount > 0 && <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">{readyCount} ready</span>}
-        </div>
-        {plannedCount > 0 && (
-          <button
-            onClick={handleGenerateAll}
-            disabled={!!generating}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-aa-blue text-white hover:bg-aa-blue/90 disabled:opacity-50 flex items-center gap-1"
-          >
-            {generating ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-            Generate All ({plannedCount})
-          </button>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
-        {skillableActions.map(action => {
-          const badge = STATUS_BADGES[action.status] || STATUS_BADGES.planned;
-          const isGenerating = generating === action.id;
-          const isActivating = activating === action.id;
-
-          return (
-            <div key={action.id} className="px-4 py-3 flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-dark-text">{action.title}</div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[11px] px-1.5 py-0.5 rounded ${badge.cls}`}>{badge.label}</span>
-                  {action.agent_key && (
-                    <span className="text-[11px] text-secondary-text flex items-center gap-1">
-                      <Bot size={10} /> {action.agent_key}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {action.status === 'planned' && (
-                  <button
-                    onClick={() => handleGenerateSkill(action.id)}
-                    disabled={!!generating || !!activating}
-                    className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-aa-blue/30 text-aa-blue hover:bg-aa-blue/5 disabled:opacity-50 flex items-center gap-1"
-                  >
-                    {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-                    Generate
-                  </button>
-                )}
-                {action.status === 'ready_for_review' && (
-                  <button
-                    onClick={() => handleActivateSkill(action.id)}
-                    disabled={!!generating || !!activating}
-                    className="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-green-300 text-green-700 hover:bg-green-50 disabled:opacity-50 flex items-center gap-1"
-                  >
-                    {isActivating ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
-                    Activate
-                  </button>
-                )}
-                {action.status === 'active' && (
-                  <span className="flex items-center gap-1 text-xs text-green-700">
-                    <CheckCircle size={12} /> Deployed
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {activeCount > 0 && (
-        <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
-          <div className="text-sm text-green-800">
-            {activeCount} skill{activeCount !== 1 ? 's' : ''} deployed to agents. They're now available in agent conversations.
-          </div>
-        </div>
-      )}
-
-      <div className="flex justify-between mt-6">
-        <button onClick={onBack} className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-secondary-text hover:text-dark-text flex items-center gap-2">
-          <ArrowLeft size={14} /> Back
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main Page ───────────────────────────────────────────────────────────────
-
-export default function SOPBuilder() {
-  const { tenantId } = useTenantId();
-  const [currentStep, setCurrentStep] = useState('select');
-  const [completedSteps, setCompletedSteps] = useState(new Set());
-
-  // Pipeline data
-  const [selectedDocs, setSelectedDocs] = useState([]);
-  const [analysisResults, setAnalysisResults] = useState([]);
-  const [roadmapData, setRoadmapData] = useState([]);
-  const [actionsData, setActionsData] = useState([]);
-
-  function markCompleted(step) {
-    setCompletedSteps(prev => new Set([...prev, step]));
-  }
-
-  function goToStep(step) {
-    setCurrentStep(step);
-  }
-
-  return (
-    <div>
-      <div className="mb-6">
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
         <div className="flex items-center gap-3 mb-1">
           <div className="p-2 bg-aa-blue/10 rounded-lg">
-            <Zap size={20} className="text-aa-blue" />
+            <FileText size={20} className="text-aa-blue" />
           </div>
           <div>
             <h1 className="text-2xl font-light text-dark-text">SOP Builder</h1>
             <p className="text-sm text-secondary-text">
-              Analyze SOPs, generate automation roadmaps, and deploy agent skills.
+              Create, upload, and manage Standard Operating Procedures
             </p>
           </div>
         </div>
       </div>
 
-      <StepIndicator currentStep={currentStep} completedSteps={completedSteps} />
-
-      {currentStep === 'select' && (
-        <SelectStep
-          tenantId={tenantId}
-          selected={selectedDocs}
-          setSelected={setSelectedDocs}
-          onNext={() => { markCompleted('select'); goToStep('analyze'); }}
-        />
+      {/* Alerts */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
+          <XCircle size={16} className="shrink-0" />
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
+          <CheckCircle size={16} className="shrink-0" />
+          {success}
+        </div>
       )}
 
-      {currentStep === 'analyze' && (
-        <AnalyzeStep
-          tenantId={tenantId}
-          selectedDocs={selectedDocs}
-          results={analysisResults}
-          setResults={setAnalysisResults}
-          onNext={() => { markCompleted('analyze'); goToStep('roadmap'); }}
-          onBack={() => goToStep('select')}
-        />
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button
+          onClick={() => navigate('/portal/tools/sop-builder/new')}
+          className="bg-white rounded-lg border border-gray-200 p-6 text-left hover:border-aa-blue/40 hover:shadow-sm transition-all group"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-aa-blue/10 rounded-lg group-hover:bg-aa-blue/15 transition-colors">
+              <Plus size={20} className="text-aa-blue" />
+            </div>
+            <h3 className="text-sm font-semibold text-dark-text">Create New SOP</h3>
+          </div>
+          <p className="text-xs text-secondary-text">
+            Build a structured SOP from scratch with AI-guided section writing
+          </p>
+        </button>
+
+        <button
+          onClick={() => setShowUpload(true)}
+          className="bg-white rounded-lg border border-gray-200 p-6 text-left hover:border-aa-blue/40 hover:shadow-sm transition-all group"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-aa-blue/10 rounded-lg group-hover:bg-aa-blue/15 transition-colors">
+              <Upload size={20} className="text-aa-blue" />
+            </div>
+            <h3 className="text-sm font-semibold text-dark-text">Upload SOP</h3>
+          </div>
+          <p className="text-xs text-secondary-text">
+            Import existing SOPs from PDF, DOCX, or TXT files
+          </p>
+        </button>
+      </div>
+
+      {/* Upload Modal */}
+      {showUpload && (
+        <>
+          <div className="fixed inset-0 bg-black/20 z-40" onClick={() => !uploading && setShowUpload(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+              <h2 className="text-lg font-semibold text-dark-text mb-4">Upload SOP Documents</h2>
+
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-secondary-text mb-1">Department</label>
+                <select
+                  value={uploadDept}
+                  onChange={(e) => setUploadDept(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue bg-white"
+                >
+                  {departments.map((d) => (
+                    <option key={d.key} value={d.key}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                  dragOver
+                    ? 'border-aa-blue bg-sky-50'
+                    : 'border-gray-300 hover:border-aa-blue/50 hover:bg-gray-50'
+                } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+              >
+                {uploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 size={24} className="text-aa-blue animate-spin" />
+                    <span className="text-sm text-secondary-text">Extracting text and uploading...</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload size={24} className="text-gray-400" />
+                    <span className="text-sm text-secondary-text">Drop files here or click to upload</span>
+                    <span className="text-xs text-gray-400">PDF, DOCX, TXT — max 20 MB</span>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.docx,.txt"
+                  onChange={(e) => { if (e.target.files.length > 0) handleFiles(e.target.files); e.target.value = ''; }}
+                  className="hidden"
+                />
+              </div>
+
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setShowUpload(false)}
+                  disabled={uploading}
+                  className="px-4 py-2 text-sm font-medium text-secondary-text hover:text-dark-text disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
-      {currentStep === 'roadmap' && (
-        <RoadmapStep
-          tenantId={tenantId}
-          analysisResults={analysisResults}
-          roadmapData={roadmapData}
-          setRoadmapData={setRoadmapData}
-          onNext={() => { markCompleted('roadmap'); goToStep('actions'); }}
-          onBack={() => goToStep('analyze')}
-        />
-      )}
+      {/* SOP Table */}
+      {documents.length === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <FileText size={32} className="text-gray-300 mx-auto mb-3" />
+          <div className="text-sm text-secondary-text">No SOPs yet.</div>
+          <div className="text-xs text-secondary-text mt-1">
+            Create a new SOP or upload an existing one to get started.
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50">
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Title</th>
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Department</th>
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Status</th>
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Created</th>
+                <th className="text-right text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {documents.map(doc => {
+                const status = getStatus(doc);
+                const isBuilderCreated = doc.created_via === 'builder';
 
-      {currentStep === 'actions' && (
-        <ActionsStep
-          tenantId={tenantId}
-          roadmapData={roadmapData}
-          actionsData={actionsData}
-          setActionsData={setActionsData}
-          onNext={() => { markCompleted('actions'); goToStep('skills'); }}
-          onBack={() => goToStep('roadmap')}
-        />
-      )}
-
-      {currentStep === 'skills' && (
-        <SkillsStep
-          tenantId={tenantId}
-          actionsData={actionsData}
-          onBack={() => goToStep('actions')}
-        />
+                return (
+                  <tr key={doc.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <div className="text-sm font-medium text-dark-text">{getTitle(doc)}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <DeptBadge dept={doc.department} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${status.cls}`}>
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-secondary-text">
+                        {new Date(doc.created_at).toLocaleDateString()}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        {isBuilderCreated && (
+                          <button
+                            onClick={() => navigate(`/portal/tools/sop-builder/edit/${doc.id}`)}
+                            className="p-1.5 text-secondary-text hover:text-aa-blue transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                        {confirmDelete === doc.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleDelete(doc.id)}
+                              disabled={deleting === doc.id}
+                              className="px-2 py-1 text-[11px] font-medium text-red-700 bg-red-50 rounded hover:bg-red-100"
+                            >
+                              {deleting === doc.id ? 'Deleting...' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDelete(null)}
+                              className="px-2 py-1 text-[11px] text-secondary-text hover:text-dark-text"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDelete(doc.id)}
+                            className="p-1.5 text-secondary-text hover:text-red-500 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
