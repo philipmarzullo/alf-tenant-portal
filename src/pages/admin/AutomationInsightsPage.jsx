@@ -56,7 +56,7 @@ async function sopAnalysisFetch(path, body) {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-export default function AutomationInsightsPage() {
+export default function AutomationInsightsPage({ embedded = false, initialTab }) {
   const { isAdmin } = useUser();
   const { tenantId } = useTenantId();
   const { workspaces, agents, getWorkspaceColor } = useTenantPortal();
@@ -81,7 +81,7 @@ export default function AutomationInsightsPage() {
   const [actions, setActions] = useState([]);
   const [sopDocs, setSopDocs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(initialTab || 'overview');
   const [expandedDept, setExpandedDept] = useState(null);
   const [filterDept, setFilterDept] = useState('all');
   const [chatAgent, setChatAgent] = useState(null);
@@ -311,10 +311,12 @@ export default function AutomationInsightsPage() {
   if (!hasAnalyses && !hasActionsData && !hasSopDocs) {
     return (
       <div>
-        <div className="mb-6">
-          <h1 className="text-2xl font-light text-dark-text mb-1">Automation Workboard</h1>
-          <p className="text-sm text-secondary-text">Track automations, agent skills, and responsibilities across your operations.</p>
-        </div>
+        {!embedded && (
+          <div className="mb-6">
+            <h1 className="text-2xl font-light text-dark-text mb-1">Automation Workboard</h1>
+            <p className="text-sm text-secondary-text">Track automations, agent skills, and responsibilities across your operations.</p>
+          </div>
+        )}
         <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
           <Zap size={32} className="text-gray-300 mx-auto mb-3" />
           <div className="text-sm text-secondary-text">No automation data available yet.</div>
@@ -331,10 +333,12 @@ export default function AutomationInsightsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-light text-dark-text mb-1">Automation Workboard</h1>
-        <p className="text-sm text-secondary-text">Track automations, agent skills, and responsibilities across your operations.</p>
-      </div>
+      {!embedded && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-light text-dark-text mb-1">Automation Workboard</h1>
+          <p className="text-sm text-secondary-text">Track automations, agent skills, and responsibilities across your operations.</p>
+        </div>
+      )}
 
       {/* Pipeline Error */}
       {pipelineError && (

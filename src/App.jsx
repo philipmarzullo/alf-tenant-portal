@@ -16,6 +16,7 @@ import useTierAccess from './hooks/useTierAccess';
 import UpgradePrompt from './components/shared/UpgradePrompt';
 
 import Dashboard from './pages/Dashboard';
+import MyWorkPage from './pages/MyWorkPage';
 import HRLayout from './pages/hr/HRLayout';
 import HROverview from './pages/hr/HROverview';
 import Benefits from './pages/hr/Benefits';
@@ -42,9 +43,8 @@ import KnowledgePage from './pages/admin/KnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
 import RoleTemplates from './pages/admin/RoleTemplates';
 import UserManagement from './pages/admin/UserManagement';
-import AutomationInsightsPage from './pages/admin/AutomationInsightsPage';
+import AutomationPage from './pages/admin/AutomationPage';
 import ConnectionsPage from './pages/admin/ConnectionsPage';
-import AutomationPreferencesPage from './pages/admin/AutomationPreferencesPage';
 import AgentInstructionsPage from './pages/admin/AgentInstructionsPage';
 import DashboardsLayout from './pages/dashboards/DashboardsLayout';
 import OperationsDashboard from './pages/dashboards/OperationsDashboard';
@@ -198,6 +198,16 @@ function AuthGate({ children }) {
   return children;
 }
 
+/**
+ * Redirects portal index based on role:
+ * user/manager → /portal/my-work, admin+ → Dashboard (Command Center)
+ */
+function PortalIndex() {
+  const { isAdmin } = useUser();
+  if (!isAdmin) return <Navigate to="/portal/my-work" replace />;
+  return <Dashboard />;
+}
+
 function ProtectedRoute({ moduleKey, adminOnly, superAdminOnly, children }) {
   const { hasModule, isAdmin, isSuperAdmin } = useUser();
   const { hasFeature, requiredTierLabel } = useTierAccess();
@@ -263,7 +273,8 @@ export default function App() {
                 <TopBar isMobile={isMobile} onMenuToggle={() => setMobileMenuOpen(true)} />
                 <PageWrapper>
                   <Routes>
-                    <Route index element={<Dashboard />} />
+                    <Route index element={<PortalIndex />} />
+                    <Route path="my-work" element={<MyWorkPage />} />
 
                     <Route
                       path="hr"
@@ -479,16 +490,7 @@ export default function App() {
                       path="admin/automation"
                       element={
                         <ProtectedRoute moduleKey="automation">
-                          <AutomationInsightsPage />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    <Route
-                      path="admin/automation-preferences"
-                      element={
-                        <ProtectedRoute superAdminOnly>
-                          <AutomationPreferencesPage />
+                          <AutomationPage />
                         </ProtectedRoute>
                       }
                     />

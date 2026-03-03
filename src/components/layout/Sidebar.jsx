@@ -5,7 +5,7 @@ import {
   FileBarChart, Presentation, Settings, UserCog, Briefcase,
   BookOpen, Zap, BarChart3, ChevronLeft, ChevronRight, ChevronDown, LogOut,
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
-  Wrench, ClipboardList, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
+  Wrench, ClipboardList, ClipboardCheck, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
   Lock, TrendingUp, Layers, Bot,
 } from 'lucide-react';
@@ -29,7 +29,7 @@ const ICON_MAP = {
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
   Wrench, ClipboardList, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
-  Layers, Bot,
+  Layers, Bot, ClipboardCheck,
   // kebab-case (used in tenant_workspaces and tenant_tools from DB)
   'clipboard-list': ClipboardList,
   'users': Users,
@@ -62,6 +62,16 @@ const ICON_MAP = {
   'trending-up': TrendingUp,
 };
 
+// Role hierarchy for min_role nav filtering
+const ROLE_LEVEL = {
+  user: 0,
+  manager: 1,
+  admin: 2,
+  'super-admin': 3,
+  super_admin: 3,
+  platform_owner: 4,
+};
+
 // Tools that produce real deliverables (PPTX, etc.)
 const PRIMARY_TOOLS = new Set(['qbu', 'salesDeck', 'sop-builder']);
 
@@ -87,6 +97,9 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     return location.pathname.startsWith(path);
   };
 
+  // User's role level for min_role filtering
+  const userRoleLevel = ROLE_LEVEL[currentUser?.role] ?? 0;
+
   // Build nav section items from DB nav sections
   const dbNavGroups = useMemo(() => {
     const groups = {};
@@ -94,30 +107,49 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       groups[section.section_key] = {
         group: section.label.toUpperCase(),
         sectionKey: section.section_key,
-        items: (section.items || []).map(item => ({
-          label: item.label,
-          path: item.path,
-          icon: item.icon,
-          moduleKey: item.module_key || null,
-          adminOnly: item.admin_only || false,
-          superAdminOnly: item.super_admin_only || false,
-        })),
+        items: (section.items || [])
+          .filter(item => {
+            // min_role filtering: skip items the user's role can't see
+            if (item.min_role) {
+              const minLevel = ROLE_LEVEL[item.min_role] ?? 0;
+              if (userRoleLevel < minLevel) return false;
+            }
+            return true;
+          })
+          .map(item => ({
+            label: item.label,
+            path: item.path,
+            icon: item.icon,
+            moduleKey: item.module_key || null,
+            adminOnly: item.admin_only || false,
+            superAdminOnly: item.super_admin_only || false,
+            scope: item.scope || null,
+          })),
       };
     }
     return groups;
-  }, [navSections]);
+  }, [navSections, userRoleLevel]);
 
   // Build dynamic WORKSPACES group from tenant_workspaces
-  const dynamicWorkspaces = useMemo(() => ({
-    group: 'WORKSPACES',
-    items: workspaces.map((ws) => ({
-      label: ws.name,
-      path: getWorkspacePath(ws.department_key),
-      icon: ws.icon || 'ClipboardList',
-      moduleKey: ws.department_key,
-      _dynamic: true,
-    })),
-  }), [workspaces, getWorkspacePath]);
+  // user/manager roles only see their department's workspace
+  const dynamicWorkspaces = useMemo(() => {
+    const userDept = currentUser?.department_key;
+    const scopeToDept = userDept && userRoleLevel < ROLE_LEVEL.admin;
+    const visibleWorkspaces = scopeToDept
+      ? workspaces.filter(ws => ws.department_key === userDept)
+      : workspaces;
+
+    return {
+      group: 'WORKSPACES',
+      items: visibleWorkspaces.map((ws) => ({
+        label: ws.name,
+        path: getWorkspacePath(ws.department_key),
+        icon: ws.icon || 'ClipboardList',
+        moduleKey: ws.department_key,
+        _dynamic: true,
+      })),
+    };
+  }, [workspaces, getWorkspacePath, currentUser?.department_key, userRoleLevel]);
 
   // Build dynamic TOOLS group from tenant_tools — split into primary + templates
   const dynamicTools = useMemo(() => {

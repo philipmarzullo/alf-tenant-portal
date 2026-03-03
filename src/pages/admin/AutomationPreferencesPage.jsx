@@ -334,7 +334,7 @@ function WorkspaceGroup({ workspace, preferences, msConnected, savingKey, onMode
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-export default function AutomationPreferencesPage() {
+export default function AutomationPreferencesPage({ embedded = false }) {
   const navigate = useNavigate();
   const { tenantId } = useTenantId();
   const [preferences, setPreferences] = useState({});
@@ -505,10 +505,14 @@ export default function AutomationPreferencesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-light text-dark-text mb-2">Automation Preferences</h1>
-      <p className="text-sm text-secondary-text mb-6">
-        Control how agent actions interact with connected services. Each action can draft only, present a send button for review, or execute automatically.
-      </p>
+      {!embedded && (
+        <>
+          <h1 className="text-2xl font-light text-dark-text mb-2">Automation Preferences</h1>
+          <p className="text-sm text-secondary-text mb-6">
+            Control how agent actions interact with connected services. Each action can draft only, present a send button for review, or execute automatically.
+          </p>
+        </>
+      )}
 
       <div className="space-y-4 max-w-3xl">
 
