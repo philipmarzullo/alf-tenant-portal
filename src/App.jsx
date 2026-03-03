@@ -1,6 +1,30 @@
-import { useState } from 'react';
+import { useState, Component } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+
+// Error boundary to catch render crashes and show the error instead of a white screen
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="p-8 max-w-xl mx-auto mt-12">
+          <h2 className="text-lg font-semibold text-red-700 mb-2">Something went wrong</h2>
+          <pre className="text-sm text-red-600 bg-red-50 p-4 rounded-lg overflow-auto whitespace-pre-wrap">
+            {this.state.error.message}
+            {'\n\n'}
+            {this.state.error.stack}
+          </pre>
+          <button onClick={() => this.setState({ error: null })} className="mt-4 px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import PageWrapper from './components/layout/PageWrapper';
@@ -337,7 +361,9 @@ export default function App() {
                       path="dashboards"
                       element={
                         <ProtectedRoute moduleKey="dashboards">
-                          <DashboardsLayout />
+                          <ErrorBoundary>
+                            <DashboardsLayout />
+                          </ErrorBoundary>
                         </ProtectedRoute>
                       }
                     >
