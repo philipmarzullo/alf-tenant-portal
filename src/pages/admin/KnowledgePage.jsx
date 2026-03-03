@@ -97,7 +97,7 @@ function DocumentTextPreview({ docId }) {
 
 /* ─── Main Knowledge Page ─── */
 
-export default function KnowledgePage() {
+export default function KnowledgePage({ embedded = false }) {
   const { tenantId } = useTenantId();
   const { workspaces } = useTenantPortal();
 
@@ -134,6 +134,7 @@ export default function KnowledgePage() {
       .from('tenant_documents')
       .select('id, file_name, file_type, file_size, department, doc_type, char_count, page_count, status, title, description, created_at')
       .eq('tenant_id', tenantId)
+      .eq('source', 'tenant')
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
@@ -272,12 +273,14 @@ export default function KnowledgePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-dark-text">Knowledge Base</h1>
-        <p className="text-sm text-secondary-text mt-1">
-          Upload SOPs, policies, and reference documents. Extracted text is used as context for AI agents.
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl font-semibold text-dark-text">Knowledge Base</h1>
+          <p className="text-sm text-secondary-text mt-1">
+            Upload SOPs, policies, and reference documents. Extracted text is used as context for AI agents.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
