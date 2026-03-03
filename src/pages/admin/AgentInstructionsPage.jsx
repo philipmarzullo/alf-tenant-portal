@@ -91,15 +91,18 @@ export default function AgentInstructionsPage() {
         };
       }
 
+      // Admins auto-approve their own instructions; regular users need review
+      const autoApprove = isSuperAdmin;
       const { error: insertErr } = await supabase
         .from('agent_instructions')
         .insert({
           tenant_id: tenantId,
           agent_key: form.agentKey,
           instruction_text: form.text.trim(),
-          source: 'tenant',
-          status: 'pending',
+          source: autoApprove ? 'platform' : 'tenant',
+          status: autoApprove ? 'approved' : 'pending',
           created_by: currentUser.id,
+          ...(autoApprove ? { reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() } : {}),
           ...fileFields,
         });
 
@@ -107,7 +110,7 @@ export default function AgentInstructionsPage() {
 
       setForm({ agentKey: '', text: '' });
       setFile(null);
-      setSuccess('Instruction submitted for review');
+      setSuccess(autoApprove ? 'Instruction added and approved' : 'Instruction submitted for review');
       setTimeout(() => setSuccess(null), 4000);
       loadInstructions();
     } catch (err) {
