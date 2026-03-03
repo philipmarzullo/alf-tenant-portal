@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Loader2, Upload, MessageSquareText, XCircle, CheckCircle,
-  Clock, CheckCheck, XOctagon, FileText,
+  Clock, CheckCheck, XOctagon, FileText, ChevronDown, ChevronUp,
+  Check, X, GitBranch,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { buildDocumentPath, formatFileSize } from '../../utils/storagePaths';
@@ -18,7 +19,7 @@ const STATUS_BADGE = {
 export default function AgentInstructionsPage() {
   const { tenantId } = useTenantId();
   const { agents } = useTenantPortal();
-  const { currentUser } = useUser();
+  const { currentUser, isSuperAdmin } = useUser();
 
   const [instructions, setInstructions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +35,13 @@ export default function AgentInstructionsPage() {
   const [form, setForm] = useState({ agentKey: '', text: '' });
   const [file, setFile] = useState(null);
 
+  // Review state
+  const [reviewingId, setReviewingId] = useState(null);
+  const [reviewMode, setReviewMode] = useState(null); // 'approve' | 'reject'
+  const [reviewNote, setReviewNote] = useState('');
+  const [propagateAgents, setPropagateAgents] = useState([]);
+  const [actionLoading, setActionLoading] = useState(null);
+
   useEffect(() => { loadInstructions(); }, []);
 
   async function loadInstructions() {
@@ -41,7 +49,7 @@ export default function AgentInstructionsPage() {
     setError(null);
     const { data, error: err } = await supabase
       .from('agent_instructions')
-      .select('*, profiles:created_by(full_name)')
+      .select('*, profiles:created_by(full_name), reviewer:reviewed_by(full_name), propagated_from')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false });
 
@@ -124,6 +132,124 @@ export default function AgentInstructionsPage() {
     }
   }
 
+  // Open review panel for an instruction
+  function openReview(instrId, mode) {
+    if (reviewingId === instrId && reviewMode === mode) {
+      // Toggle off
+      closeReview();
+      return;
+    }
+    setReviewingId(instrId);
+    setReviewMode(mode);
+    setReviewNote('');
+    setPropagateAgents([]);
+  }
+
+  function closeReview() {
+    setReviewingId(null);
+    setReviewMode(null);
+    setReviewNote('');
+    setPropagateAgents([]);
+  }
+
+  function togglePropagateAgent(agentKey) {
+    setPropagateAgents(prev =>
+      prev.includes(agentKey)
+        ? prev.filter(k => k !== agentKey)
+        : [...prev, agentKey]
+    );
+  }
+
+  async function handleApprove(instr) {
+    setActionLoading(instr.id);
+    setError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // 1. Approve the original instruction
+      const { error: updateErr } = await supabase
+        .from('agent_instructions')
+        .update({
+          status: 'approved',
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
+          review_note: reviewNote.trim() || null,
+        })
+        .eq('id', instr.id);
+
+      if (updateErr) throw updateErr;
+
+      // 2. Create propagated copies for selected agents
+      if (propagateAgents.length > 0) {
+        const copies = propagateAgents.map(agentKey => ({
+          tenant_id: instr.tenant_id,
+          agent_key: agentKey,
+          instruction_text: instr.instruction_text,
+          file_name: instr.file_name || null,
+          file_type: instr.file_type || null,
+          file_size: instr.file_size || null,
+          storage_path: instr.storage_path || null,
+          extracted_text: instr.extracted_text || null,
+          source: instr.source,
+          created_by: instr.created_by,
+          status: 'approved',
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
+          review_note: reviewNote.trim() || null,
+          propagated_from: instr.id,
+        }));
+
+        const { error: insertErr } = await supabase
+          .from('agent_instructions')
+          .insert(copies);
+
+        if (insertErr) throw insertErr;
+      }
+
+      closeReview();
+      const count = propagateAgents.length;
+      setSuccess(count > 0
+        ? `Approved and propagated to ${count} other agent${count > 1 ? 's' : ''}`
+        : 'Instruction approved'
+      );
+      setTimeout(() => setSuccess(null), 4000);
+      loadInstructions();
+    } catch (err) {
+      setError(err.message);
+      setTimeout(() => setError(null), 4000);
+    }
+    setActionLoading(null);
+  }
+
+  async function handleReject(instrId) {
+    setActionLoading(instrId);
+    setError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error: updateErr } = await supabase
+        .from('agent_instructions')
+        .update({
+          status: 'rejected',
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
+          review_note: reviewNote.trim() || null,
+        })
+        .eq('id', instrId);
+
+      if (updateErr) throw updateErr;
+
+      closeReview();
+      setSuccess('Instruction rejected');
+      setTimeout(() => setSuccess(null), 4000);
+      loadInstructions();
+    } catch (err) {
+      setError(err.message);
+      setTimeout(() => setError(null), 4000);
+    }
+    setActionLoading(null);
+  }
+
   // Filtering
   const filtered = useMemo(() => {
     let list = instructions;
@@ -150,6 +276,13 @@ export default function AgentInstructionsPage() {
     const keys = new Set(instructions.map(i => i.agent_key));
     return [...keys].sort();
   }, [instructions]);
+
+  // Source instruction name lookup for propagated_from
+  const sourceInstrAgent = (propagatedFromId) => {
+    if (!propagatedFromId) return null;
+    const source = instructions.find(i => i.id === propagatedFromId);
+    return source ? agentName(source.agent_key) : null;
+  };
 
   if (loading) {
     return (
@@ -343,35 +476,162 @@ export default function AgentInstructionsPage() {
           {filtered.map((instr) => {
             const badge = STATUS_BADGE[instr.status];
             const BadgeIcon = badge.icon;
+            const isReviewing = reviewingId === instr.id;
+            const isLoading = actionLoading === instr.id;
+            const propagatedSourceName = sourceInstrAgent(instr.propagated_from);
+            // Other agents to propagate to (exclude current instruction's agent)
+            const otherAgents = agents.filter(a => a.agent_key !== instr.agent_key);
 
             return (
-              <div key={instr.id} className="bg-white rounded-lg border border-gray-200 px-4 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-aa-blue/10 text-aa-blue">
-                        {agentName(instr.agent_key)}
-                      </span>
-                      <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded ${badge.className}`}>
-                        <BadgeIcon size={10} />
-                        {badge.label}
-                      </span>
-                      {instr.file_name && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600">
-                          <FileText size={10} />
-                          {instr.file_name}
+              <div key={instr.id} className="bg-white rounded-lg border border-gray-200">
+                <div className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-aa-blue/10 text-aa-blue">
+                          {agentName(instr.agent_key)}
                         </span>
-                      )}
+                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded ${badge.className}`}>
+                          <BadgeIcon size={10} />
+                          {badge.label}
+                        </span>
+                        {instr.file_name && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600">
+                            <FileText size={10} />
+                            {instr.file_name}
+                          </span>
+                        )}
+                        {propagatedSourceName && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded bg-purple-50 text-purple-700">
+                            <GitBranch size={10} />
+                            Propagated from {propagatedSourceName}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-dark-text whitespace-pre-wrap">{instr.instruction_text}</p>
+                      <div className="text-xs text-secondary-text mt-1">
+                        {instr.profiles?.full_name || 'Unknown'} · {new Date(instr.created_at).toLocaleDateString()}
+                        {instr.reviewer?.full_name && (
+                          <span className="ml-2 text-gray-400">
+                            Reviewed by {instr.reviewer.full_name}
+                            {instr.reviewed_at && ` · ${new Date(instr.reviewed_at).toLocaleDateString()}`}
+                          </span>
+                        )}
+                        {instr.review_note && (
+                          <span className="ml-2 text-gray-400">— {instr.review_note}</span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm text-dark-text whitespace-pre-wrap">{instr.instruction_text}</p>
-                    <div className="text-xs text-secondary-text mt-1">
-                      {instr.profiles?.full_name || 'Unknown'} · {new Date(instr.created_at).toLocaleDateString()}
-                      {instr.review_note && (
-                        <span className="ml-2 text-gray-400">Review note: {instr.review_note}</span>
-                      )}
-                    </div>
+
+                    {/* Action buttons — super-admin only, pending only */}
+                    {isSuperAdmin && instr.status === 'pending' && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => openReview(instr.id, 'approve')}
+                          disabled={isLoading}
+                          className={`p-1.5 rounded-md transition-colors ${
+                            isReviewing && reviewMode === 'approve'
+                              ? 'bg-green-100 text-green-700'
+                              : 'text-gray-400 hover:bg-green-50 hover:text-green-600'
+                          }`}
+                          title="Approve"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button
+                          onClick={() => openReview(instr.id, 'reject')}
+                          disabled={isLoading}
+                          className={`p-1.5 rounded-md transition-colors ${
+                            isReviewing && reviewMode === 'reject'
+                              ? 'bg-red-100 text-red-700'
+                              : 'text-gray-400 hover:bg-red-50 hover:text-red-600'
+                          }`}
+                          title="Reject"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* Expanded review panel */}
+                {isReviewing && (
+                  <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50 space-y-3">
+                    {reviewMode === 'approve' && otherAgents.length > 0 && (
+                      <div>
+                        <label className="text-xs font-medium text-dark-text block mb-1.5">
+                          Also apply to:
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {otherAgents.map(a => (
+                            <label
+                              key={a.agent_key}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md border cursor-pointer transition-colors ${
+                                propagateAgents.includes(a.agent_key)
+                                  ? 'bg-blue-50 border-blue-300 text-blue-800'
+                                  : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={propagateAgents.includes(a.agent_key)}
+                                onChange={() => togglePropagateAgent(a.agent_key)}
+                                className="sr-only"
+                              />
+                              {propagateAgents.includes(a.agent_key) && <Check size={12} />}
+                              {a.name}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-xs font-medium text-dark-text block mb-1">
+                        Review note <span className="text-secondary-text font-normal">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={reviewNote}
+                        onChange={(e) => setReviewNote(e.target.value)}
+                        placeholder={reviewMode === 'approve' ? 'e.g., Good practice — applying broadly' : 'e.g., Too vague, needs specifics'}
+                        className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {reviewMode === 'approve' ? (
+                        <button
+                          onClick={() => handleApprove(instr)}
+                          disabled={isLoading}
+                          className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        >
+                          {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                          {propagateAgents.length > 0
+                            ? `Approve & Propagate to ${propagateAgents.length}`
+                            : 'Approve'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleReject(instr.id)}
+                          disabled={isLoading}
+                          className="flex items-center gap-1.5 px-4 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        >
+                          {isLoading ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
+                          Reject
+                        </button>
+                      )}
+                      <button
+                        onClick={closeReview}
+                        disabled={isLoading}
+                        className="px-3 py-1.5 text-sm text-secondary-text hover:text-dark-text transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
