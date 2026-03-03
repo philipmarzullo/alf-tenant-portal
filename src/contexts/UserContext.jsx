@@ -104,11 +104,13 @@ export function UserProvider({ children }) {
     (moduleKey) => {
       if (!currentUser) return false;
       if (!moduleKey) return true;
-      if (currentUser.role === 'admin' || currentUser.role === 'super-admin') return true;
-      if (currentUser.modules.includes(moduleKey)) return true;
+      if (currentUser.role === 'admin' || currentUser.role === 'super-admin' || currentUser.role === 'manager') return true;
+      const key = moduleKey.toLowerCase();
+      const userModules = (currentUser.modules || []).map(m => m.toLowerCase());
+      if (userModules.includes(key)) return true;
       // 'tools' group check: grant access if user has any individual tool module
-      if (moduleKey === 'tools') {
-        return currentUser.modules.some(m => TOOL_MODULE_KEYS.has(m));
+      if (key === 'tools') {
+        return userModules.some(m => TOOL_MODULE_KEYS.has(m));
       }
       return false;
     },
