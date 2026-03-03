@@ -19,7 +19,7 @@ const STATUS_BADGE = {
 export default function AgentInstructionsPage() {
   const { tenantId } = useTenantId();
   const { agents } = useTenantPortal();
-  const { currentUser, isSuperAdmin } = useUser();
+  const { currentUser, isAdmin, isSuperAdmin } = useUser();
 
   const [instructions, setInstructions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +92,7 @@ export default function AgentInstructionsPage() {
       }
 
       // Admins auto-approve their own instructions; regular users need review
-      const autoApprove = isSuperAdmin;
+      const autoApprove = isAdmin || currentUser?.role === 'platform_owner';
       const { error: insertErr } = await supabase
         .from('agent_instructions')
         .insert({
