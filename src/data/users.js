@@ -8,6 +8,7 @@ export const MODULE_DEFINITIONS = [
   { key: 'qbu', label: 'Quarterly Review Builder', group: 'TOOLS', path: '/tools/qbu' },
   { key: 'salesDeck', label: 'Proposal Builder', group: 'TOOLS', path: '/tools/sales-deck' },
   { key: 'sop-builder', label: 'SOP Builder', group: 'TOOLS', path: '/tools/sop-builder' },
+  { key: 'rfp-response', label: 'RFP Response Builder', group: 'TOOLS', path: '/tools/rfp-response' },
   { key: 'admin', label: 'Admin', group: 'ADMIN', path: '/admin' },
 ];
 
