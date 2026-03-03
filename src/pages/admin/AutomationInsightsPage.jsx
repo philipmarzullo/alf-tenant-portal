@@ -153,7 +153,7 @@ export default function AutomationInsightsPage({ embedded = false, initialTab })
     setPipelineBusy('analyze');
     setPipelineError(null);
     try {
-      await sopAnalysisFetch('/analyze', { document_ids: documentIds });
+      await sopAnalysisFetch('/analyze', { tenant_id: tenantId, document_ids: documentIds });
       await loadData();
     } catch (err) {
       setPipelineError(err.message);
@@ -166,7 +166,7 @@ export default function AutomationInsightsPage({ embedded = false, initialTab })
     setPipelineBusy(`roadmap-${department}`);
     setPipelineError(null);
     try {
-      await sopAnalysisFetch('/roadmap', { department });
+      await sopAnalysisFetch('/roadmap', { tenant_id: tenantId, department });
       await loadData();
     } catch (err) {
       setPipelineError(err.message);
@@ -179,7 +179,7 @@ export default function AutomationInsightsPage({ embedded = false, initialTab })
     setPipelineBusy(`actions-${roadmapId}`);
     setPipelineError(null);
     try {
-      await sopAnalysisFetch('/convert-to-actions', { roadmap_id: roadmapId });
+      await sopAnalysisFetch('/convert-to-actions', { tenant_id: tenantId, roadmap_id: roadmapId });
       await loadData();
     } catch (err) {
       setPipelineError(err.message);
@@ -192,7 +192,7 @@ export default function AutomationInsightsPage({ embedded = false, initialTab })
     setPipelineBusy(`skill-${actionId}`);
     setPipelineError(null);
     try {
-      await sopAnalysisFetch('/generate-skill', { action_id: actionId });
+      await sopAnalysisFetch('/generate-skill', { tenant_id: tenantId, action_id: actionId });
       await loadData();
     } catch (err) {
       setPipelineError(err.message);
@@ -205,7 +205,7 @@ export default function AutomationInsightsPage({ embedded = false, initialTab })
     setPipelineBusy(`activate-${actionId}`);
     setPipelineError(null);
     try {
-      await sopAnalysisFetch('/activate-skill', { action_id: actionId });
+      await sopAnalysisFetch('/activate-skill', { tenant_id: tenantId, action_id: actionId });
       await loadData();
     } catch (err) {
       setPipelineError(err.message);
@@ -219,7 +219,7 @@ export default function AutomationInsightsPage({ embedded = false, initialTab })
     setPipelineError(null);
     try {
       for (const id of actionIds) {
-        await sopAnalysisFetch('/generate-skill', { action_id: id });
+        await sopAnalysisFetch('/generate-skill', { tenant_id: tenantId, action_id: id });
       }
       await loadData();
     } catch (err) {
@@ -233,7 +233,7 @@ export default function AutomationInsightsPage({ embedded = false, initialTab })
     setPipelineBusy(`deactivate-${actionId}`);
     setPipelineError(null);
     try {
-      await sopAnalysisFetch('/deactivate-skill', { action_id: actionId });
+      await sopAnalysisFetch('/deactivate-skill', { tenant_id: tenantId, action_id: actionId });
       await loadData();
     } catch (err) {
       setPipelineError(err.message);
@@ -247,7 +247,7 @@ export default function AutomationInsightsPage({ embedded = false, initialTab })
     setPipelineError(null);
     try {
       for (const id of actionIds) {
-        await sopAnalysisFetch('/activate-skill', { action_id: id });
+        await sopAnalysisFetch('/activate-skill', { tenant_id: tenantId, action_id: id });
       }
       await loadData();
     } catch (err) {
