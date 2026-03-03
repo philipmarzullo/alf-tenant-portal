@@ -72,10 +72,6 @@ const ROLE_LEVEL = {
   platform_owner: 4,
 };
 
-// Tools that produce real deliverables (PPTX, etc.)
-const PRIMARY_TOOLS = new Set(['qbu', 'salesDeck', 'sop-builder']);
-
-
 export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onMobileClose }) {
   const location = useLocation();
   const { currentUser, isSuperAdmin, isAdmin } = useUser();
@@ -87,10 +83,11 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   const { hasFeature, requiredTierLabel } = useTierAccess();
   const [upgradeModal, setUpgradeModal] = useState(null);
 
-  // Collapsible state — workspaces open if any workspace is active
+  // Collapsible state — auto-open if any child is active
   const workspaceActive = workspaces.some(ws => location.pathname.startsWith(getWorkspacePath(ws.department_key)));
   const [workspacesOpen, setWorkspacesOpen] = useState(workspaceActive);
-  const [quickTemplatesOpen, setQuickTemplatesOpen] = useState(false);
+  const toolActive = tools.some(t => location.pathname.startsWith(getToolPath(t.tool_key)));
+  const [toolsOpen, setToolsOpen] = useState(toolActive);
 
   const isActive = (path) => {
     if (path === '/portal') return location.pathname === '/portal';
@@ -151,7 +148,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
     };
   }, [workspaces, getWorkspacePath, currentUser?.department_key, userRoleLevel]);
 
-  // Build dynamic TOOLS group from tenant_tools — split into primary + templates
+  // Build dynamic TOOLS group from tenant_tools — flat list
   const dynamicTools = useMemo(() => {
     const allTools = tools.map((t) => ({
       label: t.name,
@@ -160,7 +157,6 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       moduleKey: 'tools',
       pageKey: t.tool_key,
       _dynamic: true,
-      _primary: PRIMARY_TOOLS.has(t.tool_key),
     }));
     return {
       group: 'TOOLS',
@@ -251,7 +247,6 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
           icon: t.icon || 'Wrench',
           moduleKey: 'tools',
           _custom: true,
-          _primary: true, // custom tools are primary
         }));
         items = [...items, ...customItems];
       }
@@ -359,12 +354,9 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
       );
     }
 
-    // --- TOOLS: split primary vs quick templates ---
+    // --- TOOLS: collapsible ---
     if (group.group === 'TOOLS') {
-      const primaryTools = group.items.filter(i => i._primary);
-      const templateTools = group.items.filter(i => !i._primary && !i._tierLocked);
-      const lockedTools = group.items.filter(i => i._tierLocked);
-
+      const anyActive = group.items.some(item => !item._tierLocked && isActive(item.path));
       return (
         <div key={group.group} className="mb-4">
           {!showCollapsed && (
@@ -372,20 +364,11 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
               {group.group}
             </div>
           )}
-          {/* Primary tools (real output) — always visible */}
-          {primaryTools.map(item => renderNavItem(item))}
-          {/* Locked tools */}
-          {lockedTools.map(item => renderNavItem(item))}
-          {/* Quick templates — collapsible */}
-          {templateTools.length > 0 && (
-            <>
-              {renderCollapsibleHeader('Quick Templates', 'FileText', quickTemplatesOpen, () => setQuickTemplatesOpen(!quickTemplatesOpen), templateTools.some(i => isActive(i.path)))}
-              {quickTemplatesOpen && (
-                <div className="mt-0.5">
-                  {templateTools.map(item => renderNavItem(item, true))}
-                </div>
-              )}
-            </>
+          {renderCollapsibleHeader('Tools', 'Wrench', toolsOpen, () => setToolsOpen(!toolsOpen), anyActive)}
+          {toolsOpen && (
+            <div className="mt-0.5">
+              {group.items.map(item => renderNavItem(item, true))}
+            </div>
           )}
         </div>
       );
