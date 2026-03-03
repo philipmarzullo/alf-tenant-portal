@@ -4,19 +4,41 @@ import { Loader2 } from 'lucide-react';
 
 // Error boundary to catch render crashes and show the error instead of a white screen
 class ErrorBoundary extends Component {
-  constructor(props) { super(props); this.state = { error: null }; }
+  constructor(props) { super(props); this.state = { error: null, errorInfo: null }; }
   static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, errorInfo) {
+    this.setState({ errorInfo });
+    console.error('[ErrorBoundary] Caught error:', error);
+    console.error('[ErrorBoundary] Component stack:', errorInfo?.componentStack);
+  }
   render() {
     if (this.state.error) {
+      const err = this.state.error;
+      const errMsg = typeof err === 'object' ? (err.message || JSON.stringify(err)) : String(err);
+      const errStack = typeof err === 'object' ? err.stack : '';
       return (
         <div className="p-8 max-w-xl mx-auto mt-12">
           <h2 className="text-lg font-semibold text-red-700 mb-2">Something went wrong</h2>
-          <pre className="text-sm text-red-600 bg-red-50 p-4 rounded-lg overflow-auto whitespace-pre-wrap">
-            {this.state.error.message}
-            {'\n\n'}
-            {this.state.error.stack}
+          <pre className="text-sm text-red-600 bg-red-50 p-4 rounded-lg overflow-auto whitespace-pre-wrap max-h-60">
+            {errMsg}
           </pre>
-          <button onClick={() => this.setState({ error: null })} className="mt-4 px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">
+          {errStack && (
+            <details className="mt-2">
+              <summary className="text-xs text-secondary-text cursor-pointer">Stack trace</summary>
+              <pre className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg overflow-auto whitespace-pre-wrap max-h-40 mt-1">
+                {errStack}
+              </pre>
+            </details>
+          )}
+          {this.state.errorInfo?.componentStack && (
+            <details className="mt-2" open>
+              <summary className="text-xs font-medium text-red-600 cursor-pointer">Component stack</summary>
+              <pre className="text-xs text-red-500 bg-red-50 p-3 rounded-lg overflow-auto whitespace-pre-wrap max-h-60 mt-1">
+                {this.state.errorInfo.componentStack}
+              </pre>
+            </details>
+          )}
+          <button onClick={() => this.setState({ error: null, errorInfo: null })} className="mt-4 px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">
             Try Again
           </button>
         </div>

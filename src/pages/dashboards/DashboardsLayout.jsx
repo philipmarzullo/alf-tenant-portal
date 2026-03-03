@@ -34,7 +34,7 @@ export default function DashboardsLayout() {
   const allTabs = useMemo(() =>
     dashboardDomains.map((d) => ({
       key: d.domain_key,
-      label: d.name,
+      label: typeof d.name === 'string' ? d.name : String(d.name || d.domain_key),
       path: getDomainPath(d.domain_key),
     })),
     [dashboardDomains, getDomainPath]

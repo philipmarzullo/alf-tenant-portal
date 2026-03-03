@@ -82,7 +82,7 @@ export default function OperationsDashboard() {
   }, [data]);
 
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="text-aa-blue animate-spin" /></div>;
-  if (error) return <div className="text-center py-20"><div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto"><p className="text-sm text-red-700">{error}</p></div></div>;
+  if (error) return <div className="text-center py-20"><div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto"><p className="text-sm text-red-700">{String(error)}</p></div></div>;
   if (!metrics) return <DashboardEmptyState domain="operations" />;
 
   const kpiCards = {

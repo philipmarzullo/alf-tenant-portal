@@ -302,9 +302,10 @@ export function resolveConfig(domain, config, metricTier) {
     .filter(tierFilter)
     .map((regItem, i) => {
       const cfg = configKpiMap[regItem.id];
+      const rawLabel = cfg?.label ?? regItem.defaultLabel;
       return {
         id: regItem.id,
-        label: cfg?.label ?? regItem.defaultLabel,
+        label: typeof rawLabel === 'string' ? rawLabel : String(rawLabel ?? regItem.defaultLabel),
         icon: cfg?.icon ?? regItem.icon,
         sensitivity: regItem.sensitivity,
         visible: cfg?.visible ?? true,
@@ -316,9 +317,10 @@ export function resolveConfig(domain, config, metricTier) {
     .filter(tierFilter)
     .map((regItem, i) => {
       const cfg = configChartMap[regItem.id];
+      const rawLabel = cfg?.label ?? regItem.defaultLabel;
       return {
         id: regItem.id,
-        label: cfg?.label ?? regItem.defaultLabel,
+        label: typeof rawLabel === 'string' ? rawLabel : String(rawLabel ?? regItem.defaultLabel),
         sensitivity: regItem.sensitivity,
         visible: cfg?.visible ?? true,
         order: cfg?.order ?? i,
