@@ -7,7 +7,7 @@ import {
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
   Wrench, ClipboardList, ClipboardCheck, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
-  Lock, TrendingUp, Layers, Bot,
+  Lock, TrendingUp, Layers, Bot, FileSearch,
 } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,7 +29,7 @@ const ICON_MAP = {
   ListChecks, ArrowRightLeft, Calculator, ShieldAlert, GraduationCap, ShieldCheck,
   Wrench, ClipboardList, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
-  Layers, Bot, ClipboardCheck,
+  Layers, Bot, ClipboardCheck, FileSearch,
   // kebab-case (used in tenant_workspaces and tenant_tools from DB)
   'clipboard-list': ClipboardList,
   'users': Users,
@@ -60,6 +60,7 @@ const ICON_MAP = {
   'settings': Settings,
   'shield-check': ShieldCheck,
   'trending-up': TrendingUp,
+  'file-search': FileSearch,
 };
 
 // Role hierarchy for min_role nav filtering
