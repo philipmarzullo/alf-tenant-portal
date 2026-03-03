@@ -15,7 +15,7 @@ const MODE_BADGE = {
 
 export default function AgentChatPanel({ open, onClose, agentKey, agentName, context, systemPromptSuffix }) {
   const { tenantId } = useTenantId();
-  const { currentUser } = useUser();
+  const { currentUser, isAdmin } = useUser();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -105,21 +105,23 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
         };
       }
 
+      const autoApprove = isAdmin || currentUser?.role === 'platform_owner';
       const { error: insertErr } = await supabase
         .from('agent_instructions')
         .insert({
           tenant_id: tenantId,
           agent_key: agentKey,
           instruction_text: teachText.trim(),
-          source: 'tenant',
-          status: 'pending',
+          source: autoApprove ? 'platform' : 'tenant',
+          status: autoApprove ? 'approved' : 'pending',
           created_by: currentUser.id,
+          ...(autoApprove ? { reviewed_by: currentUser.id, reviewed_at: new Date().toISOString() } : {}),
           ...fileFields,
         });
 
       if (insertErr) throw insertErr;
 
-      setTeachResult('success');
+      setTeachResult(autoApprove ? 'approved' : 'success');
       setTeachText('');
       setTeachFile(null);
       setTimeout(() => { setTeachResult(null); setShowTeach(false); }, 2500);
@@ -217,6 +219,11 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
                 {teachSubmitting ? 'Submitting...' : 'Submit'}
               </button>
             </div>
+            {teachResult === 'approved' && (
+              <div className="flex items-center gap-1 text-xs text-green-600">
+                <CheckCircle size={12} /> Instruction added and active
+              </div>
+            )}
             {teachResult === 'success' && (
               <div className="flex items-center gap-1 text-xs text-green-600">
                 <CheckCircle size={12} /> Instruction submitted for review
