@@ -246,8 +246,13 @@ export default function MyWorkPage() {
     ? workspaces.find(ws => ws.department_key === currentUser.department_key)
     : null;
 
-  const agentKey = currentUser?.department_key || 'operations';
-  const agentName = userWorkspace ? `${userWorkspace.name} Assistant` : 'My Work Assistant';
+  // Find the agent linked to the user's workspace
+  const { agents } = useTenantPortal();
+  const workspaceAgent = userWorkspace
+    ? agents.find(a => a.workspace_id === userWorkspace.id)
+    : null;
+  const agentKey = workspaceAgent?.agent_key || 'ops';
+  const agentName = workspaceAgent?.name || (userWorkspace ? `${userWorkspace.name} Assistant` : 'My Work Assistant');
 
   return (
     <div className="space-y-6">
