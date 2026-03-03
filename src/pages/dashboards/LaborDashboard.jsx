@@ -36,17 +36,10 @@ export default function LaborDashboard() {
 
   // First-time setup for non-admin users
   const [setupDismissed, setSetupDismissed] = useState(false);
-  if (!isAdmin && !setupDismissed && source === 'default' && !loading) {
-    return (
-      <FirstTimeSetup
-        domain="labor"
-        onComplete={() => setSetupDismissed(true)}
-      />
-    );
-  }
 
   const chartLabel = (id) => activeCharts.find(c => c.id === id)?.label ?? id;
 
+  // useMemo must be called before any early returns (React hooks rules)
   const metrics = useMemo(() => {
     if (!data?.labor?.length) return null;
     const labor = data.labor;
@@ -94,6 +87,15 @@ export default function LaborDashboard() {
 
     return { totalBudget, totalActual, variancePct, totalOTHours: Math.round(totalOTHours), otPct, siteChart, trendChart, otBreakdown };
   }, [data]);
+
+  if (!isAdmin && !setupDismissed && source === 'default' && !loading) {
+    return (
+      <FirstTimeSetup
+        domain="labor"
+        onComplete={() => setSetupDismissed(true)}
+      />
+    );
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="text-aa-blue animate-spin" /></div>;

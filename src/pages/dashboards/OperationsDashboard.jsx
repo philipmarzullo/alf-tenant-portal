@@ -35,15 +35,8 @@ export default function OperationsDashboard() {
 
   // First-time setup for non-admin users
   const [setupDismissed, setSetupDismissed] = useState(false);
-  if (!isAdmin && !setupDismissed && source === 'default' && !loading) {
-    return (
-      <FirstTimeSetup
-        domain="operations"
-        onComplete={() => setSetupDismissed(true)}
-      />
-    );
-  }
 
+  // useMemo must be called before any early returns (React hooks rules)
   const metrics = useMemo(() => {
     if (!data?.tickets?.length) return null;
     const tickets = data.tickets;
@@ -80,6 +73,15 @@ export default function OperationsDashboard() {
 
     return { total, completed, completionRate, siteChart, trendChart, categoryChart };
   }, [data]);
+
+  if (!isAdmin && !setupDismissed && source === 'default' && !loading) {
+    return (
+      <FirstTimeSetup
+        domain="operations"
+        onComplete={() => setSetupDismissed(true)}
+      />
+    );
+  }
 
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="text-aa-blue animate-spin" /></div>;
   if (error) return <div className="text-center py-20"><div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto"><p className="text-sm text-red-700">{String(error)}</p></div></div>;
