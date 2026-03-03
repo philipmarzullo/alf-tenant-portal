@@ -15,6 +15,7 @@ const TOOL_PATH_OVERRIDES = {
   'incident-report': '/portal/tools/incident-report',
   'training-plan': '/portal/tools/training-plan',
   budget: '/portal/tools/budget',
+  'rfp-response': '/portal/tools/rfp-response',
 };
 
 /**

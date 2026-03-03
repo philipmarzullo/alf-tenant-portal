@@ -85,6 +85,9 @@ import SOPBuilder from './pages/tools/SOPBuilder';
 import SOPEditorPage from './pages/tools/SOPEditorPage';
 import CustomToolBuilder from './pages/tools/CustomToolBuilder';
 import CustomToolPage from './pages/tools/CustomToolPage';
+import RFPProjectsPage from './pages/tools/RFPProjectsPage';
+import RFPLibraryPage from './pages/tools/RFPLibraryPage';
+import RFPProjectDetail from './pages/tools/RFPProjectDetail';
 import KnowledgePage from './pages/admin/KnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
 import RoleTemplates from './pages/admin/RoleTemplates';
@@ -454,6 +457,30 @@ export default function App() {
                       element={
                         <ProtectedRoute moduleKey="tools">
                           <ToolPage toolKey="trainingPlan" />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/rfp-response"
+                      element={
+                        <ProtectedRoute moduleKey="tools">
+                          <RFPProjectsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/rfp-response/library"
+                      element={
+                        <ProtectedRoute moduleKey="tools">
+                          <RFPLibraryPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/rfp-response/:projectId"
+                      element={
+                        <ProtectedRoute moduleKey="tools">
+                          <RFPProjectDetail />
                         </ProtectedRoute>
                       }
                     />

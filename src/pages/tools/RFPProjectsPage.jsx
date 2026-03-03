@@ -1,0 +1,498 @@
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  FileSearch, Plus, BookOpen, Loader2, XCircle, CheckCircle,
+  Bot, Calendar, Building2, Upload, X,
+} from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { buildDocumentPath } from '../../utils/storagePaths';
+import { useTenantId } from '../../contexts/TenantIdContext';
+import AgentChatPanel from '../../components/shared/AgentChatPanel';
+
+const STATUS_FILTERS = ['all', 'draft', 'in_progress', 'review', 'submitted', 'won', 'lost'];
+
+const STATUS_BADGE = {
+  draft: { label: 'Draft', cls: 'bg-gray-100 text-gray-600' },
+  in_progress: { label: 'In Progress', cls: 'bg-blue-50 text-blue-700' },
+  review: { label: 'Review', cls: 'bg-purple-50 text-purple-700' },
+  submitted: { label: 'Submitted', cls: 'bg-cyan-50 text-cyan-700' },
+  won: { label: 'Won', cls: 'bg-green-50 text-green-700' },
+  lost: { label: 'Lost', cls: 'bg-red-50 text-red-700' },
+};
+
+export default function RFPProjectsPage() {
+  const navigate = useNavigate();
+  const { tenantId } = useTenantId();
+  const fileInputRef = useRef(null);
+
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  // Filter
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  // New project modal
+  const [showNew, setShowNew] = useState(false);
+  const [newForm, setNewForm] = useState({ name: '', issuing_organization: '', due_date: '' });
+  const [newFile, setNewFile] = useState(null);
+  const [creating, setCreating] = useState(false);
+
+  // Chat
+  const [chatOpen, setChatOpen] = useState(false);
+
+  useEffect(() => {
+    loadProjects();
+  }, [tenantId]);
+
+  async function loadProjects() {
+    setLoading(true);
+    const { data, error: err } = await supabase
+      .from('tenant_rfp_projects')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
+
+    if (err) {
+      setError(err.message);
+    } else {
+      setProjects(data || []);
+    }
+    setLoading(false);
+  }
+
+  async function handleCreate() {
+    if (!newForm.name.trim()) {
+      setError('Project name is required.');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    setCreating(true);
+    setError(null);
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let sourceDocumentId = null;
+
+    // Upload RFP document if provided
+    if (newFile) {
+      try {
+        const { extractText } = await import('../../utils/docExtractor.js');
+        const result = await extractText(newFile);
+        const fileType = newFile.name.toLowerCase().endsWith('.pdf') ? 'pdf'
+          : newFile.name.toLowerCase().endsWith('.docx') ? 'docx' : 'txt';
+
+        const storagePath = buildDocumentPath(tenantId, 'rfp_source', newFile.name);
+        const { error: uploadErr } = await supabase.storage
+          .from('tenant-documents')
+          .upload(storagePath, newFile);
+
+        if (uploadErr) throw uploadErr;
+
+        const { data: doc, error: insertErr } = await supabase
+          .from('tenant_documents')
+          .insert({
+            tenant_id: tenantId,
+            department: 'sales',
+            doc_type: 'reference',
+            document_scope: 'rfp_source',
+            file_name: newFile.name,
+            file_type: fileType,
+            file_size: newFile.size,
+            storage_path: storagePath,
+            page_count: result.pageCount || null,
+            extracted_text: result.text,
+            char_count: result.text.length,
+            status: result.warning ? 'failed' : 'extracted',
+            status_detail: result.warning || null,
+          })
+          .select('id')
+          .single();
+
+        if (insertErr) throw insertErr;
+        sourceDocumentId = doc.id;
+      } catch (err) {
+        console.error('Failed to upload RFP document:', err);
+        setError('Failed to upload document. Project created without it.');
+        setTimeout(() => setError(null), 4000);
+      }
+    }
+
+    const { data: project, error: createErr } = await supabase
+      .from('tenant_rfp_projects')
+      .insert({
+        tenant_id: tenantId,
+        name: newForm.name.trim(),
+        issuing_organization: newForm.issuing_organization.trim() || null,
+        due_date: newForm.due_date || null,
+        source_document_id: sourceDocumentId,
+        created_by: user?.id,
+      })
+      .select()
+      .single();
+
+    if (createErr) {
+      setError(createErr.message);
+      setTimeout(() => setError(null), 4000);
+    } else {
+      setSuccess('Project created');
+      setTimeout(() => setSuccess(null), 3000);
+      setShowNew(false);
+      setNewForm({ name: '', issuing_organization: '', due_date: '' });
+      setNewFile(null);
+      navigate(`/portal/tools/rfp-response/${project.id}`);
+    }
+    setCreating(false);
+  }
+
+  // Filter
+  const filtered = useMemo(() => {
+    if (statusFilter === 'all') return projects;
+    return projects.filter(p => p.status === statusFilter);
+  }, [projects, statusFilter]);
+
+  // Stats
+  const totalProjects = projects.length;
+  const activeProjects = projects.filter(p => ['in_progress', 'review'].includes(p.status)).length;
+  const wonCount = projects.filter(p => p.status === 'won').length;
+  const lostCount = projects.filter(p => p.status === 'lost').length;
+  const winRate = wonCount + lostCount > 0 ? Math.round((wonCount / (wonCount + lostCount)) * 100) : null;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 size={24} className="text-aa-blue animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-aa-blue/10 rounded-lg">
+            <FileSearch size={20} className="text-aa-blue" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-light text-dark-text">RFP Response Builder</h1>
+            <p className="text-sm text-secondary-text">
+              Parse RFPs, match answers, and draft winning responses
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setChatOpen(true)}
+          className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+        >
+          <Bot size={16} />
+          Ask RFP Agent
+        </button>
+      </div>
+
+      {/* Alerts */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
+          <XCircle size={16} className="shrink-0" />
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
+          <CheckCircle size={16} className="shrink-0" />
+          {success}
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Total Projects</div>
+          <div className="text-2xl font-semibold text-dark-text mt-1">{totalProjects}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Active</div>
+          <div className="text-2xl font-semibold text-dark-text mt-1">{activeProjects}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Win Rate</div>
+          <div className="text-2xl font-semibold text-dark-text mt-1">
+            {winRate !== null ? `${winRate}%` : '—'}
+          </div>
+        </div>
+      </div>
+
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button
+          onClick={() => setShowNew(true)}
+          className="bg-white rounded-lg border border-gray-200 p-6 text-left hover:border-aa-blue/40 hover:shadow-sm transition-all group"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-aa-blue/10 rounded-lg group-hover:bg-aa-blue/15 transition-colors">
+              <Plus size={20} className="text-aa-blue" />
+            </div>
+            <h3 className="text-sm font-semibold text-dark-text">New RFP Project</h3>
+          </div>
+          <p className="text-xs text-secondary-text">
+            Start a new RFP response project — upload the RFP document to get started
+          </p>
+        </button>
+
+        <button
+          onClick={() => navigate('/portal/tools/rfp-response/library')}
+          className="bg-white rounded-lg border border-gray-200 p-6 text-left hover:border-aa-blue/40 hover:shadow-sm transition-all group"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-aa-blue/10 rounded-lg group-hover:bg-aa-blue/15 transition-colors">
+              <BookOpen size={20} className="text-aa-blue" />
+            </div>
+            <h3 className="text-sm font-semibold text-dark-text">Q&A Library</h3>
+          </div>
+          <p className="text-xs text-secondary-text">
+            Manage curated question-answer pairs that power auto-matching
+          </p>
+        </button>
+      </div>
+
+      {/* Status Filter Pills */}
+      <div className="flex flex-wrap gap-2">
+        {STATUS_FILTERS.map(s => {
+          const count = s === 'all' ? projects.length : projects.filter(p => p.status === s).length;
+          const isActive = statusFilter === s;
+          return (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors capitalize ${
+                isActive
+                  ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                  : 'bg-gray-100 text-gray-600 border border-transparent hover:bg-gray-200'
+              }`}
+            >
+              {s === 'all' ? 'All' : s.replace(/_/g, ' ')} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Projects Table */}
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <FileSearch size={32} className="text-gray-300 mx-auto mb-3" />
+          <div className="text-sm text-secondary-text">
+            {projects.length === 0 ? 'No RFP projects yet.' : 'No projects match this filter.'}
+          </div>
+          {projects.length === 0 && (
+            <div className="text-xs text-secondary-text mt-1">
+              Create a new project or build your Q&A library to get started.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50">
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Name</th>
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Organization</th>
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Due Date</th>
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Status</th>
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Progress</th>
+                <th className="text-left text-[11px] font-semibold text-secondary-text uppercase tracking-wider px-4 py-2.5">Created</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filtered.map(project => {
+                const status = STATUS_BADGE[project.status] || STATUS_BADGE.draft;
+                const progress = project.item_count > 0
+                  ? Math.round((project.approved_count / project.item_count) * 100)
+                  : 0;
+                const isDueSoon = project.due_date && new Date(project.due_date) < new Date(Date.now() + 7 * 86400000);
+
+                return (
+                  <tr
+                    key={project.id}
+                    onClick={() => navigate(`/portal/tools/rfp-response/${project.id}`)}
+                    className="hover:bg-gray-50 cursor-pointer"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="text-sm font-medium text-dark-text">{project.name}</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-secondary-text flex items-center gap-1">
+                        {project.issuing_organization ? (
+                          <><Building2 size={12} className="shrink-0" /> {project.issuing_organization}</>
+                        ) : (
+                          '—'
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {project.due_date ? (
+                        <div className={`text-sm flex items-center gap-1 ${isDueSoon ? 'text-red-600 font-medium' : 'text-secondary-text'}`}>
+                          <Calendar size={12} className="shrink-0" />
+                          {new Date(project.due_date).toLocaleDateString()}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-secondary-text">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${status.cls}`}>
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {project.item_count > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-aa-blue rounded-full transition-all"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-secondary-text">
+                            {project.approved_count}/{project.item_count}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-secondary-text">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-secondary-text">
+                        {new Date(project.created_at).toLocaleDateString()}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* New Project Modal */}
+      {showNew && (
+        <>
+          <div className="fixed inset-0 bg-black/20 z-40" onClick={() => !creating && setShowNew(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-dark-text">New RFP Project</h2>
+                <button onClick={() => setShowNew(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-secondary-text mb-1">Project Name *</label>
+                  <input
+                    type="text"
+                    value={newForm.name}
+                    onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
+                    placeholder="City of Springfield — Janitorial Services RFP"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-secondary-text mb-1">Issuing Organization</label>
+                    <input
+                      type="text"
+                      value={newForm.issuing_organization}
+                      onChange={e => setNewForm(f => ({ ...f, issuing_organization: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
+                      placeholder="City of Springfield"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-secondary-text mb-1">Due Date</label>
+                    <input
+                      type="date"
+                      value={newForm.due_date}
+                      onChange={e => setNewForm(f => ({ ...f, due_date: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-secondary-text mb-1">RFP Document (optional)</label>
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-aa-blue/50 hover:bg-gray-50 transition-colors"
+                  >
+                    {newFile ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <FileSearch size={16} className="text-aa-blue" />
+                        <span className="text-sm text-dark-text">{newFile.name}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setNewFile(null); }}
+                          className="text-gray-400 hover:text-red-500"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <Upload size={20} className="text-gray-400" />
+                        <span className="text-sm text-secondary-text">Drop RFP document or click to upload</span>
+                        <span className="text-xs text-gray-400">PDF, DOCX, TXT — max 20 MB</span>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.docx,.txt"
+                      onChange={e => { if (e.target.files[0]) setNewFile(e.target.files[0]); e.target.value = ''; }}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    onClick={() => setShowNew(false)}
+                    disabled={creating}
+                    className="px-4 py-2 text-sm font-medium text-secondary-text hover:text-dark-text disabled:opacity-40 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreate}
+                    disabled={creating || !newForm.name.trim()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-lg hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
+                  >
+                    {creating ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 size={14} className="animate-spin" />
+                        Creating...
+                      </span>
+                    ) : (
+                      'Create Project'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Agent Chat */}
+      <AgentChatPanel
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        agentKey="rfp_builder"
+        agentName="RFP Response Agent"
+        context="RFP responses, project strategy, bid/no-bid analysis"
+      />
+    </div>
+  );
+}

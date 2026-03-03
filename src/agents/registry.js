@@ -12,6 +12,7 @@ import { budgetAgent } from './configs/budget';
 import { incidentReportAgent } from './configs/incidentReport';
 import { trainingPlanAgent } from './configs/trainingPlan';
 import { analyticsAgent } from './configs/analytics';
+import { rfpBuilderAgent } from './configs/rfpBuilder';
 import { mergeOverride } from './overrides';
 
 const agents = {
@@ -29,6 +30,7 @@ const agents = {
   incidentReport: incidentReportAgent,
   trainingPlan: trainingPlanAgent,
   analytics: analyticsAgent,
+  rfp_builder: rfpBuilderAgent,
 };
 
 /** Returns the agent config with any localStorage overrides merged in.
