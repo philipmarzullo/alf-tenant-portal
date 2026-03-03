@@ -39,6 +39,11 @@ export default function UserManagement() {
   const [assignedSiteIds, setAssignedSiteIds] = useState([]);
   const [loadingExtras, setLoadingExtras] = useState(false);
 
+  // SOP assignments
+  const [availableSops, setAvailableSops] = useState([]);
+  const [assignedSopIds, setAssignedSopIds] = useState([]);
+  const [loadingSops, setLoadingSops] = useState(false);
+
   // Fetch role templates and sites when panel opens
   const fetchExtras = useCallback(async (userId) => {
     if (!tenantId) return;
@@ -84,14 +89,50 @@ export default function UserManagement() {
     }
   }, [tenantId]);
 
+  // Fetch available SOPs and user's assignments
+  const fetchSops = useCallback(async (userId) => {
+    if (!tenantId) return;
+    setLoadingSops(true);
+    try {
+      // Fetch all published SOPs for this tenant
+      const { data: allSops } = await supabase
+        .from('tenant_documents')
+        .select('id, file_name, department, structured_content')
+        .eq('tenant_id', tenantId)
+        .eq('doc_type', 'sop')
+        .eq('status', 'extracted')
+        .is('deleted_at', null)
+        .order('department', { ascending: true });
+
+      setAvailableSops(allSops || []);
+
+      // Fetch user's current SOP assignments
+      if (userId) {
+        const { data: assignments } = await supabase
+          .from('tenant_user_sops')
+          .select('document_id')
+          .eq('user_id', userId);
+        setAssignedSopIds((assignments || []).map(a => a.document_id));
+      } else {
+        setAssignedSopIds([]);
+      }
+    } catch (err) {
+      console.error('[UserManagement] Error loading SOPs:', err.message);
+    } finally {
+      setLoadingSops(false);
+    }
+  }, [tenantId]);
+
   const openAdd = () => {
     setEditingUser(null);
     setForm(EMPTY_FORM);
     setSelectedTemplateId('');
     setAssignedSiteIds([]);
+    setAssignedSopIds([]);
     setSaveError(null);
     setPanelOpen(true);
     fetchExtras(null);
+    fetchSops(null);
   };
 
   const openEdit = (user) => {
@@ -110,6 +151,7 @@ export default function UserManagement() {
     setSaveError(null);
     setPanelOpen(true);
     fetchExtras(user.id);
+    fetchSops(user.id);
   };
 
   const handleSave = async () => {
@@ -185,6 +227,34 @@ export default function UserManagement() {
         } catch (err) {
           console.error('[UserManagement] Site assignment save error:', err.message);
         }
+      }
+
+      // Sync SOP assignments — diff current vs desired
+      try {
+        const { data: existing } = await supabase
+          .from('tenant_user_sops')
+          .select('id, document_id')
+          .eq('user_id', editingUser.id);
+
+        const existingIds = (existing || []).map(e => e.document_id);
+        const toInsert = assignedSopIds.filter(id => !existingIds.includes(id));
+        const toDelete = (existing || []).filter(e => !assignedSopIds.includes(e.document_id)).map(e => e.id);
+
+        if (toDelete.length) {
+          await supabase.from('tenant_user_sops').delete().in('id', toDelete);
+        }
+        if (toInsert.length) {
+          await supabase.from('tenant_user_sops').insert(
+            toInsert.map(docId => ({
+              tenant_id: tenantId,
+              user_id: editingUser.id,
+              document_id: docId,
+              assigned_by: currentUser.id,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('[UserManagement] SOP assignment save error:', err.message);
       }
     } else {
       // Create new user via Edge Function
@@ -272,6 +342,14 @@ export default function UserManagement() {
       prev.includes(jobId)
         ? prev.filter(id => id !== jobId)
         : [...prev, jobId]
+    );
+  };
+
+  const toggleSop = (docId) => {
+    setAssignedSopIds(prev =>
+      prev.includes(docId)
+        ? prev.filter(id => id !== docId)
+        : [...prev, docId]
     );
   };
 
@@ -704,6 +782,60 @@ export default function UserManagement() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Assigned Procedures — edit mode only */}
+          {editingUser && (
+            <div>
+              <label className="block text-sm font-medium text-dark-text mb-2">Assigned Procedures</label>
+              {loadingSops ? (
+                <div className="flex items-center gap-2 text-sm text-secondary-text py-2">
+                  <Loader2 size={14} className="animate-spin" /> Loading procedures...
+                </div>
+              ) : availableSops.length === 0 ? (
+                <p className="text-xs text-secondary-text italic">No published SOPs found. Upload SOPs in the Knowledge Base first.</p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-3">
+                  {Object.entries(
+                    availableSops.reduce((acc, sop) => {
+                      const dept = sop.department || 'General';
+                      if (!acc[dept]) acc[dept] = [];
+                      acc[dept].push(sop);
+                      return acc;
+                    }, {})
+                  ).map(([dept, deptSops]) => (
+                    <div key={dept}>
+                      <div className="text-[11px] font-semibold text-secondary-text uppercase tracking-wider mb-1">
+                        {dept}
+                      </div>
+                      <div className="space-y-1">
+                        {deptSops.map(sop => {
+                          const title = sop.structured_content?.title || sop.file_name || 'Untitled SOP';
+                          return (
+                            <label key={sop.id} className="flex items-center gap-2.5 cursor-pointer group py-0.5">
+                              <input
+                                type="checkbox"
+                                checked={assignedSopIds.includes(sop.id)}
+                                onChange={() => toggleSop(sop.id)}
+                                className="w-4 h-4 rounded border-gray-300 text-aa-blue focus:ring-aa-blue"
+                              />
+                              <span className="text-sm text-dark-text group-hover:text-aa-blue transition-colors">
+                                {title}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-secondary-text mt-1.5">
+                {assignedSopIds.length === 0
+                  ? 'No procedures assigned.'
+                  : `${assignedSopIds.length} procedure${assignedSopIds.length === 1 ? '' : 's'} assigned. These will appear on the user's My Work page.`}
+              </p>
             </div>
           )}
 

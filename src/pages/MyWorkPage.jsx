@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ClipboardCheck, Loader2, CheckCircle, Clock, ArrowRight, Inbox,
   Play, Check, XCircle, ChevronDown, Bot, CalendarClock,
-  Send, User, Copy,
+  Send, User, Copy, FileText,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useUser } from '../contexts/UserContext';
@@ -36,7 +36,7 @@ function dueLabel(due) {
 }
 
 // ── Embedded Agent Chat ─────────────────────────────────────────────
-function TaskAgentChat({ agentKey, agentName, tasks }) {
+function TaskAgentChat({ agentKey, agentName, tasks, sops = [] }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,8 @@ function TaskAgentChat({ agentKey, agentName, tasks }) {
   const inputRef = useRef(null);
   const tasksRef = useRef(tasks);
   tasksRef.current = tasks;
+  const sopsRef = useRef(sops);
+  sopsRef.current = sops;
 
   useEffect(() => {
     setMessages([{
@@ -58,17 +60,36 @@ function TaskAgentChat({ agentKey, agentName, tasks }) {
   }, [messages]);
 
   function buildSuffix() {
+    const parts = [];
+
+    // SOP context
+    const sopList = sopsRef.current;
+    if (sopList?.length) {
+      parts.push('The user is responsible for the following management procedures:');
+      sopList.forEach((sop, i) => {
+        const title = sop.structured_content?.title || sop.file_name || 'Untitled SOP';
+        const dept = sop.department || '';
+        const text = (sop.extracted_text || '').slice(0, 500);
+        parts.push(`${i + 1}. ${title}${dept ? ` (${dept})` : ''}${text ? ` — ${text}` : ''}`);
+      });
+      parts.push('');
+      parts.push('Help them execute these procedures. When they ask about a process, reference the specific steps from the assigned SOP. Identify which steps you (the agent) can automate vs. which require human action.');
+      parts.push('');
+    }
+
+    // Task context
     const taskList = tasksRef.current;
-    if (!taskList?.length) return 'The user has no pending tasks.';
-    const lines = taskList.map((t, i) =>
-      `${i + 1}. [${t.status}] ${t.title}${t.description ? ` — ${t.description}` : ''}${t.due_date ? ` (Due: ${new Date(t.due_date).toLocaleDateString()})` : ''}`
-    );
-    return [
-      `The user's current task queue:`,
-      ...lines,
-      '',
-      `Help them complete, prioritize, or understand these tasks. Give specific, actionable guidance. If they ask about a task, reference it by name.`,
-    ].join('\n');
+    if (taskList?.length) {
+      parts.push(`The user's current task queue:`);
+      taskList.forEach((t, i) => {
+        parts.push(`${i + 1}. [${t.status}] ${t.title}${t.description ? ` — ${t.description}` : ''}${t.due_date ? ` (Due: ${new Date(t.due_date).toLocaleDateString()})` : ''}`);
+      });
+      parts.push('');
+      parts.push('Help them complete, prioritize, or understand these tasks. Give specific, actionable guidance. If they ask about a task, reference it by name.');
+    }
+
+    if (!parts.length) return 'The user has no pending tasks or assigned procedures.';
+    return parts.join('\n');
   }
 
   async function handleSend() {
@@ -112,7 +133,7 @@ function TaskAgentChat({ agentKey, agentName, tasks }) {
         </div>
         <div>
           <div className="text-sm font-medium text-dark-text">{agentName}</div>
-          <div className="text-xs text-secondary-text">Knows your current tasks</div>
+          <div className="text-xs text-secondary-text">Knows your tasks & procedures</div>
         </div>
       </div>
 
@@ -209,6 +230,9 @@ export default function MyWorkPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
   const [updating, setUpdating] = useState(null);
+  const [sops, setSops] = useState([]);
+  const [sopsLoading, setSopsLoading] = useState(true);
+  const [expandedSopId, setExpandedSopId] = useState(null);
 
   const loadTasks = useCallback(async () => {
     if (!currentUser?.id || !tenantId) return;
@@ -228,6 +252,24 @@ export default function MyWorkPage() {
   }, [currentUser?.id, tenantId]);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
+
+  // Fetch user's assigned SOPs
+  const loadSops = useCallback(async () => {
+    if (!currentUser?.id || !tenantId) return;
+    setSopsLoading(true);
+    const { data, error } = await supabase
+      .from('tenant_user_sops')
+      .select('document_id, tenant_documents(id, file_name, department, extracted_text, structured_content, doc_type)')
+      .eq('tenant_id', tenantId)
+      .eq('user_id', currentUser.id);
+
+    if (!error && data) {
+      setSops(data.map(row => row.tenant_documents).filter(Boolean));
+    }
+    setSopsLoading(false);
+  }, [currentUser?.id, tenantId]);
+
+  useEffect(() => { loadSops(); }, [loadSops]);
 
   async function updateStatus(taskId, newStatus) {
     setUpdating(taskId);
@@ -276,6 +318,67 @@ export default function MyWorkPage() {
           </div>
           <ArrowRight size={16} className="text-secondary-text" />
         </button>
+      )}
+
+      {/* My Procedures — assigned SOPs */}
+      {sopsLoading ? (
+        <div className="flex items-center gap-2 text-sm text-secondary-text py-4">
+          <Loader2 size={14} className="animate-spin" /> Loading procedures...
+        </div>
+      ) : sops.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-dark-text mb-2">
+            My Procedures
+            <span className="ml-2 text-xs font-normal text-secondary-text">
+              ({sops.length} assigned)
+            </span>
+          </h2>
+          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+            {sops.map(sop => {
+              const title = sop.structured_content?.title || sop.file_name || 'Untitled SOP';
+              const dept = sop.department;
+              const role = sop.structured_content?.sop_role;
+              const isExpanded = expandedSopId === sop.id;
+              const previewText = sop.extracted_text || sop.structured_content?.summary || '';
+
+              return (
+                <button
+                  key={sop.id}
+                  onClick={() => setExpandedSopId(isExpanded ? null : sop.id)}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText size={16} className="text-aa-blue shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-dark-text truncate">{title}</div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {role && (
+                            <span className="text-xs text-secondary-text">{role}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {dept && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700">
+                          {dept}
+                        </span>
+                      )}
+                      <ChevronDown size={14} className={`text-secondary-text transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </div>
+                  </div>
+                  {isExpanded && previewText && (
+                    <div className="mt-3 ml-7 text-xs text-secondary-text leading-relaxed whitespace-pre-wrap border-t border-gray-100 pt-3">
+                      {previewText.slice(0, 800)}
+                      {previewText.length > 800 && '...'}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Two-column layout: tasks + agent */}
@@ -391,7 +494,7 @@ export default function MyWorkPage() {
         {/* Agent chat — 2 cols, always visible */}
         <div className="lg:col-span-2">
           <div className="lg:sticky lg:top-6">
-            <TaskAgentChat agentKey={agentKey} agentName={agentName} tasks={tasks} />
+            <TaskAgentChat agentKey={agentKey} agentName={agentName} tasks={tasks} sops={sops} />
           </div>
         </div>
       </div>
