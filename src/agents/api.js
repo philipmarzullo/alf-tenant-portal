@@ -89,8 +89,7 @@ export async function callAgent(agentKey, actionKey, data, tenantContext) {
  */
 export async function chatWithAgent(agentKey, messages, tenantContext, options = {}) {
   const ctx = tenantContext || _tenantContext;
-  const agent = getAgent(agentKey, ctx);
-  if (!agent) throw new Error(`Agent not found: ${agentKey}`);
+  const agent = getAgent(agentKey, ctx); // may be null — backend resolves from DB
 
   const token = await getFreshToken();
 
@@ -99,9 +98,20 @@ export async function chatWithAgent(agentKey, messages, tenantContext, options =
   }
 
   const tenantId = getTenantId();
-  const systemPrompt = options.systemPromptSuffix
-    ? `${agent.systemPrompt}\n\n${options.systemPromptSuffix}`
-    : agent.systemPrompt;
+
+  // Build request body — if local agent found, include system prompt; otherwise backend resolves from DB
+  const body = { messages, agent_key: agentKey, tenant_id: tenantId, max_tokens: 2048 };
+
+  if (agent) {
+    const systemPrompt = options.systemPromptSuffix
+      ? `${agent.systemPrompt}\n\n${options.systemPromptSuffix}`
+      : agent.systemPrompt;
+    body.system = systemPrompt;
+    body.model = agent.model;
+  } else if (options.systemPromptSuffix) {
+    // No local agent — send suffix as page_context for backend to append
+    body.page_context = options.systemPromptSuffix;
+  }
 
   const response = await fetch(`${BACKEND_URL}/api/claude`, {
     method: 'POST',
@@ -109,14 +119,7 @@ export async function chatWithAgent(agentKey, messages, tenantContext, options =
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      model: agent.model,
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages,
-      agent_key: agentKey,
-      tenant_id: tenantId,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
