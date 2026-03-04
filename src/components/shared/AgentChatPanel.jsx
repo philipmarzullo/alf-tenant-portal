@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Copy, Check, FileEdit, ShieldCheck, Zap, MessageSquarePlus, Upload, CheckCircle, XCircle } from 'lucide-react';
+import { X, Send, Bot, User, Copy, Check, FileEdit, ShieldCheck, Zap, MessageSquarePlus, Upload, CheckCircle, XCircle, Mail } from 'lucide-react';
 import { chatWithAgent } from '../../agents/api';
 import { supabase } from '../../lib/supabase';
 import { useTenantId } from '../../contexts/TenantIdContext';
 import { useUser } from '../../contexts/UserContext';
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
 import { buildDocumentPath } from '../../utils/storagePaths';
 import SimpleMarkdown from './SimpleMarkdown';
 
@@ -16,6 +17,8 @@ const MODE_BADGE = {
 export default function AgentChatPanel({ open, onClose, agentKey, agentName, context, systemPromptSuffix }) {
   const { tenantId } = useTenantId();
   const { currentUser, isAdmin } = useUser();
+  const { hasCapability } = useTenantPortal();
+  const canSendEmail = hasCapability('can_send_email');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -164,6 +167,12 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {canSendEmail && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-teal-50 text-teal-600">
+                <Mail size={9} />
+                Email
+              </span>
+            )}
             {badge && (
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${badge.color}`}>
                 <badge.icon size={10} />

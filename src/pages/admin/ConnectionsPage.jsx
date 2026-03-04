@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Cable, Plus, Trash2, Play, Power, PowerOff, Loader, CheckCircle, XCircle, X, History, ExternalLink, Unplug } from 'lucide-react';
+import { Cable, Plus, Trash2, Play, Power, PowerOff, Loader, CheckCircle, XCircle, X, History, ExternalLink, Unplug, Zap } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useUser } from '../../contexts/UserContext';
 import { useTenantId } from '../../contexts/TenantIdContext';
+import { useTenantPortal } from '../../contexts/TenantPortalContext';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
@@ -27,6 +28,7 @@ async function authHeaders() {
 export default function ConnectionsPage() {
   const { isSuperAdmin } = useUser();
   const { tenantId } = useTenantId();
+  const { connectionTier, refreshAll: refreshPortal } = useTenantPortal();
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -57,6 +59,7 @@ export default function ConnectionsPage() {
 
     if (success === 'microsoft') {
       setMsMessage({ type: 'success', text: 'Microsoft 365 connected successfully.' });
+      refreshPortal();
     } else if (error) {
       const messages = {
         access_denied: 'Microsoft sign-in was cancelled or denied.',
@@ -329,6 +332,33 @@ export default function ConnectionsPage() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Tier indicator ── */}
+        {connectionTier > 0 && (
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center gap-3">
+              <Zap size={16} className="text-teal-600" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-dark-text">Tier {connectionTier}</span>
+                  <span className="flex gap-0.5">
+                    {[1, 2, 3].map(i => (
+                      <span
+                        key={i}
+                        className={`w-1.5 h-1.5 rounded-full ${i <= connectionTier ? 'bg-teal-500' : 'bg-gray-200'}`}
+                      />
+                    ))}
+                  </span>
+                </div>
+                <p className="text-xs text-secondary-text mt-0.5">
+                  {connectionTier === 1 && 'Email connected — agents can draft and send emails directly.'}
+                  {connectionTier === 2 && 'Email + data connected — agents can act on live data and send results.'}
+                  {connectionTier === 3 && 'Full integration — agents operate autonomously across all systems.'}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

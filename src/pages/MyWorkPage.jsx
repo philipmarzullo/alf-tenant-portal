@@ -3,14 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import {
   ClipboardCheck, Loader2, CheckCircle, Clock, ArrowRight, Inbox,
   Play, Check, XCircle, ChevronDown, Bot, CalendarClock,
-  Send, User, Copy, FileText,
+  Send, User, Copy, FileText, Mail, X,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { getFreshToken } from '../lib/supabase';
 import { useUser } from '../contexts/UserContext';
 import { useTenantId } from '../contexts/TenantIdContext';
 import { useTenantPortal } from '../contexts/TenantPortalContext';
 import { chatWithAgent } from '../agents/api';
 import SimpleMarkdown from '../components/shared/SimpleMarkdown';
+
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const STATUS_CONFIG = {
   pending:     { label: 'Pending',     className: 'bg-amber-50 text-amber-700', icon: Clock },
@@ -220,11 +223,155 @@ function TaskAgentChat({ agentKey, agentName, tasks, sops = [] }) {
   );
 }
 
+// ── Email Compose Modal ──────────────────────────────────────────────
+function EmailComposeModal({ task, tenantId, onClose, onSent }) {
+  const agentOutput = task.agent_output || {};
+  const outputText = agentOutput.text || '';
+
+  // Parse Subject: and To: from agent output
+  const subjectMatch = outputText.match(/^Subject:\s*(.+)$/m);
+  const toMatch = outputText.match(/^To:\s*(.+)$/m);
+  const initialSubject = subjectMatch?.[1]?.trim() || task.title || '';
+  const initialTo = toMatch?.[1]?.trim() || '';
+
+  // Strip metadata lines from body
+  const bodyText = outputText
+    .replace(/^Subject:\s*.+$/m, '')
+    .replace(/^To:\s*.+$/m, '')
+    .replace(/^\[DRAFT\]\s*/m, '')
+    .replace(/^\[PENDING REVIEW\]\s*/m, '')
+    .trim();
+
+  const [to, setTo] = useState(initialTo);
+  const [subject, setSubject] = useState(initialSubject);
+  const [body, setBody] = useState(bodyText);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
+
+  const wasEdited = body !== bodyText;
+
+  async function handleSend() {
+    if (!to.trim() || !subject.trim() || !body.trim()) return;
+    setSending(true);
+    setError(null);
+
+    try {
+      const token = await getFreshToken();
+      const res = await fetch(`${BACKEND_URL}/api/integrations/email/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          tenantId,
+          to: to.split(',').map(e => e.trim()).filter(Boolean),
+          subject,
+          body: `<div style="font-family: sans-serif; font-size: 14px; line-height: 1.6;">${body.replace(/\n/g, '<br>')}</div>`,
+          taskId: task.id,
+          agentKey: agentOutput.agent_key || null,
+          actionKey: task.source_reference_id || null,
+          wasEdited,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.code === 'SCOPE_REQUIRED') {
+          setError('Email permissions need updating. Please reconnect Microsoft 365 in Connections.');
+        } else {
+          setError(data.error || 'Failed to send email');
+        }
+        return;
+      }
+
+      onSent();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Mail size={16} className="text-teal-600" />
+              <h3 className="text-sm font-semibold text-dark-text">Send via Email</h3>
+            </div>
+            <button onClick={onClose} className="text-secondary-text hover:text-dark-text">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="p-5 space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-dark-text mb-1">To</label>
+              <input
+                type="text"
+                value={to}
+                onChange={e => setTo(e.target.value)}
+                placeholder="recipient@example.com"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-aa-blue"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-dark-text mb-1">Subject</label>
+              <input
+                type="text"
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-aa-blue"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-dark-text mb-1">Body</label>
+              <textarea
+                value={body}
+                onChange={e => setBody(e.target.value)}
+                rows={10}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-aa-blue leading-relaxed"
+              />
+            </div>
+            {error && (
+              <div className="flex items-center gap-2 text-xs text-red-600">
+                <XCircle size={14} />
+                {error}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-secondary-text hover:text-dark-text transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={!to.trim() || !subject.trim() || !body.trim() || sending}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors disabled:opacity-50"
+            >
+              {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              Send Email
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Main Page ───────────────────────────────────────────────────────
 export default function MyWorkPage() {
   const { currentUser } = useUser();
   const { tenantId } = useTenantId();
-  const { workspaces, getWorkspacePath } = useTenantPortal();
+  const { workspaces, getWorkspacePath, hasCapability } = useTenantPortal();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -233,6 +380,8 @@ export default function MyWorkPage() {
   const [sops, setSops] = useState([]);
   const [sopsLoading, setSopsLoading] = useState(true);
   const [expandedSopId, setExpandedSopId] = useState(null);
+  const [composingTaskId, setComposingTaskId] = useState(null);
+  const canSendEmail = hasCapability('can_send_email');
 
   const loadTasks = useCallback(async () => {
     if (!currentUser?.id || !tenantId) return;
@@ -456,6 +605,14 @@ export default function MyWorkPage() {
                         )}
 
                         <div className="flex items-center gap-2 flex-wrap">
+                          {canSendEmail && task.source_type === 'agent_output' && (
+                            <button
+                              onClick={() => setComposingTaskId(task.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
+                            >
+                              <Mail size={12} /> Send via Email
+                            </button>
+                          )}
                           {task.status === 'pending' && (
                             <button
                               onClick={() => updateStatus(task.id, 'in_progress')}
@@ -498,6 +655,23 @@ export default function MyWorkPage() {
           </div>
         </div>
       </div>
+
+      {/* Email compose modal */}
+      {composingTaskId && (() => {
+        const task = tasks.find(t => t.id === composingTaskId);
+        if (!task) return null;
+        return (
+          <EmailComposeModal
+            task={task}
+            tenantId={tenantId}
+            onClose={() => setComposingTaskId(null)}
+            onSent={() => {
+              setComposingTaskId(null);
+              loadTasks();
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

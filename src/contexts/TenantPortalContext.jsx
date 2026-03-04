@@ -35,6 +35,7 @@ export function TenantPortalProvider({ children }) {
   const [navSections, setNavSections] = useState([]);
   const [moduleRegistry, setModuleRegistry] = useState([]);
   const [agents, setAgents] = useState([]);
+  const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export function TenantPortalProvider({ children }) {
       setNavSections([]);
       setModuleRegistry([]);
       setAgents([]);
+      setConnections([]);
       setLoading(false);
       return;
     }
@@ -53,7 +55,7 @@ export function TenantPortalProvider({ children }) {
     let cancelled = false;
 
     async function fetchAll() {
-      const [wsRes, toolsRes, domainsRes, profileRes, navRes, moduleRes, agentsRes] = await Promise.all([
+      const [wsRes, toolsRes, domainsRes, profileRes, navRes, moduleRes, agentsRes, connRes] = await Promise.all([
         supabase
           .from('tenant_workspaces')
           .select('*')
@@ -94,6 +96,10 @@ export function TenantPortalProvider({ children }) {
           .select('id, agent_key, name, workspace_id, is_active, knowledge_scopes')
           .eq('tenant_id', tenantId)
           .eq('is_active', true),
+        supabase
+          .from('tenant_connections')
+          .select('*')
+          .eq('tenant_id', tenantId),
       ]);
 
       if (cancelled) return;
@@ -105,6 +111,7 @@ export function TenantPortalProvider({ children }) {
       setNavSections(navRes.data || []);
       setModuleRegistry(moduleRes.data || []);
       setAgents(agentsRes.data || []);
+      setConnections(connRes.data || []);
       setLoading(false);
     }
 
@@ -117,6 +124,7 @@ export function TenantPortalProvider({ children }) {
       setNavSections([]);
       setModuleRegistry([]);
       setAgents([]);
+      setConnections([]);
       setLoading(false);
     });
 
@@ -152,7 +160,7 @@ export function TenantPortalProvider({ children }) {
     if (!supabase || !tenantId) return;
     setLoading(true);
     try {
-      const [wsRes, toolsRes, domainsRes, profileRes, navRes, moduleRes, agentsRes] = await Promise.all([
+      const [wsRes, toolsRes, domainsRes, profileRes, navRes, moduleRes, agentsRes, connRes] = await Promise.all([
         supabase.from('tenant_workspaces').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
         supabase.from('tenant_tools').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
         supabase.from('tenant_dashboard_domains').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
@@ -160,6 +168,7 @@ export function TenantPortalProvider({ children }) {
         supabase.from('tenant_nav_sections').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
         supabase.from('tenant_module_registry').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
         supabase.from('tenant_agents').select('id, agent_key, name, workspace_id, is_active, knowledge_scopes').eq('tenant_id', tenantId).eq('is_active', true),
+        supabase.from('tenant_connections').select('*').eq('tenant_id', tenantId),
       ]);
       setWorkspaces(wsRes.data || []);
       setTools(toolsRes.data || []);
@@ -168,6 +177,7 @@ export function TenantPortalProvider({ children }) {
       setNavSections(navRes.data || []);
       setModuleRegistry(moduleRes.data || []);
       setAgents(agentsRes.data || []);
+      setConnections(connRes.data || []);
     } catch (err) {
       console.error('Failed to refresh tenant portal data:', err);
     } finally {
@@ -197,6 +207,19 @@ export function TenantPortalProvider({ children }) {
     [workspaces],
   );
 
+  const connectionTier = useMemo(() => {
+    const active = connections.filter(c => c.status === 'connected');
+    const hasEmail = active.some(c => c.connection_type === 'email');
+    if (!hasEmail) return 0;
+    const hasData = active.some(c => ['erp', 'inspection', 'crm'].includes(c.connection_type));
+    return hasData ? 2 : 1;
+  }, [connections]);
+
+  const hasCapability = useCallback(
+    (flag) => connections.some(c => c.status === 'connected' && c.capabilities?.includes(flag)),
+    [connections],
+  );
+
   const value = useMemo(
     () => ({
       workspaces,
@@ -207,6 +230,9 @@ export function TenantPortalProvider({ children }) {
       navSections,
       moduleRegistry,
       agents,
+      connections,
+      connectionTier,
+      hasCapability,
       loading,
       refreshAll,
       getToolByKey,
@@ -216,7 +242,7 @@ export function TenantPortalProvider({ children }) {
       getDomainPath,
       getWorkspaceColor,
     }),
-    [workspaces, tools, dashboardDomains, companyProfile, profileStatus, navSections, moduleRegistry, agents, loading, refreshAll, getToolByKey, getDomainByKey, getWorkspacePath, getToolPath, getDomainPath, getWorkspaceColor],
+    [workspaces, tools, dashboardDomains, companyProfile, profileStatus, navSections, moduleRegistry, agents, connections, connectionTier, hasCapability, loading, refreshAll, getToolByKey, getDomainByKey, getWorkspacePath, getToolPath, getDomainPath, getWorkspaceColor],
   );
 
   return (
