@@ -88,13 +88,12 @@ import CustomToolPage from './pages/tools/CustomToolPage';
 import RFPProjectsPage from './pages/tools/RFPProjectsPage';
 import RFPLibraryPage from './pages/tools/RFPLibraryPage';
 import RFPProjectDetail from './pages/tools/RFPProjectDetail';
-import KnowledgePage from './pages/admin/KnowledgePage';
+import AgentKnowledgePage from './pages/admin/AgentKnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
 import RoleTemplates from './pages/admin/RoleTemplates';
 import UserManagement from './pages/admin/UserManagement';
 import AutomationPage from './pages/admin/AutomationPage';
 import ConnectionsPage from './pages/admin/ConnectionsPage';
-import AgentInstructionsPage from './pages/admin/AgentInstructionsPage';
 import DashboardsLayout from './pages/dashboards/DashboardsLayout';
 import OperationsDashboard from './pages/dashboards/OperationsDashboard';
 import LaborDashboard from './pages/dashboards/LaborDashboard';
@@ -113,6 +112,7 @@ import MarketingLayout from './pages/marketing/MarketingLayout';
 import HomePage from './pages/marketing/HomePage';
 import PricingPage from './pages/marketing/PricingPage';
 import RequestDemoPage from './pages/marketing/RequestDemoPage';
+import MelmacInvaders from './pages/marketing/MelmacInvaders';
 
 /**
  * Catch-all route for dynamic dashboard domains.
@@ -292,6 +292,9 @@ export default function App() {
       ) : (
         <Route path="/" element={<Navigate to="/portal" replace />} />
       )}
+
+      {/* Easter egg game — standalone, no layout chrome */}
+      <Route path="/melmac" element={<MelmacInvaders />} />
 
       {/* Auth — no sidebar, public */}
       <Route path="/login" element={<LoginPage />} />
@@ -538,18 +541,14 @@ export default function App() {
                       path="admin/knowledge"
                       element={
                         <ProtectedRoute moduleKey="knowledge" adminOnly>
-                          <KnowledgePage />
+                          <AgentKnowledgePage />
                         </ProtectedRoute>
                       }
                     />
 
                     <Route
                       path="admin/agent-instructions"
-                      element={
-                        <ProtectedRoute adminOnly>
-                          <AgentInstructionsPage />
-                        </ProtectedRoute>
-                      }
+                      element={<Navigate to="/portal/admin/knowledge?tab=instructions" replace />}
                     />
 
                     <Route

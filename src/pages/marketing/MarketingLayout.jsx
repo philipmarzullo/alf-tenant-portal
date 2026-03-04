@@ -60,7 +60,7 @@ export default function MarketingLayout() {
             <AlfMark variant="dark" size="md" />
           </div>
           <div className="text-xs">
-            <span>&copy; 2026 Alf &middot; Operations Intelligence</span>
+            <span>&copy; 2026 Alf &middot; Operations Intelligence &middot; <Link to="/melmac" className="text-white/60 no-underline hover:text-white/60">Melmac</Link></span>
           </div>
         </div>
       </footer>
