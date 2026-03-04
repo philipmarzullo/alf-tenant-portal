@@ -293,8 +293,8 @@ export default function App() {
         <Route path="/" element={<Navigate to="/portal" replace />} />
       )}
 
-      {/* Easter egg game — standalone, no layout chrome */}
-      <Route path="/melmac" element={<MelmacInvaders />} />
+      {/* Easter egg game — marketing site only, standalone (no layout chrome) */}
+      {!isStandalone && <Route path="/melmac" element={<MelmacInvaders />} />}
 
       {/* Auth — no sidebar, public */}
       <Route path="/login" element={<LoginPage />} />

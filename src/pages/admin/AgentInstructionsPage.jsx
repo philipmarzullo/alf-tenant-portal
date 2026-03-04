@@ -16,7 +16,7 @@ const STATUS_BADGE = {
   rejected: { label: 'Rejected', className: 'bg-red-50 text-red-600', icon: XOctagon },
 };
 
-export default function AgentInstructionsPage() {
+export default function AgentInstructionsPage({ embedded = false }) {
   const { tenantId } = useTenantId();
   const { agents } = useTenantPortal();
   const { currentUser, isAdmin, isSuperAdmin } = useUser();
@@ -297,12 +297,14 @@ export default function AgentInstructionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-dark-text">Agent Instructions</h1>
-        <p className="text-sm text-secondary-text mt-1">
-          Submit feedback and instructions to your AI agents. All submissions require admin approval before taking effect.
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl font-semibold text-dark-text">Agent Instructions</h1>
+          <p className="text-sm text-secondary-text mt-1">
+            Submit feedback and instructions to your AI agents. All submissions require admin approval before taking effect.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
