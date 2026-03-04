@@ -73,9 +73,40 @@ export async function getQBUHistory() {
   }));
 }
 
+/** Convert a File to base64 data URL */
+function fileToBase64(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Convert photo array — preserve base64 so any user can generate the PPTX */
+async function serializePhotos(photos) {
+  return Promise.all(
+    (photos || []).map(async (p) => {
+      const base64 = p.file instanceof File ? await fileToBase64(p.file) : (p.base64 || null);
+      return {
+        name: p.name,
+        caption: p.caption,
+        location: p.location,
+        type: p.type || 'general',
+        base64,
+      };
+    })
+  );
+}
+
 export async function saveQBU({ client, quarter, jobName, formData, agentOutput }) {
   const tenantId = getTenantId();
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Serialize photos to base64 so any user can download the PPTX with images
+  const [projectPhotos, roadmapPhotos] = await Promise.all([
+    serializePhotos(formData.projects?.photos),
+    serializePhotos(formData.roadmap?.photos),
+  ]);
 
   const row = {
     tenant_id: tenantId,
@@ -85,12 +116,11 @@ export async function saveQBU({ client, quarter, jobName, formData, agentOutput 
       ...formData,
       projects: {
         ...formData.projects,
-        // Strip file blobs — only keep metadata
-        photos: (formData.projects?.photos || []).map((p) => ({
-          name: p.name,
-          caption: p.caption,
-          location: p.location,
-        })),
+        photos: projectPhotos,
+      },
+      roadmap: {
+        ...formData.roadmap,
+        photos: roadmapPhotos,
       },
     },
     agent_output: agentOutput,

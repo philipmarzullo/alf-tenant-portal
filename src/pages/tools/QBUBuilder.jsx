@@ -712,7 +712,7 @@ export default function QBUBuilder() {
                 {form.projects.photos.map((photo, i) => (
                   <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="relative aspect-video bg-gray-100">
-                      <img src={photo.preview} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
+                      <img src={photo.preview || photo.base64} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
                       <button
                         onClick={() => removePhoto(i)}
                         className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
@@ -917,7 +917,7 @@ export default function QBUBuilder() {
                 {form.roadmap.photos.map((photo, i) => (
                   <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="relative aspect-video bg-gray-100">
-                      <img src={photo.preview} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
+                      <img src={photo.preview || photo.base64} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
                       <button
                         onClick={() => removePhoto(i, 'roadmap')}
                         className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
@@ -1276,7 +1276,7 @@ export default function QBUBuilder() {
                 {form.projects.photos.map((photo, i) => (
                   <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="relative aspect-video bg-gray-100">
-                      <img src={photo.preview} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
+                      <img src={photo.preview || photo.base64} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
                       <button
                         onClick={() => removePhoto(i)}
                         className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
@@ -1333,7 +1333,7 @@ export default function QBUBuilder() {
                 {form.roadmap.photos.map((photo, i) => (
                   <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="relative aspect-video bg-gray-100">
-                      <img src={photo.preview} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
+                      <img src={photo.preview || photo.base64} alt={photo.caption || photo.name} className="w-full h-full object-cover" />
                       <button
                         onClick={() => removePhoto(i, 'roadmap')}
                         className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"

@@ -47,43 +47,82 @@ Use these to:
 Do NOT just quote documents verbatim. Synthesize the information into polished QBU content.
 If a document contradicts structured form data, flag the discrepancy.
 
+## CRITICAL SLIDE DENSITY RULES
+Each section of the QBU MUST fit on its designated slide(s). The PPTX generator maps sections to fixed slides. If your content is too verbose, it overflows and creates layout problems.
+- **A.1 Safety Moment: ONE slide.** Combine all tips, reminders, and "Why It Matters" into concise content. Do NOT separate each tip onto its own section.
+- **A.2 Safety & Compliance: ONE slide.** Recordables table + good saves + incident details all on one slide.
+- **B.1 Executive Summary: ONE slide.** Keep achievements to 3-5 concise bullets, challenges to 2-3, innovations to 2-3. Each bullet should be 1-2 lines max.
+- **E.1 Challenges: ONE slide.** If many challenges, prioritize the most impactful and condense language.
+- **F.1 Financial: ONE slide.** Keep strategy notes to 3-4 concise bullets.
+
+## ABSOLUTE DATA INTEGRITY RULE
+**You may NEVER remove, omit, or drop user-provided data.** This is the most critical rule:
+- Every completed project the user entered MUST appear in D.1. You can polish the wording, but you cannot drop items.
+- Every testimonial MUST appear in D.3 with the EXACT quote text and full attribution (name AND event/location).
+- Every challenge and action MUST appear in E.1.
+- Every roadmap initiative MUST appear in G.2.
+- Every innovation highlight MUST appear in G.1.
+- Every event in "Events Supported" MUST appear in C.1.
+- If content is too long for one slide, the PPTX generator will handle overflow — but you must include ALL items.
+- You may condense wording and polish language, but the COUNT of items in your output must match the COUNT provided.
+
+## LOCATION DETAIL PRESERVATION
+Campus names, building names, and specific location references are CRITICAL and must ALWAYS be preserved:
+- In D.1 projects: include the specific building/campus where work was done (e.g., "Brooklyn Campus — Humanities Building")
+- In E.1 challenges: include the location for BOTH the challenge AND the action taken
+- In D.3 testimonials: include the event or location the quote came from
+- In C.1 events supported: include full event names as provided
+- NEVER generalize specific locations into vague descriptions
+
 ## CONTENT RULES BY SECTION
 
 ### A — Safety
-- A.1: Safety Moment rotates quarterly (workplace violence, slip/fall, PPE, heat illness, winter prep, ergonomics, chemical safety). Include Key Safety Tips, Quick Reminders, and "Why It Matters" callout. When a safety theme is provided, BUILD OUT a complete safety moment for that theme — write 3-5 actionable tips, 3-5 quick reminders, and a compelling "Why It Matters" paragraph. If specific tips or reminders are provided, incorporate and refine them. If the input is sparse, develop appropriate safety guidance grounded in the named theme — this is standard safety training content, not fabrication. NEVER fabricate incident data, metrics, or claims.
-- A.2: Recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified.
+- A.1: Safety Moment — ONE SLIDE. Rotates quarterly (workplace violence, slip/fall, PPE, heat illness, winter prep, ergonomics, chemical safety). Include Key Safety Tips (3-5 concise bullets), Quick Reminders (3-5 concise bullets), and "Why It Matters" callout (2-3 sentences). When a safety theme is provided, BUILD OUT a complete safety moment for that theme. If specific tips or reminders are provided, incorporate and refine them. If the input is sparse, develop appropriate safety guidance grounded in the named theme — this is standard safety training content, not fabrication. NEVER fabricate incident data, metrics, or claims.
+- A.2: Safety & Compliance — ONE SLIDE. When there are NO recordable incidents for the quarter, clearly state "Zero Recordables This Quarter" and omit the empty recordables table. Same for Good Saves — if none reported, state "No Good Saves Reported" rather than showing an empty structure. When incidents DO exist: recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified. Include the FULL detail for each — do not just say "slip and fall" when the user provided specifics about what happened.
 
 ### B — Executive Summary
-- Key Achievements (3–5): concrete accomplishments with specifics — name the building, cite the metric, specify the timeframe.
+- ONE SLIDE. This is critical — keep it concise.
+- Key Achievements (3–5): concrete accomplishments with specifics — name the building, cite the metric, specify the timeframe. One line per achievement.
 - Strategic Challenges (2–3): be HONEST — spin undermines trust. If something went wrong, say so directly.
-- Innovation Milestones (2–5): tech deployments, process improvements, equipment additions.
+- Innovation Milestones (2–3): tech deployments, process improvements, equipment additions.
 - This slide sets the narrative for the entire QBU.
+- When no executive summary data is provided, synthesize one from the other sections (safety record, project completions, operational metrics). This is acceptable — but clearly mark synthesized content and keep it grounded in the data from other sections.
 
 ### C — Operational Performance
-- C.1: Work tickets MUST show YoY comparison with % change. Include a Key Takeaway narrative explaining the numbers (e.g., "11.7% decrease reflects addition of 3rd shift and improved technology adoption").
-- C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies.
+- C.1: Work tickets MUST show YoY comparison with % change. Include a Key Takeaway narrative explaining the numbers (e.g., "11.7% decrease reflects addition of 3rd shift and improved technology adoption"). Events Supported must be listed cleanly — include ALL events provided, formatted as a simple bulleted list. Do NOT split events into a table or spread them across sections.
+- C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies. If prior quarter comparison was removed by the user, only show current quarter data.
 - C.3: Visual data breakdown of corrective action areas with counts. Include a Key Takeaway interpreting what the top corrective action areas indicate about operational focus and priorities.
 - EVERY KPI must have an interpretation sentence AND a next action — raw numbers without context are useless.
 
 ### D — Projects & Satisfaction
-- D.1: Organize by category. Be specific: name buildings, describe what was done. Polish raw project descriptions into concise, professional summaries that convey scope and impact.
+- D.1: Organize by category. Be specific: name buildings, describe what was done. Polish raw project descriptions into concise, professional summaries that convey scope and impact. INCLUDE ALL PROJECTS — do not drop any. Preserve campus/building/location details.
 - D.2: Real photos with captions. Photos tagged as Before/After will be automatically paired on slides. Reference before/after transformations in your D.1 narrative where relevant.
-- D.3: Actual client quotes from emails/texts/meetings. Attribute by name. Organize by location. Keep all quotes EXACTLY as provided — only improve framing and organization.
+- D.3: ALL client quotes MUST appear. Keep quotes EXACTLY as provided — only improve framing and organization. Include the event or context where the quote came from (e.g., "Fox Event", "Career Fair"). Attribute by name AND location.
 
 ### E — Challenges
 - Must be RECURRING issues, not one-time incidents.
-- Every challenge MUST map to an action taken or planned.
-- Tag each with location.
+- Every challenge MUST map to an action taken or planned. If an action is missing, use [PLACEHOLDER: action plan needed] — this is valuable because it flags gaps.
+- Tag each challenge AND each action with specific location (campus, building).
 - If action was committed last quarter, report whether it was delivered.
+- Preserve the user's meaning — do not reinterpret "vehicles should not drive on grounds" as "vehicle access policy." Keep the original intent clear.
 
 ### F — Financial
 - Don't avoid uncomfortable AR conversations. Show total outstanding with as-of date.
 - Break down by aging bucket: 1–30, 31–60, 61–90, 91+ days.
+- **Aging color guidance for the PPTX:** 1-30 days and 31-60 days = neutral (no alarm). 61-90 days = caution. 91+ days = alert. Do NOT present 1-30 day balances as alarming — that is normal payment processing time.
 - Include financial strategy notes. Polish raw strategy notes into professional bullets that frame the financial position clearly — address collection efforts, payment trends, and next steps.
+- When no financial strategy is provided but financial data exists, generate a professional financial assessment based on the aging distribution. This is acceptable and expected.
 
 ### G — Innovation & Roadmap
-- G.1: New tech, equipment, or process improvements. Connect each to an operational benefit. Polish raw innovation descriptions into clear, benefit-driven summaries. Innovation photos appear on their own slides after G.1. Reference visual evidence in your G.1 narrative when photos exist.
-- G.2: Concrete next-quarter look-ahead — this becomes the outline for the next QBU. Not vague goals. Polish initiative descriptions and connect the goal statement to operational outcomes.
+- G.1: New tech, equipment, or process improvements. Connect each to an operational benefit. Polish raw innovation descriptions into clear, benefit-driven summaries. INCLUDE ALL innovations — do not drop any. Innovation photos appear on their own slides after G.1.
+- G.2: Concrete next-quarter look-ahead. INCLUDE ALL roadmap initiatives provided — do not drop any. Use consistent date formatting throughout (all months OR all quarters — do not mix "March" with "Q1"). Polish initiative descriptions and connect the goal statement to operational outcomes. Not vague goals.
+
+## EMPTY SECTION HANDLING
+When a section has NO user-provided data:
+- For sections that can be reasonably synthesized from other data (B.1 Executive Summary, F.1 Financial Strategy): generate content but keep it grounded in actual data from other sections.
+- For sections that require specific input (D.1 Projects, D.3 Testimonials, C.1 Work Tickets): use [PLACEHOLDER] markers.
+- For G.1 Innovation and G.2 Roadmap: if no data provided, use [PLACEHOLDER] markers. Do NOT fabricate future plans, technology deployments, or strategic initiatives — making up roadmap items is misleading.
+- NEVER invent incident data, financial figures, project details, or client quotes.
 
 ## NARRATIVE FLOW
 Your job is to build a compelling, cohesive story across ALL 16 slides — not just the ones with obvious narrative sections.

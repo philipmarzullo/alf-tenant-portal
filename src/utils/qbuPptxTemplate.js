@@ -694,7 +694,8 @@ async function addBeforeAfterSlide(pptx, pair, title, logoColor) {
   for (let j = 0; j < 2; j++) {
     const photo = j === 0 ? pair.before : pair.after;
     const label = j === 0 ? 'BEFORE' : 'AFTER';
-    const base64 = await fileToBase64(photo.file);
+    const base64 = await resolvePhotoData(photo);
+    if (!base64) continue;
     const xPos = j === 0 ? MARGIN : MARGIN + COL2_W + 0.3;
 
     // Label above image
@@ -720,12 +721,19 @@ async function addBeforeAfterSlide(pptx, pair, title, logoColor) {
   addLogoBottomRight(slide, logoColor);
 }
 
+/** Resolve photo image data — handles both File objects and stored base64 strings */
+async function resolvePhotoData(photo) {
+  if (photo.file instanceof File) return fileToBase64(photo.file);
+  if (photo.base64) return photo.base64;
+  return null;
+}
+
 async function addPhotoSlides(pptx, form, logoColor) {
   const photos = form.projects?.photos || [];
-  const withFiles = photos.filter((p) => p.file instanceof File);
-  if (!withFiles.length) return; // Skip photo slides entirely when no photos
+  const withData = photos.filter((p) => p.file instanceof File || p.base64);
+  if (!withData.length) return; // Skip photo slides entirely when no photos
 
-  const { pairs, singles } = pairBeforeAfterPhotos(withFiles);
+  const { pairs, singles } = pairBeforeAfterPhotos(withData);
 
   // Render before/after pairs first — one pair per slide
   for (let i = 0; i < pairs.length; i++) {
@@ -745,7 +753,8 @@ async function addPhotoSlides(pptx, form, logoColor) {
 
     for (let j = 0; j < 2 && i + j < singles.length; j++) {
       const photo = singles[i + j];
-      const base64 = await fileToBase64(photo.file);
+      const base64 = await resolvePhotoData(photo);
+      if (!base64) continue;
       const xPos = j === 0 ? MARGIN : MARGIN + COL2_W + 0.3;
 
       // Card frame
@@ -1103,10 +1112,10 @@ function addFinancialSlide(pptx, form, logoColor, narratives) {
 
 async function addInnovationPhotoSlides(pptx, form, logoColor) {
   const photos = form.roadmap?.photos || [];
-  const withFiles = photos.filter((p) => p.file instanceof File);
-  if (!withFiles.length) return; // Skip when no innovation photos
+  const withData = photos.filter((p) => p.file instanceof File || p.base64);
+  if (!withData.length) return; // Skip when no innovation photos
 
-  const { pairs, singles } = pairBeforeAfterPhotos(withFiles);
+  const { pairs, singles } = pairBeforeAfterPhotos(withData);
 
   // Render before/after pairs first — one pair per slide
   for (let i = 0; i < pairs.length; i++) {
@@ -1126,7 +1135,8 @@ async function addInnovationPhotoSlides(pptx, form, logoColor) {
 
     for (let j = 0; j < 2 && i + j < singles.length; j++) {
       const photo = singles[i + j];
-      const base64 = await fileToBase64(photo.file);
+      const base64 = await resolvePhotoData(photo);
+      if (!base64) continue;
       const xPos = j === 0 ? MARGIN : MARGIN + COL2_W + 0.3;
 
       addCard(slide, { x: xPos, y: 1.15, w: COL2_W, h: 3.8 });
