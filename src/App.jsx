@@ -325,7 +325,7 @@ export default function App() {
                 onMobileClose={() => setMobileMenuOpen(false)}
               />
               <div
-                className={`flex-1 flex flex-col transition-all duration-200 ${
+                className={`flex-1 min-w-0 flex flex-col transition-all duration-200 ${
                   isMobile ? 'ml-0' : sidebarCollapsed ? 'ml-16' : 'ml-60'
                 }`}
               >
