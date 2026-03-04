@@ -93,6 +93,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 import RoleTemplates from './pages/admin/RoleTemplates';
 import UserManagement from './pages/admin/UserManagement';
 import AutomationPage from './pages/admin/AutomationPage';
+import AgentFactoryPage from './pages/admin/AgentFactoryPage';
 import ConnectionsPage from './pages/admin/ConnectionsPage';
 import DashboardsLayout from './pages/dashboards/DashboardsLayout';
 import OperationsDashboard from './pages/dashboards/OperationsDashboard';
@@ -565,6 +566,15 @@ export default function App() {
                       element={
                         <ProtectedRoute moduleKey="automation">
                           <AutomationPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="admin/agents"
+                      element={
+                        <ProtectedRoute adminOnly>
+                          <AgentFactoryPage />
                         </ProtectedRoute>
                       }
                     />

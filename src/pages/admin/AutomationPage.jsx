@@ -4,12 +4,14 @@ import { Zap } from 'lucide-react';
 import AutomationInsightsPage from './AutomationInsightsPage';
 import AutomationPreferencesPage from './AutomationPreferencesPage';
 import AutomationSchedulesTab from './AutomationSchedulesTab';
+import AutomationConditionsTab from './AutomationConditionsTab';
 import { useUser } from '../../contexts/UserContext';
 
 const TABS = [
   { key: 'insights', label: 'Insights' },
   { key: 'sop-builder', label: 'SOP Builder' },
   { key: 'schedules', label: 'Schedules' },
+  { key: 'conditions', label: 'Conditions' },
   { key: 'preferences', label: 'Preferences' },
 ];
 
@@ -61,6 +63,7 @@ export default function AutomationPage() {
       {activeTab === 'insights' && <AutomationInsightsPage embedded />}
       {activeTab === 'sop-builder' && <AutomationInsightsPage embedded initialTab="skills" />}
       {activeTab === 'schedules' && <AutomationSchedulesTab />}
+      {activeTab === 'conditions' && <AutomationConditionsTab />}
       {activeTab === 'preferences' && isSuperAdmin && <AutomationPreferencesPage embedded />}
     </div>
   );

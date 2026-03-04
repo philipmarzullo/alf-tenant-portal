@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Loader2, Upload, FileText, Trash2,
-  ChevronDown, ChevronUp, XCircle, CheckCircle, Pencil, X, Check,
+  ChevronDown, ChevronUp, XCircle, CheckCircle, Pencil, X, Check, Sparkles,
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, getFreshToken } from '../../lib/supabase';
 import { buildDocumentPath, formatFileSize } from '../../utils/storagePaths';
 import { useTenantId } from '../../contexts/TenantIdContext';
 import { useTenantPortal } from '../../contexts/TenantPortalContext';
 import { useUser } from '../../contexts/UserContext';
+
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 const DOC_TYPES = [
   { key: 'sop', label: 'SOP' },
@@ -125,6 +127,10 @@ export default function KnowledgePage({ embedded = false }) {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Embedding status state
+  const [embeddingStatus, setEmbeddingStatus] = useState(null);
+  const [embedding, setEmbedding] = useState(false);
+
   // Inline department editing state (admin/super-admin only)
   const [editingDeptDocId, setEditingDeptDocId] = useState(null);
   const [addingNewDept, setAddingNewDept] = useState(false);
@@ -135,6 +141,7 @@ export default function KnowledgePage({ embedded = false }) {
 
   useEffect(() => {
     loadDocuments();
+    loadEmbeddingStatus();
   }, []);
 
   async function loadDocuments() {
@@ -154,6 +161,47 @@ export default function KnowledgePage({ embedded = false }) {
       setDocuments(data || []);
     }
     setLoading(false);
+  }
+
+  async function loadEmbeddingStatus() {
+    try {
+      const token = await getFreshToken();
+      const res = await fetch(`${BACKEND_URL}/api/embeddings/${tenantId}/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmbeddingStatus(data);
+      }
+    } catch (err) {
+      // Non-critical — just don't show embedding status
+      console.log('[knowledge] Could not load embedding status:', err.message);
+    }
+  }
+
+  async function handleEmbedAll() {
+    setEmbedding(true);
+    try {
+      const token = await getFreshToken();
+      const res = await fetch(`${BACKEND_URL}/api/embeddings/${tenantId}/embed-all`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSuccess(`Embedded ${data.documents_embedded} documents (${data.total_chunks} chunks)${data.errors ? `, ${data.errors} errors` : ''}`);
+        setTimeout(() => setSuccess(null), 5000);
+        loadEmbeddingStatus();
+      } else {
+        const err = await res.json();
+        setError(err.error || 'Failed to embed documents');
+        setTimeout(() => setError(null), 4000);
+      }
+    } catch (err) {
+      setError('Embedding failed: ' + err.message);
+      setTimeout(() => setError(null), 4000);
+    }
+    setEmbedding(false);
   }
 
   async function handleFiles(files) {
@@ -196,7 +244,7 @@ export default function KnowledgePage({ embedded = false }) {
 
         if (uploadErr) throw uploadErr;
 
-        const { error: insertErr } = await supabase
+        const { data: insertedDoc, error: insertErr } = await supabase
           .from('tenant_documents')
           .insert({
             tenant_id: tenantId,
@@ -211,10 +259,22 @@ export default function KnowledgePage({ embedded = false }) {
             char_count: result.text.length,
             status: result.warning ? 'failed' : 'extracted',
             status_detail: result.warning || null,
-          });
+          })
+          .select('id')
+          .single();
 
         if (insertErr) throw insertErr;
         uploaded++;
+
+        // Auto-embed if extraction succeeded
+        if (!result.warning && insertedDoc?.id) {
+          getFreshToken().then(token =>
+            fetch(`${BACKEND_URL}/api/embeddings/${tenantId}/embed-document/${insertedDoc.id}`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            }).catch(() => {}) // Non-critical
+          );
+        }
       } catch (err) {
         console.error(`Failed to upload ${file.name}:`, err);
         failed++;
@@ -227,6 +287,8 @@ export default function KnowledgePage({ embedded = false }) {
       setSuccess(`${uploaded} document${uploaded > 1 ? 's' : ''} uploaded${failed > 0 ? ` (${failed} failed)` : ''}`);
       setTimeout(() => setSuccess(null), 4000);
       loadDocuments();
+      // Refresh embedding status after a short delay (auto-embed is async)
+      setTimeout(() => loadEmbeddingStatus(), 3000);
     }
     if (failed > 0 && uploaded === 0) {
       setError(`Failed to upload ${failed} file${failed > 1 ? 's' : ''}`);
@@ -411,7 +473,7 @@ export default function KnowledgePage({ embedded = false }) {
       )}
 
       {/* Metric cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Documents</div>
           <div className="text-2xl font-semibold text-dark-text mt-1">{documents.length}</div>
@@ -425,6 +487,31 @@ export default function KnowledgePage({ embedded = false }) {
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Departments</div>
           <div className="text-2xl font-semibold text-dark-text mt-1">{deptSet.size}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Semantic Search</div>
+          {embeddingStatus ? (
+            <div className="mt-1">
+              <div className="text-2xl font-semibold text-dark-text">
+                {embeddingStatus.coverage_pct}%
+              </div>
+              <div className="text-[11px] text-secondary-text">
+                {embeddingStatus.embedded_documents}/{embeddingStatus.total_documents} docs · {embeddingStatus.total_chunks} chunks
+              </div>
+              {isAdmin && embeddingStatus.coverage_pct < 100 && (
+                <button
+                  onClick={handleEmbedAll}
+                  disabled={embedding}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-aa-blue hover:text-aa-blue/80 font-medium disabled:opacity-50"
+                >
+                  {embedding ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                  {embedding ? 'Embedding...' : 'Embed All'}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-secondary-text mt-1">—</div>
+          )}
         </div>
       </div>
 
