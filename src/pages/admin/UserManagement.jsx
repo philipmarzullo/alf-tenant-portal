@@ -496,7 +496,7 @@ export default function UserManagement() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <div>
-          <h1 className="text-2xl font-light text-dark-text mb-1">User Management</h1>
+          <h1 className="text-xl font-semibold text-dark-text">User Management</h1>
           <p className="text-sm text-secondary-text">
             Manage portal users and module access. Admins automatically receive access to all modules.
           </p>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ClipboardCheck, Loader2, CheckCircle, Clock, ArrowRight, Inbox,
   Play, Check, XCircle, ChevronDown, Bot, CalendarClock,
-  Send, User, Copy, FileText, Mail, X,
+  Send, User, Copy, FileText, Mail, X, GitBranch,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getFreshToken } from '../lib/supabase';
@@ -26,6 +26,7 @@ const SOURCE_LABELS = {
   agent_output:    { label: 'Agent', icon: Bot },
   manual_trigger:  { label: 'Manual', icon: ClipboardCheck },
   scheduled:       { label: 'Scheduled', icon: CalendarClock },
+  workflow:        { label: 'Workflow', icon: GitBranch },
 };
 
 function dueLabel(due) {
@@ -382,6 +383,8 @@ export default function MyWorkPage() {
   const [sopsLoading, setSopsLoading] = useState(true);
   const [expandedSopId, setExpandedSopId] = useState(null);
   const [composingTaskId, setComposingTaskId] = useState(null);
+  const [workflowNotes, setWorkflowNotes] = useState({});
+  const [rejectingTaskId, setRejectingTaskId] = useState(null);
   const canSendEmail = hasCapability('can_send_email');
 
   const loadTasks = useCallback(async () => {
@@ -421,17 +424,42 @@ export default function MyWorkPage() {
 
   useEffect(() => { loadSops(); }, [loadSops]);
 
-  async function updateStatus(taskId, newStatus) {
+  async function updateStatus(taskId, newStatus, { outcome_notes } = {}) {
     setUpdating(taskId);
     const updates = { status: newStatus, updated_at: new Date().toISOString() };
     if (newStatus === 'completed') {
       updates.completed_at = new Date().toISOString();
       updates.completed_by = currentUser.id;
     }
+    if (outcome_notes) updates.outcome_notes = outcome_notes;
     await supabase.from('tenant_user_tasks').update(updates).eq('id', taskId);
     await loadTasks();
     setUpdating(null);
     setExpandedId(null);
+  }
+
+  async function handleWorkflowReject(task) {
+    setUpdating(task.id);
+    try {
+      const token = await getFreshToken();
+      await fetch(
+        `${BACKEND_URL}/api/workflow-runs/${tenantId}/runs/${task.workflow_run_id}/stages/${task.workflow_step_run_id}/reject`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ reason: workflowNotes[task.id] || '' }),
+        }
+      );
+      setRejectingTaskId(null);
+      await loadTasks();
+    } catch (err) {
+      console.error('[my-work] Reject workflow stage error:', err.message);
+    } finally {
+      setUpdating(null);
+    }
   }
 
   const userWorkspace = currentUser?.department_key
@@ -611,6 +639,34 @@ export default function MyWorkPage() {
                           <p className="text-sm text-secondary-text">{task.description}</p>
                         )}
 
+                        {/* Workflow stage: show agent output */}
+                        {task.source_type === 'workflow' && task.agent_output && (
+                          <div>
+                            <div className="text-xs text-secondary-text mb-1">Agent Output</div>
+                            <div className="bg-gray-50 rounded border border-gray-200 p-3 text-sm leading-relaxed max-h-48 overflow-y-auto">
+                              <SimpleMarkdown content={
+                                typeof task.agent_output === 'string'
+                                  ? task.agent_output
+                                  : task.agent_output.text || JSON.stringify(task.agent_output, null, 2)
+                              } />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Workflow stage: notes textarea */}
+                        {task.source_type === 'workflow' && (task.status === 'pending' || task.status === 'in_progress') && (
+                          <div>
+                            <label className="block text-xs text-secondary-text mb-1">Notes (optional)</label>
+                            <textarea
+                              value={workflowNotes[task.id] || ''}
+                              onChange={e => setWorkflowNotes(prev => ({ ...prev, [task.id]: e.target.value }))}
+                              placeholder="Add notes before completing..."
+                              rows={2}
+                              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-aa-blue"
+                            />
+                          </div>
+                        )}
+
                         <div className="flex items-center gap-2 flex-wrap">
                           {canSendEmail && task.source_type === 'agent_output' && (
                             <button
@@ -631,20 +687,54 @@ export default function MyWorkPage() {
                           )}
                           {(task.status === 'pending' || task.status === 'in_progress') && (
                             <button
-                              onClick={() => updateStatus(task.id, 'completed')}
+                              onClick={() => updateStatus(task.id, 'completed', { outcome_notes: workflowNotes[task.id] })}
                               disabled={isUpdating}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50"
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-50 ${
+                                task.source_type === 'workflow'
+                                  ? 'bg-green-600 text-white hover:bg-green-700'
+                                  : 'bg-green-50 text-green-700 hover:bg-green-100'
+                              }`}
                             >
-                              <Check size={12} /> Mark Complete
+                              <Check size={12} /> {task.source_type === 'workflow' ? 'Complete Stage' : 'Mark Complete'}
                             </button>
                           )}
-                          <button
-                            onClick={() => updateStatus(task.id, 'dismissed')}
-                            disabled={isUpdating}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-gray-50 text-secondary-text hover:bg-gray-100 transition-colors disabled:opacity-50"
-                          >
-                            <XCircle size={12} /> Dismiss
-                          </button>
+                          {/* Workflow reject button */}
+                          {task.source_type === 'workflow' && task.workflow_run_id && (task.status === 'pending' || task.status === 'in_progress') && (
+                            rejectingTaskId === task.id ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => handleWorkflowReject(task)}
+                                  disabled={isUpdating}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                                >
+                                  Confirm Reject
+                                </button>
+                                <button
+                                  onClick={() => setRejectingTaskId(null)}
+                                  className="px-2 py-1.5 text-xs text-secondary-text hover:text-dark-text"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setRejectingTaskId(task.id)}
+                                disabled={isUpdating}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                              >
+                                <XCircle size={12} /> Reject
+                              </button>
+                            )
+                          )}
+                          {task.source_type !== 'workflow' && (
+                            <button
+                              onClick={() => updateStatus(task.id, 'dismissed')}
+                              disabled={isUpdating}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-gray-50 text-secondary-text hover:bg-gray-100 transition-colors disabled:opacity-50"
+                            >
+                              <XCircle size={12} /> Dismiss
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}

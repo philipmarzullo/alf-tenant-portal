@@ -331,7 +331,7 @@ export default function ConnectionsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-light text-dark-text mb-2">Connections</h1>
+      <h1 className="text-xl font-semibold text-dark-text">Connections</h1>
       <p className="text-sm text-secondary-text mb-6">
         Connect your systems to unlock agent capabilities across your organization.
       </p>

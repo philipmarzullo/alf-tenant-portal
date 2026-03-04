@@ -79,6 +79,7 @@ export default function AutomationSchedulesTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(null);
 
   // New schedule form
   const [showAdd, setShowAdd] = useState(false);
@@ -319,15 +320,33 @@ export default function AutomationSchedulesTab() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => handleDelete(trigger.id)}
-                        disabled={isSaving}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        <Trash2 size={12} />
-                        Remove Schedule
-                      </button>
+                    <div className="flex justify-end gap-2">
+                      {confirmingDelete === trigger.id ? (
+                        <>
+                          <button
+                            onClick={() => { handleDelete(trigger.id); setConfirmingDelete(null); }}
+                            disabled={isSaving}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setConfirmingDelete(null)}
+                            className="px-3 py-1.5 text-xs text-secondary-text hover:text-dark-text transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmingDelete(trigger.id)}
+                          disabled={isSaving}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 size={12} />
+                          Remove Schedule
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

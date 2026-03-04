@@ -95,6 +95,7 @@ import UserManagement from './pages/admin/UserManagement';
 import AutomationPage from './pages/admin/AutomationPage';
 import AgentFactoryPage from './pages/admin/AgentFactoryPage';
 import ConnectionsPage from './pages/admin/ConnectionsPage';
+import WorkflowRunDetailPage from './pages/admin/WorkflowRunDetailPage';
 import DashboardsLayout from './pages/dashboards/DashboardsLayout';
 import OperationsDashboard from './pages/dashboards/OperationsDashboard';
 import LaborDashboard from './pages/dashboards/LaborDashboard';
@@ -277,7 +278,7 @@ function ProtectedRoute({ moduleKey, adminOnly, superAdminOnly, children }) {
 const isStandalone = !!import.meta.env.VITE_TENANT_ID;
 
 export default function App() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 767px)');
 
@@ -313,7 +314,12 @@ export default function App() {
             <div className="flex h-screen overflow-hidden">
               <Sidebar
                 collapsed={sidebarCollapsed}
-                onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+                onToggle={() => {
+                  setSidebarCollapsed(prev => {
+                    localStorage.setItem('sidebar-collapsed', String(!prev));
+                    return !prev;
+                  });
+                }}
                 isMobile={isMobile}
                 mobileOpen={mobileMenuOpen}
                 onMobileClose={() => setMobileMenuOpen(false)}
@@ -566,6 +572,15 @@ export default function App() {
                       element={
                         <ProtectedRoute moduleKey="automation">
                           <AutomationPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="admin/automation/runs/:runId"
+                      element={
+                        <ProtectedRoute moduleKey="automation">
+                          <WorkflowRunDetailPage />
                         </ProtectedRoute>
                       }
                     />

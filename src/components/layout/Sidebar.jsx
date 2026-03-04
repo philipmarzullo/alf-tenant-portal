@@ -265,7 +265,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   // --- Rendering helpers ---
 
   function renderNavItem(item, indent = false) {
-    const Icon = ICON_MAP[item.icon];
+    const Icon = ICON_MAP[item.icon] || FileText;
 
     if (item._tierLocked) {
       return (

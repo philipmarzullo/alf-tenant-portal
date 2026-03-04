@@ -5,6 +5,7 @@ import AutomationInsightsPage from './AutomationInsightsPage';
 import AutomationPreferencesPage from './AutomationPreferencesPage';
 import AutomationSchedulesTab from './AutomationSchedulesTab';
 import AutomationConditionsTab from './AutomationConditionsTab';
+import AutomationRunsTab from './AutomationRunsTab';
 import { useUser } from '../../contexts/UserContext';
 
 const TABS = [
@@ -12,6 +13,7 @@ const TABS = [
   { key: 'sop-builder', label: 'SOP Builder' },
   { key: 'schedules', label: 'Schedules' },
   { key: 'conditions', label: 'Conditions' },
+  { key: 'runs', label: 'Workflow Runs' },
   { key: 'preferences', label: 'Preferences' },
 ];
 
@@ -64,6 +66,7 @@ export default function AutomationPage() {
       {activeTab === 'sop-builder' && <AutomationInsightsPage embedded initialTab="skills" />}
       {activeTab === 'schedules' && <AutomationSchedulesTab />}
       {activeTab === 'conditions' && <AutomationConditionsTab />}
+      {activeTab === 'runs' && <AutomationRunsTab />}
       {activeTab === 'preferences' && isSuperAdmin && <AutomationPreferencesPage embedded />}
     </div>
   );

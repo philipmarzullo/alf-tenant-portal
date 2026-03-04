@@ -31,7 +31,8 @@ const BREADCRUMB_MAP = {
   '/portal/admin/settings': ['Admin', 'Settings'],
   '/portal/admin/role-templates': ['Admin', 'Role Templates'],
   '/portal/admin/dashboard-settings': ['Admin', 'Dashboard Defaults'],
-  '/portal/admin/automation': ['Admin', 'Automation Insights'],
+  '/portal/admin/automation': ['Admin', 'Automation'],
+  '/portal/admin/automation/runs': ['Admin', 'Automation', 'Run Detail'],
 };
 
 const ROLE_VIEW_OPTIONS = [
@@ -55,7 +56,11 @@ function buildSyntheticRoleUser(opt, realUser) {
 
 export default function TopBar({ isMobile, onMenuToggle }) {
   const location = useLocation();
-  const crumbs = BREADCRUMB_MAP[location.pathname] || ['Dashboard'];
+  const crumbs = BREADCRUMB_MAP[location.pathname]
+    || Object.entries(BREADCRUMB_MAP)
+        .filter(([path]) => location.pathname.startsWith(path))
+        .sort((a, b) => b[0].length - a[0].length)[0]?.[1]
+    || ['Dashboard'];
   const { realIsAdmin, realUser, activeUsers, viewingAs, setViewingAs, clearViewingAs } = useUser();
 
   const [viewAsOpen, setViewAsOpen] = useState(false);

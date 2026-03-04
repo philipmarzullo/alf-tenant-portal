@@ -28,7 +28,7 @@ export default function AgentKnowledgePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-dark-text">Agent Knowledge</h1>
+        <h1 className="text-xl font-semibold text-dark-text">Agent Knowledge</h1>
         <p className="text-sm text-secondary-text mt-1">
           Manage documents and instructions that shape how your AI agents work.
         </p>
