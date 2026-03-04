@@ -46,7 +46,7 @@ export default function SalesChatWidget() {
     if (open && messages.length === 0) {
       setMessages([{
         role: 'assistant',
-        content: "Hey — I'm Alf. I help service operations companies get their data, teams, and workflows working together in one place. What kind of operation are you running?",
+        content: "Hey — I'm Alf. Ask me anything about the platform.",
       }]);
       setTimeout(() => inputRef.current?.focus(), 100);
     } else if (open) {
