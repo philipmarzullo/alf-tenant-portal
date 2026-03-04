@@ -3,11 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { Zap } from 'lucide-react';
 import AutomationInsightsPage from './AutomationInsightsPage';
 import AutomationPreferencesPage from './AutomationPreferencesPage';
+import AutomationSchedulesTab from './AutomationSchedulesTab';
 import { useUser } from '../../contexts/UserContext';
 
 const TABS = [
   { key: 'insights', label: 'Insights' },
   { key: 'sop-builder', label: 'SOP Builder' },
+  { key: 'schedules', label: 'Schedules' },
   { key: 'preferences', label: 'Preferences' },
 ];
 
@@ -58,6 +60,7 @@ export default function AutomationPage() {
       {/* Tab content */}
       {activeTab === 'insights' && <AutomationInsightsPage embedded />}
       {activeTab === 'sop-builder' && <AutomationInsightsPage embedded initialTab="skills" />}
+      {activeTab === 'schedules' && <AutomationSchedulesTab />}
       {activeTab === 'preferences' && isSuperAdmin && <AutomationPreferencesPage embedded />}
     </div>
   );

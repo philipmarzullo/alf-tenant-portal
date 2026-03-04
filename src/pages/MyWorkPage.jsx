@@ -12,6 +12,7 @@ import { useTenantId } from '../contexts/TenantIdContext';
 import { useTenantPortal } from '../contexts/TenantPortalContext';
 import { chatWithAgent } from '../agents/api';
 import SimpleMarkdown from '../components/shared/SimpleMarkdown';
+import CapabilityHint from '../components/shared/CapabilityHint';
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
@@ -452,6 +453,12 @@ export default function MyWorkPage() {
         <p className="text-sm text-secondary-text mt-1">
           Your tasks and assignments
         </p>
+        <div className="mt-2">
+          <CapabilityHint
+            capability="can_send_email"
+            message="Connect email to send task outputs via Alf."
+          />
+        </div>
       </div>
 
       {/* Quick links */}

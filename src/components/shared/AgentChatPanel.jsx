@@ -7,6 +7,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useTenantPortal } from '../../contexts/TenantPortalContext';
 import { buildDocumentPath } from '../../utils/storagePaths';
 import SimpleMarkdown from './SimpleMarkdown';
+import CapabilityHint from './CapabilityHint';
 
 const MODE_BADGE = {
   draft: { label: 'Draft Mode', icon: FileEdit, color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -167,11 +168,16 @@ export default function AgentChatPanel({ open, onClose, agentKey, agentName, con
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {canSendEmail && (
+            {canSendEmail ? (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-teal-50 text-teal-600">
                 <Mail size={9} />
                 Email
               </span>
+            ) : (
+              <CapabilityHint
+                capability="can_send_email"
+                message="Connect email to send agent drafts directly."
+              />
             )}
             {badge && (
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${badge.color}`}>

@@ -11,6 +11,7 @@ import AgentChatPanel from '../components/shared/AgentChatPanel';
 import DashboardEmptyState from '../components/dashboards/DashboardEmptyState';
 import SyncHealthBanner from '../components/dashboards/SyncHealthBanner';
 import OnboardingBanner from '../components/shared/OnboardingBanner';
+import CapabilityHint from '../components/shared/CapabilityHint';
 import { useUser } from '../contexts/UserContext';
 import { useBranding } from '../contexts/BrandingContext';
 import { useRBAC } from '../contexts/RBACContext';
@@ -434,9 +435,15 @@ export default function Dashboard() {
 
       {/* ─── Section 3: Operational Intelligence ─── */}
       <div className="mb-8">
-        <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">
-          Operational Intelligence
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider">
+            Operational Intelligence
+          </h2>
+          <CapabilityHint
+            capability="can_send_email"
+            message="Connect email to let agents deliver work directly."
+          />
+        </div>
         {!hasFeature('agentChat') ? (
           <div className="grid gap-4 grid-cols-1">
             <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
