@@ -20,9 +20,9 @@ const TIERS = [
       { label: 'Custom Tool Builder', included: false },
       { label: 'Analytics Chat', included: false },
       { label: 'SOP-Driven Discovery', included: false },
-      { label: 'Automation Flows', included: false },
+      { label: 'Workflow Execution', included: false },
       { label: 'Connected Execution', included: false },
-      { label: 'Agent Spawning', included: false },
+      { label: 'Agent Factory', included: false },
       { label: 'Custom Builds', included: false },
     ],
   },
@@ -45,9 +45,9 @@ const TIERS = [
       { label: 'Custom Tool Builder', included: true },
       { label: 'Analytics Chat', included: true },
       { label: 'SOP-Driven Discovery', included: false },
-      { label: 'Automation Flows', included: false },
+      { label: 'Workflow Execution', included: false },
       { label: 'Connected Execution', included: false },
-      { label: 'Agent Spawning', included: false },
+      { label: 'Agent Factory', included: false },
       { label: 'Custom Builds', included: false },
     ],
   },
@@ -70,9 +70,9 @@ const TIERS = [
       { label: 'Custom Tool Builder', included: true },
       { label: 'Analytics Chat', included: true },
       { label: 'SOP-Driven Discovery', included: true },
-      { label: 'Automation Flows', included: true },
+      { label: 'Workflow Execution', included: true },
       { label: 'Connected Execution', included: true },
-      { label: 'Agent Spawning', included: true },
+      { label: 'Agent Factory', included: true },
       { label: 'Custom Builds', included: true },
     ],
   },
@@ -92,7 +92,7 @@ export default function PricingPage() {
           className="text-center text-alf-slate mb-16 max-w-xl mx-auto text-lg"
           style={{ fontFamily: "var(--font-marketing-body)" }}
         >
-          Choose the tier that matches your operations maturity.
+          Start with visibility. Add intelligence. Scale to full automation.
         </p>
 
         <div className="grid md:grid-cols-3 gap-6">

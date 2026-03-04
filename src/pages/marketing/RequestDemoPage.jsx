@@ -21,10 +21,10 @@ const INTERESTS = [
 ];
 
 const VALUE_POINTS = [
-  'Connect your operational data in minutes',
-  'See AI agents built for your business',
-  'Explore automation opportunities in your workflows',
-  'Get a portal tailored to your departments',
+  'See agents built for your departments — working from day one',
+  'Watch your procedures become live workflows with real routing',
+  'Connect your data and see agents act on it, not just display it',
+  'Get a white-labeled portal generated from your company profile',
 ];
 
 const inputClass =
@@ -122,9 +122,9 @@ export default function RequestDemoPage() {
               className="text-alf-slate text-base leading-relaxed mb-8"
               style={{ fontFamily: 'var(--font-marketing-body)' }}
             >
-              In 30 minutes, we'll walk through how Alf connects to your operational data,
-              deploys AI agents tailored to your business, and automates the work your team
-              does every day.
+              In 30 minutes, we'll show you how Alf gives every department AI agents
+              that do the work those departments do — and turns your procedures into
+              live workflows that actually execute.
             </p>
             <ul className="space-y-4" style={{ fontFamily: 'var(--font-marketing-body)' }}>
               {VALUE_POINTS.map((point) => (

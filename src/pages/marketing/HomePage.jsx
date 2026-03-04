@@ -1,77 +1,77 @@
 import { Link } from 'react-router-dom';
-import { LayoutDashboard, Building2, BarChart3, Bot, FileText, Shield, Database, Globe, Lock } from 'lucide-react';
+import { LayoutDashboard, Building2, BarChart3, Bot, GitBranch, Plug, Database, Globe, Zap } from 'lucide-react';
 
 const PLATFORM_FEATURES = [
   {
     icon: LayoutDashboard,
     title: 'Command Center',
-    description: 'Real-time KPIs across your entire operation — one screen, every department.',
+    description: 'Real-time KPIs across your entire operation. A budget variance doesn\'t just turn red — it triggers a workflow. Data stops being something you look at and starts being something the system works from.',
   },
   {
     icon: Building2,
-    title: 'Workspaces',
-    description: 'Each department gets its own workspace: Operations, HR, Safety, Finance, Sales, Purchasing. Your portal mirrors your org chart.',
-  },
-  {
-    icon: BarChart3,
-    title: 'Dashboards',
-    description: 'Drill into operations, labor, quality, timekeeping, and safety. Admins control exactly which dashboards each user sees.',
+    title: 'Department Workspaces',
+    description: 'HR, Finance, Purchasing, Operations, Safety, Sales — every department gets its own workspace with agents that do the work that department does.',
   },
   {
     icon: Bot,
     title: 'AI Agents',
-    description: 'Agents trained on your data, your SOPs, and your knowledge base — not generic models. Ask questions, get answers grounded in your operations.',
+    description: 'Every department gets AI agents that handle the work that department handles. The repetitive reports, the approval chains, the document generation — agents learn how your company does it and start doing it.',
   },
   {
-    icon: FileText,
-    title: 'Document Tools',
-    description: 'QBR Builder, SOP Builder, Proposal Builder — generate real documents from real data, not blank templates.',
+    icon: GitBranch,
+    title: 'Workflow Execution',
+    description: 'Upload your procedures and Alf turns them into live workflows — with stages, assignments, approvals, and agent processing at each step. Requests route through defined chains with the right data pulled automatically.',
   },
   {
-    icon: Shield,
-    title: 'Access Control',
-    description: 'Per-user module access, dashboard restrictions, site-level filtering, metric tiers. The right data for the right person.',
+    icon: BarChart3,
+    title: 'Dashboards That Act',
+    description: 'Dashboards don\'t just display data — they connect to agents that read it, flag what matters, and take action. A safety trend surfaces a response plan. A budget miss triggers a review.',
+  },
+  {
+    icon: Plug,
+    title: 'Works From Day One',
+    description: 'Zero integrations required to start. Upload docs and agents start working. Connect email and they start sending. Connect your ERP and they see live data. Value builds as connections build.',
   },
 ];
 
 const STEPS = [
   {
     step: '01',
-    title: 'Your data connects',
-    description: 'Snowflake, CMMS, workforce platforms, CSV uploads. Data flows in from the systems you already use.',
+    title: 'Upload your docs',
+    description: 'Procedures, policies, training materials. Alf reads them, learns how your company operates, and starts working from day one — no integrations required.',
   },
   {
     step: '02',
-    title: 'Tagged by department',
-    description: 'Every record is mapped to a department — Operations, HR, Safety, Finance, Sales, Purchasing. The same structure that organizes your company organizes your data.',
+    title: 'Agents learn your business',
+    description: 'Every department gets AI agents trained on your knowledge. The more you add, the smarter they get. All that intelligence stays inside the platform.',
   },
   {
     step: '03',
-    title: 'Workspaces, dashboards, and SOPs align',
-    description: 'Department-tagged data populates workspace views. SOPs tagged to the same department enrich your agents. Dashboards aggregate across all of it.',
+    title: 'Workflows execute',
+    description: 'Your procedures become live workflows with stages, approvals, and routing. Agents process automated steps. People handle decisions. The right data appears at every step.',
   },
   {
     step: '04',
-    title: 'AI agents see the full picture',
-    description: 'When an agent answers a question or drafts a document, it draws from your data, your SOPs, and your company knowledge — all connected through that department structure.',
+    title: 'Back office scales',
+    description: 'Same team handles more volume, responds faster, drops fewer balls, produces better output — because the repetitive work is handled by agents who already know how your company operates.',
   },
 ];
 
 const DIFFERENTIATORS = [
   {
     icon: Database,
-    title: 'Dynamic portal generation',
+    title: 'Your portal, generated from your business',
     description: 'Your company profile — departments, services, locations — generates a branded portal purpose-built for your organization. Not a generic template with your logo on it.',
   },
   {
     icon: Globe,
-    title: 'White-labeled and tenant-isolated',
-    description: 'Your brand, your domain, your data. Every tenant is fully isolated. Your team sees your portal, not a SaaS product.',
+    title: 'Your brand, your domain, your data',
+    description: 'Every company gets their own white-labeled portal — fully isolated, fully branded. Your team sees your portal, not a SaaS product.',
   },
   {
-    icon: Lock,
-    title: 'Enterprise-grade access control',
-    description: 'Module-level permissions, dashboard domain restrictions, site-level data filtering, metric tiers — operational, managerial, financial. Every user sees exactly what they need.',
+    icon: Zap,
+    title: 'No big-bang implementation',
+    description: 'Start with documents and agents. Add email, then ERP, then full automation. Each connection makes the platform more powerful. Value from week one, not month six.',
   },
 ];
 
@@ -123,15 +123,15 @@ export default function HomePage() {
             className="text-xl md:text-2xl text-alf-dark/70 mb-6"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
-            Your data, your departments, your AI — one platform
+            The operating system for service company back offices
           </p>
           <p
             className="text-base md:text-lg text-alf-slate max-w-xl mx-auto mb-12 leading-relaxed"
             style={{ fontFamily: "var(--font-marketing-body)" }}
           >
-            Alf connects your operational data to department-specific workspaces,
-            dashboards, and AI agents — so every team sees exactly what they need
-            to act.
+            Every department gets AI agents that do the work that department does.
+            Agents learn how your company operates and start handling the repetitive
+            work that buries your team.
           </p>
           <Link
             to="/request-demo"
@@ -150,14 +150,14 @@ export default function HomePage() {
             className="text-3xl md:text-4xl text-alf-dark text-center mb-3"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
-            Your portal, built around your business
+            What your back office runs on
           </h2>
           <div className="w-12 h-[3px] bg-alf-orange mx-auto rounded-full mb-4" />
           <p
             className="text-center text-alf-slate mb-14 max-w-xl mx-auto"
             style={{ fontFamily: "var(--font-marketing-body)" }}
           >
-            Everything your team needs to see, understand, and act on — organized the way your company actually works.
+            Agents that do real work. Workflows that actually execute. Data that drives action, not just dashboards.
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {PLATFORM_FEATURES.map((feature) => {
@@ -196,7 +196,7 @@ export default function HomePage() {
             className="text-3xl md:text-4xl text-alf-dark text-center mb-3"
             style={{ fontFamily: "var(--font-marketing-heading)" }}
           >
-            How your data becomes intelligence
+            How Alf works
           </h2>
           <div className="w-12 h-[3px] bg-alf-orange mx-auto rounded-full mb-14" />
           <div className="grid md:grid-cols-4 gap-10">
