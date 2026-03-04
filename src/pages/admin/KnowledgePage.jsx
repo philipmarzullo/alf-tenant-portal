@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Loader2, Upload, FileText, Trash2,
-  ChevronDown, ChevronUp, XCircle, CheckCircle,
+  ChevronDown, ChevronUp, XCircle, CheckCircle, Pencil, X, Check,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { buildDocumentPath, formatFileSize } from '../../utils/storagePaths';
 import { useTenantId } from '../../contexts/TenantIdContext';
 import { useTenantPortal } from '../../contexts/TenantPortalContext';
+import { useUser } from '../../contexts/UserContext';
 
 const DOC_TYPES = [
   { key: 'sop', label: 'SOP' },
@@ -99,7 +100,8 @@ function DocumentTextPreview({ docId }) {
 
 export default function KnowledgePage({ embedded = false }) {
   const { tenantId } = useTenantId();
-  const { workspaces } = useTenantPortal();
+  const { workspaces, refreshAll } = useTenantPortal();
+  const { isAdmin } = useUser();
 
   // Derive departments from workspaces dynamically
   const DEPARTMENTS = useMemo(() => [
@@ -122,6 +124,14 @@ export default function KnowledgePage({ embedded = false }) {
   const [expandedDoc, setExpandedDoc] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Inline department editing state (admin/super-admin only)
+  const [editingDeptDocId, setEditingDeptDocId] = useState(null);
+  const [addingNewDept, setAddingNewDept] = useState(false);
+  const [newDeptName, setNewDeptName] = useState('');
+  const [savingDept, setSavingDept] = useState(false);
+  const deptSelectRef = useRef(null);
+  const newDeptInputRef = useRef(null);
 
   useEffect(() => {
     loadDocuments();
@@ -253,6 +263,111 @@ export default function KnowledgePage({ embedded = false }) {
       handleFiles(e.dataTransfer.files);
     }
   }
+
+  /* ─── Inline Department Editing ─── */
+
+  async function updateDocumentDepartment(docId, newDept) {
+    // Find workspace for the new department to get workspace_id
+    const ws = workspaces.find(w => w.department_key === newDept);
+    const newWorkspaceId = ws?.id || null;
+
+    // 1. Update the document's department
+    const { error: docErr } = await supabase
+      .from('tenant_documents')
+      .update({ department: newDept })
+      .eq('id', docId);
+
+    if (docErr) throw docErr;
+
+    // 2. Cascade: update sop_analyses.department
+    await supabase
+      .from('sop_analyses')
+      .update({ department: newDept })
+      .eq('document_id', docId);
+
+    // 3. Cascade: update tenant_sop_steps.department and workspace_id
+    const stepUpdate = { department: newDept };
+    if (newWorkspaceId) stepUpdate.workspace_id = newWorkspaceId;
+    await supabase
+      .from('tenant_sop_steps')
+      .update(stepUpdate)
+      .eq('document_id', docId);
+  }
+
+  async function handleDeptSelect(docId, value) {
+    if (value === '__new__') {
+      setAddingNewDept(true);
+      setNewDeptName('');
+      setTimeout(() => newDeptInputRef.current?.focus(), 0);
+      return;
+    }
+
+    setSavingDept(true);
+    try {
+      await updateDocumentDepartment(docId, value);
+      setDocuments(prev => prev.map(d => d.id === docId ? { ...d, department: value } : d));
+      setEditingDeptDocId(null);
+      setSuccess('Department updated');
+      setTimeout(() => setSuccess(null), 2000);
+    } catch (err) {
+      setError(err.message);
+      setTimeout(() => setError(null), 4000);
+    }
+    setSavingDept(false);
+  }
+
+  async function handleNewDeptSave(docId) {
+    const name = newDeptName.trim();
+    if (!name) return;
+
+    const deptKey = name.toLowerCase().replace(/\s+/g, '-');
+    setSavingDept(true);
+
+    try {
+      // Upsert workspace for the new department
+      const { error: wsErr } = await supabase
+        .from('tenant_workspaces')
+        .upsert(
+          { tenant_id: tenantId, department_key: deptKey, name, sort_order: 99, is_active: true },
+          { onConflict: 'tenant_id,department_key' },
+        );
+
+      if (wsErr) throw wsErr;
+
+      // Update the document
+      await updateDocumentDepartment(docId, deptKey);
+      setDocuments(prev => prev.map(d => d.id === docId ? { ...d, department: deptKey } : d));
+
+      // Refresh workspaces so DEPARTMENTS list updates
+      await refreshAll();
+
+      setEditingDeptDocId(null);
+      setAddingNewDept(false);
+      setNewDeptName('');
+      setSuccess(`Department "${name}" created and assigned`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err.message);
+      setTimeout(() => setError(null), 4000);
+    }
+    setSavingDept(false);
+  }
+
+  function cancelDeptEdit() {
+    setEditingDeptDocId(null);
+    setAddingNewDept(false);
+    setNewDeptName('');
+  }
+
+  // Close dropdown on Escape
+  useEffect(() => {
+    if (!editingDeptDocId) return;
+    function handleKey(e) {
+      if (e.key === 'Escape') cancelDeptEdit();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [editingDeptDocId]);
 
   const filtered = filterDept === 'all'
     ? documents
@@ -411,7 +526,7 @@ export default function KnowledgePage({ embedded = false }) {
                 key={doc.id}
                 className="bg-white rounded-lg border border-gray-200 overflow-hidden"
               >
-                <div className="px-4 py-3 flex items-center justify-between gap-3">
+                <div className="group px-4 py-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <FileText size={16} className="text-gray-400 shrink-0" />
                     <div className="min-w-0">
@@ -423,9 +538,66 @@ export default function KnowledgePage({ embedded = false }) {
                         <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded uppercase ${DOC_TYPE_BADGE[doc.doc_type] || 'bg-gray-100 text-gray-600'}`}>
                           {doc.doc_type}
                         </span>
-                        <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 capitalize">
-                          {doc.department}
-                        </span>
+                        {isAdmin && editingDeptDocId === doc.id ? (
+                          addingNewDept ? (
+                            <span className="inline-flex items-center gap-1">
+                              <input
+                                ref={newDeptInputRef}
+                                type="text"
+                                value={newDeptName}
+                                onChange={(e) => setNewDeptName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleNewDeptSave(doc.id);
+                                  if (e.key === 'Escape') cancelDeptEdit();
+                                }}
+                                placeholder="Department name"
+                                disabled={savingDept}
+                                className="px-1.5 py-0.5 text-[10px] font-medium rounded border border-gray-300 focus:border-aa-blue focus:outline-none w-24"
+                              />
+                              <button
+                                onClick={() => handleNewDeptSave(doc.id)}
+                                disabled={savingDept || !newDeptName.trim()}
+                                className="p-0.5 text-green-600 hover:text-green-700 disabled:opacity-40"
+                                title="Save"
+                              >
+                                {savingDept ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                              </button>
+                              <button
+                                onClick={cancelDeptEdit}
+                                disabled={savingDept}
+                                className="p-0.5 text-gray-400 hover:text-gray-600"
+                                title="Cancel"
+                              >
+                                <X size={10} />
+                              </button>
+                            </span>
+                          ) : (
+                            <select
+                              ref={deptSelectRef}
+                              value={doc.department}
+                              onChange={(e) => handleDeptSelect(doc.id, e.target.value)}
+                              onBlur={() => { if (!addingNewDept) cancelDeptEdit(); }}
+                              disabled={savingDept}
+                              autoFocus
+                              className="px-1 py-0.5 text-[10px] font-medium rounded border border-gray-300 focus:border-aa-blue focus:outline-none bg-white capitalize cursor-pointer"
+                            >
+                              {DEPARTMENTS.filter(d => d.key !== 'all').map(d => (
+                                <option key={d.key} value={d.key}>{d.label}</option>
+                              ))}
+                              <option disabled>──────</option>
+                              <option value="__new__">+ Add new…</option>
+                            </select>
+                          )
+                        ) : (
+                          <span
+                            className={`px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-100 text-gray-600 capitalize${isAdmin ? ' cursor-pointer hover:bg-gray-200 transition-colors' : ''}`}
+                            onClick={isAdmin ? (e) => { e.stopPropagation(); setEditingDeptDocId(doc.id); setAddingNewDept(false); } : undefined}
+                            title={isAdmin ? 'Click to change department' : undefined}
+                          >
+                            {doc.department}
+                            {isAdmin && <Pencil size={8} className="inline ml-1 opacity-0 group-hover:opacity-50" />}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5 text-xs text-secondary-text">
                         <span>{formatFileSize(doc.file_size)}</span>
