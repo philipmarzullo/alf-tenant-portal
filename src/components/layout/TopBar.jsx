@@ -27,6 +27,7 @@ const BREADCRUMB_MAP = {
   '/portal/dashboards/action-plans': ['Analytics', 'Action Plans'],
   '/portal/admin/users': ['Admin', 'User Management'],
   '/portal/admin/knowledge': ['Admin', 'Knowledge Base'],
+  '/portal/analytics': ['Analytics'],
   '/portal/admin/agents': ['Admin', 'Agent Management'],
   '/portal/admin/settings': ['Admin', 'Settings'],
   '/portal/admin/role-templates': ['Admin', 'Role Templates'],
