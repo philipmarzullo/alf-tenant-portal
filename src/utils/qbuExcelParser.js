@@ -77,6 +77,7 @@ const PLACEHOLDER_WORDS = new Set([
   'name', 'title', 'location', 'quote', 'attribution', 'attribution (name & title)',
   'name & title', 'hazard', 'action', 'notified', 'challenge', 'notes',
   'description', 'innovation', 'benefit', 'initiative', 'details', 'month', 'event', 'event / context',
+  'quote', 'attribution (name & title)', 'project description', 'photo filename', 'caption',
   'category', 'client team attendees', 'a&a team attendees', 'a&a team',
   'client team', 'date', 'cause', 'treatment', 'return to work date',
   'corrective action', 'hazard prevented', 'who notified', 'status',
