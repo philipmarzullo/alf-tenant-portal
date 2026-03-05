@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { FileBarChart, Plus, Trash2, Upload, X, Image, ChevronLeft, ChevronRight, Download, Clock, RotateCcw, FileText, ChevronDown, ChevronUp, FileSpreadsheet, AlertTriangle, Bot, Database } from 'lucide-react';
+import { FileBarChart, Plus, Trash2, Upload, X, Image, ChevronLeft, ChevronRight, Download, Clock, RotateCcw, FileText, ChevronDown, ChevronUp, FileSpreadsheet, AlertTriangle, Bot, Database, Pencil } from 'lucide-react';
 import { extractText } from '../../utils/docExtractor';
 import { parseQBUExcel } from '../../utils/qbuExcelParser';
 import AgentActionButton from '../../components/shared/AgentActionButton';
@@ -80,6 +80,98 @@ const ReviewSection = ({ title, lines }) => {
     </div>
   );
 };
+
+// ── Slide parsing ────────────────────────────────────────
+
+function parseSlides(output) {
+  if (!output) return [];
+  const parts = output.split(/(?=\*\*SLIDE \d+:)/);
+  return parts
+    .map((raw) => {
+      const headerMatch = raw.match(/^\*\*SLIDE (\d+):\s*([^*]*)\*\*/);
+      if (!headerMatch) return null;
+      return {
+        number: parseInt(headerMatch[1]),
+        title: headerMatch[2].trim().replace(/^—\s*/, '').replace(/\s*—$/, ''),
+        raw: raw.trim(),
+      };
+    })
+    .filter(Boolean);
+}
+
+function SlideCard({ slide, isEditing, onEdit, onCancel, slideInput, onInputChange, onRefine, refining }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const displayContent = slide.raw
+    .replace(/^\*\*SLIDE \d+:.*\*\*\n?/, '')
+    .replace(/<!-- NARRATIVE:\S+ -->\n?/g, '')
+    .replace(/<!-- \/NARRATIVE -->\n?/g, '')
+    .trim();
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span className="px-2 py-0.5 text-[10px] font-bold bg-aa-blue/10 text-aa-blue rounded">
+          {slide.number}
+        </span>
+        <span className="text-sm font-medium text-dark-text flex-1">{slide.title}</span>
+        {!expanded && (
+          <span className="text-xs text-secondary-text truncate max-w-[300px]">
+            {displayContent.split('\n')[0]}
+          </span>
+        )}
+        <ChevronDown size={14} className={`text-secondary-text transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </div>
+
+      {expanded && (
+        <div className="border-t border-gray-100">
+          <div className="px-4 py-3 bg-gray-50 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-[400px] overflow-y-auto">
+            {displayContent}
+          </div>
+
+          <div className="px-4 py-3 border-t border-gray-100">
+            {isEditing ? (
+              <div className="flex gap-2">
+                <input
+                  value={slideInput}
+                  onChange={(e) => onInputChange(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !refining && onRefine()}
+                  placeholder="What should change on this slide?"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
+                  autoFocus
+                  disabled={refining}
+                />
+                <button
+                  onClick={onRefine}
+                  disabled={!slideInput.trim() || refining}
+                  className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
+                >
+                  {refining ? 'Updating...' : 'Update'}
+                </button>
+                <button
+                  onClick={onCancel}
+                  className="px-3 py-2 text-sm font-medium text-secondary-text bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                className="inline-flex items-center gap-1 text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors"
+              >
+                <Pencil size={11} /> Edit with AI
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const DOC_LABELS = ['Questionnaire', 'Call Transcript', 'Meeting Notes', 'Other'];
 
@@ -256,6 +348,10 @@ export default function QBUBuilder() {
   const [refineInput, setRefineInput] = useState('');
   const [refining, setRefining] = useState(false);
   const [currentEntryId, setCurrentEntryId] = useState(null);
+  const [slides, setSlides] = useState([]);
+  const [editingSlide, setEditingSlide] = useState(null);
+  const [slideInput, setSlideInput] = useState('');
+  const [refiningSlide, setRefiningSlide] = useState(false);
   const toast = useToast();
   const brand = useBranding();
   const photoInputRef = useRef(null);
@@ -974,8 +1070,10 @@ export default function QBUBuilder() {
     try {
       const output = await callAgent('qbu', 'generateQBU', form);
       setResult(output);
+      setSlides(parseSlides(output));
       setShowResult(true);
       setRefineInput('');
+      setEditingSlide(null);
       const saved = await saveQBU({
         client: form.cover.clientName,
         quarter: form.cover.quarter,
@@ -1003,10 +1101,12 @@ export default function QBUBuilder() {
     if (!entry) return;
     setForm({ ...INITIAL, ...entry.formData, projects: { ...entry.formData.projects, photos: entry.formData.projects?.photos || [] }, roadmap: { ...entry.formData.roadmap, photos: entry.formData.roadmap?.photos || [] } });
     setResult(entry.agentOutput);
+    setSlides(parseSlides(entry.agentOutput));
     setShowResult(true);
     setActiveTab('cover');
     setCurrentEntryId(id);
     setRefineInput('');
+    setEditingSlide(null);
     toast(`Loaded: ${entry.client} ${entry.quarter}`);
   };
 
@@ -1035,13 +1135,39 @@ export default function QBUBuilder() {
         form,
       });
       setResult(output);
+      setSlides(parseSlides(output));
       setRefineInput('');
+      setEditingSlide(null);
       if (currentEntryId) {
         await updateQBU(currentEntryId, { agentOutput: output });
       }
       toast('Review updated');
     } finally {
       setRefining(false);
+    }
+  };
+
+  const handleSlideRefine = async (slideNumber) => {
+    if (!slideInput.trim() || !result) return;
+    setRefiningSlide(true);
+    try {
+      const slide = slides.find(s => s.number === slideNumber);
+      const feedback = `For Slide ${slideNumber} (${slide.title}): ${slideInput.trim()}`;
+      const output = await callAgent('qbu', 'refineQBU', {
+        previousOutput: result,
+        feedback,
+        form,
+      });
+      setResult(output);
+      setSlides(parseSlides(output));
+      setSlideInput('');
+      setEditingSlide(null);
+      if (currentEntryId) {
+        await updateQBU(currentEntryId, { agentOutput: output });
+      }
+      toast('Slide updated');
+    } finally {
+      setRefiningSlide(false);
     }
   };
 
@@ -1486,11 +1612,13 @@ export default function QBUBuilder() {
         </div>
       )}
 
-      {/* Generated result */}
+      {/* Generated result — Slide cards */}
       {showResult && result && (
-        <div id="qbu-result" className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+        <div id="qbu-result" className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Generated Review Content</div>
+            <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider">
+              Generated Review — {slides.length} Slide{slides.length !== 1 ? 's' : ''}
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -1508,18 +1636,43 @@ export default function QBUBuilder() {
               <button onClick={() => setShowResult(false)} className="text-xs text-secondary-text hover:text-dark-text transition-colors">Hide</button>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-[600px] overflow-y-auto">
-            {result}
-          </div>
-          <div className="mt-3">
-            <div className="text-[11px] text-secondary-text mb-1.5">Quick refinement — describe changes without re-editing the form</div>
+
+          {slides.length > 0 ? (
+            <div className="space-y-3">
+              {slides.map((slide) => (
+                <SlideCard
+                  key={slide.number}
+                  slide={slide}
+                  isEditing={editingSlide === slide.number}
+                  onEdit={() => { setEditingSlide(slide.number); setSlideInput(''); }}
+                  onCancel={() => setEditingSlide(null)}
+                  slideInput={slideInput}
+                  onInputChange={setSlideInput}
+                  onRefine={() => handleSlideRefine(slide.number)}
+                  refining={refiningSlide}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="bg-gray-50 rounded-lg p-4 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-[600px] overflow-y-auto">
+                {result}
+              </div>
+            </div>
+          )}
+
+          {/* Global refine */}
+          <div className="mt-4 bg-white rounded-lg border border-gray-200 p-4">
+            <div className="text-[11px] text-secondary-text mb-1.5">
+              Apply changes across all slides
+            </div>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={refineInput}
                 onChange={(e) => setRefineInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !refining && handleRefine()}
-                placeholder="e.g., Move safety moment to one slide, remove empty tables..."
+                placeholder="e.g., Make all narratives more concise, add more data points..."
                 className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
                 disabled={refining}
               />
@@ -1528,7 +1681,7 @@ export default function QBUBuilder() {
                 disabled={!refineInput.trim() || refining}
                 className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
               >
-                {refining ? 'Refining...' : 'Refine'}
+                {refining ? 'Refining...' : 'Refine All'}
               </button>
             </div>
           </div>
