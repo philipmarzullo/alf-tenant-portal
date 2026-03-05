@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bot, Loader2, Plus, Power, PowerOff, Pencil, X, Check,
-  ChevronDown, Sparkles, Lock, Trash2,
+  ChevronDown, Sparkles, Lock, Trash2, MessageSquareText,
 } from 'lucide-react';
 import { supabase, getFreshToken } from '../../lib/supabase';
 import { useTenantId } from '../../contexts/TenantIdContext';
@@ -10,6 +11,7 @@ import { useUser } from '../../contexts/UserContext';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 export default function AgentFactoryPage() {
+  const navigate = useNavigate();
   const { tenantId } = useTenantId();
   const { isAdmin, isSuperAdmin } = useUser();
   const [workspaces, setWorkspaces] = useState([]);
@@ -404,6 +406,15 @@ export default function AgentFactoryPage() {
                       <span className="w-2 h-2 rounded-full bg-green-500" />
                     ) : (
                       <span className="text-[11px] text-secondary-text">Inactive</span>
+                    )}
+                    {isPlatform && (isAdmin || isSuperAdmin) && (
+                      <button
+                        onClick={() => navigate(`/portal/admin/knowledge?tab=instructions&agent=${agent.agent_key}`)}
+                        className="p-1 text-secondary-text hover:text-aa-blue transition-colors"
+                        title="Teach this agent"
+                      >
+                        <MessageSquareText size={14} />
+                      </button>
                     )}
                     <button
                       onClick={() => handleToggle(agent.id, agent.is_active)}

@@ -16,7 +16,7 @@ const STATUS_BADGE = {
   rejected: { label: 'Rejected', className: 'bg-red-50 text-red-600', icon: XOctagon },
 };
 
-export default function AgentInstructionsPage({ embedded = false }) {
+export default function AgentInstructionsPage({ embedded = false, initialAgent }) {
   const { tenantId } = useTenantId();
   const { agents } = useTenantPortal();
   const { currentUser, isAdmin, isSuperAdmin } = useUser();
@@ -26,13 +26,13 @@ export default function AgentInstructionsPage({ embedded = false }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [filterAgent, setFilterAgent] = useState('all');
+  const [filterAgent, setFilterAgent] = useState(initialAgent || 'all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
   // Form state
-  const [form, setForm] = useState({ agentKey: '', text: '' });
+  const [form, setForm] = useState({ agentKey: initialAgent || '', text: '' });
   const [file, setFile] = useState(null);
 
   // Review state

@@ -53,7 +53,7 @@ export default function AgentKnowledgePage() {
 
       {/* Tab content */}
       {activeTab === 'documents' && <KnowledgePage embedded />}
-      {activeTab === 'instructions' && <AgentInstructionsPage embedded />}
+      {activeTab === 'instructions' && <AgentInstructionsPage embedded initialAgent={searchParams.get('agent') || undefined} />}
     </div>
   );
 }
