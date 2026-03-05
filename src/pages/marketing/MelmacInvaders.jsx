@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const ALF_ORANGE = '#C84B0A';
@@ -48,12 +48,24 @@ function aabb(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const check = () => setMobile(window.innerWidth < 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return mobile;
+}
+
 export default function MelmacInvaders() {
   const canvasRef = useRef(null);
   const frameRef = useRef(null);
   const stateRef = useRef(null);
   const keysRef = useRef({});
   const touchRef = useRef({ left: false, right: false, shoot: false });
+  const isMobile = useIsMobile();
+  const [phase, setPhase] = useState('title');
 
   const initGame = useCallback(() => {
     const { enemies, dx, direction } = createEnemies();
@@ -72,46 +84,57 @@ export default function MelmacInvaders() {
       shootCooldown: 0,
       lastTime: 0,
     };
+    setPhase('title');
   }, []);
+
+  // Expose phase changes to React for overlay controls
+  const syncPhase = useCallback(() => {
+    if (stateRef.current) setPhase(stateRef.current.phase);
+  }, []);
+
+  const handleStart = useCallback(() => {
+    const s = stateRef.current;
+    if (!s) return;
+    if (s.phase === 'title') {
+      s.phase = 'playing';
+      syncPhase();
+    } else if (s.phase === 'gameover') {
+      const { enemies, dx, direction } = createEnemies();
+      s.phase = 'playing';
+      s.player.x = CANVAS_W / 2 - PLAYER_W / 2;
+      s.bullets = [];
+      s.enemyBullets = [];
+      s.enemies = enemies;
+      s.enemyDx = dx;
+      s.enemyDir = direction;
+      s.score = 0;
+      s.lives = 3;
+      s.wave = 1;
+      s.shootCooldown = 0;
+      syncPhase();
+    }
+  }, [syncPhase]);
 
   useEffect(() => {
     initGame();
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    // --- Input ---
+    // --- Keyboard input ---
     function onKeyDown(e) {
       keysRef.current[e.code] = true;
-      if (e.code === 'Space') e.preventDefault();
+      if (e.code === 'Space') {
+        e.preventDefault();
+        // Handle start/restart via Space
+        const s = stateRef.current;
+        if (s && (s.phase === 'title' || s.phase === 'gameover')) {
+          handleStart();
+        }
+      }
     }
     function onKeyUp(e) { keysRef.current[e.code] = false; }
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
-
-    // Touch handlers
-    function handleTouchStart(e) {
-      e.preventDefault();
-      for (const touch of e.changedTouches) {
-        const rect = canvas.getBoundingClientRect();
-        const tx = touch.clientX - rect.left;
-        const ty = touch.clientY - rect.top;
-        const relY = ty / rect.height;
-        if (relY < 0.4) {
-          touchRef.current.shoot = true;
-        } else {
-          if (tx < rect.width / 2) touchRef.current.left = true;
-          else touchRef.current.right = true;
-        }
-      }
-    }
-    function handleTouchEnd(e) {
-      e.preventDefault();
-      // Simple: clear all on any touch end
-      touchRef.current = { left: false, right: false, shoot: false };
-    }
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-    canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
 
     // --- Game loop ---
     function loop(time) {
@@ -128,11 +151,6 @@ export default function MelmacInvaders() {
 
       // --- Title screen ---
       if (s.phase === 'title') {
-        if (keys.Space || touch.shoot) {
-          s.phase = 'playing';
-          keys.Space = false;
-          touch.shoot = false;
-        }
         drawTitle(ctx, s);
         frameRef.current = requestAnimationFrame(loop);
         return;
@@ -141,22 +159,6 @@ export default function MelmacInvaders() {
       // --- Game over ---
       if (s.phase === 'gameover') {
         drawGameOver(ctx, s);
-        if (keys.Space || touch.shoot) {
-          keys.Space = false;
-          touch.shoot = false;
-          const { enemies, dx, direction } = createEnemies();
-          s.phase = 'playing';
-          s.player.x = CANVAS_W / 2 - PLAYER_W / 2;
-          s.bullets = [];
-          s.enemyBullets = [];
-          s.enemies = enemies;
-          s.enemyDx = dx;
-          s.enemyDir = direction;
-          s.score = 0;
-          s.lives = 3;
-          s.wave = 1;
-          s.shootCooldown = 0;
-        }
         frameRef.current = requestAnimationFrame(loop);
         return;
       }
@@ -238,6 +240,7 @@ export default function MelmacInvaders() {
           s.lives--;
           if (s.lives <= 0) {
             s.phase = 'gameover';
+            syncPhase();
             if (s.score > s.highScore) {
               s.highScore = s.score;
               localStorage.setItem('melmac_high', String(s.score));
@@ -251,6 +254,7 @@ export default function MelmacInvaders() {
         if (e.y + e.h >= s.player.y) {
           s.lives = 0;
           s.phase = 'gameover';
+          syncPhase();
           if (s.score > s.highScore) {
             s.highScore = s.score;
             localStorage.setItem('melmac_high', String(s.score));
@@ -279,11 +283,8 @@ export default function MelmacInvaders() {
       cancelAnimationFrame(frameRef.current);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
-      canvas.removeEventListener('touchstart', handleTouchStart);
-      canvas.removeEventListener('touchend', handleTouchEnd);
-      canvas.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [initGame]);
+  }, [initGame, handleStart, syncPhase]);
 
   // --- Resize canvas CSS ---
   useEffect(() => {
@@ -292,7 +293,10 @@ export default function MelmacInvaders() {
       if (!canvas) return;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const scale = Math.min(vw / CANVAS_W, vh / CANVAS_H, 1);
+      // On mobile, leave room for touch controls (120px)
+      const isMobileView = vw < 768;
+      const availH = isMobileView ? vh - 140 : vh;
+      const scale = Math.min(vw / CANVAS_W, availH / CANVAS_H, 1);
       canvas.style.width = `${CANVAS_W * scale}px`;
       canvas.style.height = `${CANVAS_H * scale}px`;
     }
@@ -301,10 +305,18 @@ export default function MelmacInvaders() {
     return () => window.removeEventListener('resize', resize);
   }, []);
 
+  // Touch button handlers — use refs so game loop reads them
+  const onMoveLeft = useCallback((active) => { touchRef.current.left = active; }, []);
+  const onMoveRight = useCallback((active) => { touchRef.current.right = active; }, []);
+  const onFire = useCallback((active) => { touchRef.current.shoot = active; }, []);
+
+  const showControls = isMobile && phase === 'playing';
+  const showStartButton = isMobile && (phase === 'title' || phase === 'gameover');
+
   return (
     <div
       style={{ background: ALF_DARK }}
-      className="min-h-screen flex flex-col items-center justify-center select-none"
+      className="min-h-screen flex flex-col items-center justify-center select-none overflow-hidden"
     >
       <canvas
         ref={canvasRef}
@@ -312,12 +324,45 @@ export default function MelmacInvaders() {
         height={CANVAS_H}
         className="block touch-none"
       />
-      {/* Overlay buttons for game over — rendered as HTML so Link works */}
-      {stateRef.current?.phase === 'gameover' && (
-        <div className="absolute bottom-[20%] flex flex-col items-center gap-3">
-          {/* These are handled by the canvas + space/tap, but add a visible home link */}
+
+      {/* Mobile start/restart button */}
+      {showStartButton && (
+        <button
+          onTouchStart={(e) => { e.preventDefault(); handleStart(); }}
+          onClick={handleStart}
+          className="mt-4 px-8 py-3 rounded-lg text-white font-bold text-lg tracking-wider"
+          style={{ background: ALF_ORANGE }}
+        >
+          {phase === 'title' ? 'TAP TO START' : 'PLAY AGAIN'}
+        </button>
+      )}
+
+      {/* Mobile touch controls */}
+      {showControls && (
+        <div className="w-full max-w-[480px] flex items-center justify-between px-4 mt-3 gap-3">
+          {/* Left / Right buttons */}
+          <div className="flex gap-2">
+            <TouchButton
+              label="◀"
+              onActive={onMoveLeft}
+              className="w-16 h-16 rounded-xl text-2xl"
+            />
+            <TouchButton
+              label="▶"
+              onActive={onMoveRight}
+              className="w-16 h-16 rounded-xl text-2xl"
+            />
+          </div>
+          {/* Fire button */}
+          <TouchButton
+            label="FIRE"
+            onActive={onFire}
+            className="w-24 h-16 rounded-xl text-base font-bold tracking-wider"
+            color={ALF_ORANGE}
+          />
         </div>
       )}
+
       <Link
         to="/"
         className="fixed bottom-4 text-white/30 text-xs hover:text-white/60 transition-colors"
@@ -326,6 +371,41 @@ export default function MelmacInvaders() {
         ← Back to Alf
       </Link>
     </div>
+  );
+}
+
+// Reusable touch button with press-and-hold support
+function TouchButton({ label, onActive, className = '', color }) {
+  const pressed = useRef(false);
+
+  const start = useCallback((e) => {
+    e.preventDefault();
+    pressed.current = true;
+    onActive(true);
+  }, [onActive]);
+
+  const end = useCallback((e) => {
+    e.preventDefault();
+    pressed.current = false;
+    onActive(false);
+  }, [onActive]);
+
+  return (
+    <button
+      onTouchStart={start}
+      onTouchEnd={end}
+      onTouchCancel={end}
+      onMouseDown={start}
+      onMouseUp={end}
+      onMouseLeave={end}
+      className={`flex items-center justify-center border-2 border-white/20 text-white/80 active:border-white/50 active:text-white ${className}`}
+      style={{
+        background: color ? color : 'rgba(255,255,255,0.08)',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -368,16 +448,12 @@ function drawTitle(ctx, s) {
   const blink = Math.sin(Date.now() / 400) > 0;
   if (blink) {
     ctx.fillText('PRESS SPACE TO START', CANVAS_W / 2, CANVAS_H / 2 + 100);
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '12px monospace';
-    ctx.fillText('or tap to start', CANVAS_W / 2, CANVAS_H / 2 + 125);
   }
 
   // Controls
   ctx.fillStyle = 'rgba(255,255,255,0.3)';
   ctx.font = '10px monospace';
   ctx.fillText('← → or A/D to move  ·  SPACE to fire', CANVAS_W / 2, CANVAS_H - 60);
-  ctx.fillText('Mobile: tap sides to move, top to shoot', CANVAS_W / 2, CANVAS_H - 40);
 
   ctx.textAlign = 'left';
 }
