@@ -238,209 +238,233 @@ These NARRATIVE blocks are REQUIRED — ALWAYS output them. The PPTX generator p
     generateQBU: {
       label: 'Generate QBU',
       description: 'Generate a complete Quarterly Business Update from intake data',
+      promptTemplate: (data) => buildQBUPrompt(data),
+    },
+    refineQBU: {
+      label: 'Refine QBU',
+      description: 'Refine a previously generated QBU based on user feedback',
       promptTemplate: (data) => {
-        const c = data.cover || data;
         const sections = [];
-
-        sections.push(`Generate a complete 16-slide QBU deck following the A.1/B.1/C.1 section numbering convention.\n`);
-        sections.push(`=== COVER DATA ===`);
-        sections.push(`Client: ${c.clientName || '[Client]'}`);
-        sections.push(`Quarter: ${c.quarter || '[Quarter]'}`);
-        sections.push(`Date: ${c.date || '[Date]'}`);
-        if (c.jobName) sections.push(`Job: ${c.jobName} (${c.jobNumber || 'N/A'})`);
-        if (c.regionVP) sections.push(`Region VP: ${c.regionVP}`);
-
-        if (c.aaTeam?.filter(t => t.name).length) {
-          sections.push(`\nCompany Team Attendees:`);
-          c.aaTeam.filter(t => t.name).forEach(t => sections.push(`  - ${t.name}, ${t.title}`));
-        }
-        if (c.clientTeam?.filter(t => t.name).length) {
-          sections.push(`Client Team Attendees:`);
-          c.clientTeam.filter(t => t.name).forEach(t => sections.push(`  - ${t.name}, ${t.title}`));
-        }
-
-        // Supporting documents
-        const docs = (data.documents?.files || []).filter(d => d.extractedText);
-        if (docs.length) {
-          sections.push(`\n=== SUPPORTING DOCUMENTS ===`);
-          sections.push(`The following documents provide qualitative context from site managers and internal review calls.`);
-          sections.push(`Use this context to write richer, more situation-aware narrative throughout the QBU.\n`);
-          docs.forEach((doc, i) => {
-            sections.push(`--- Document ${i + 1}: ${doc.label} (${doc.name}) ---`);
-            sections.push(doc.extractedText);
-            sections.push('');
-          });
-        }
-
-        if (data.safety) {
-          const s = data.safety;
-          sections.push(`\n=== A — SAFETY DATA ===`);
-          if (s.theme) sections.push(`Safety Moment Theme: ${s.theme}`);
-          if (s.keyTips) sections.push(`Key Tips:\n${s.keyTips}`);
-          if (s.quickReminders) sections.push(`Quick Reminders:\n${s.quickReminders}`);
-          if (s.whyItMatters) sections.push(`Why It Matters:\n${s.whyItMatters}`);
-          if (s.incidents?.filter(r => r.location).length) {
-            sections.push(`\nRecordable Incidents by Location/Quarter:`);
-            s.incidents.filter(r => r.location).forEach(r =>
-              sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}`)
-            );
-          }
-          if (s.goodSaves?.filter(r => r.location).length) {
-            sections.push(`\nGood Saves:`);
-            s.goodSaves.filter(r => r.location).forEach(r =>
-              sections.push(`  ${r.location}: Hazard="${r.hazard}" → Action="${r.action}" → Notified="${r.notified}"`)
-            );
-          }
-          if (s.incidentDetails?.filter(r => r.location).length) {
-            sections.push(`\nRecordable Incident Details:`);
-            s.incidentDetails.filter(r => r.location).forEach(r =>
-              sections.push(`  ${r.location} on ${r.date}: Cause="${r.cause}", Treatment="${r.treatment}", RTW="${r.returnDate}"`)
-            );
-          }
-        }
-
-        if (data.executive) {
-          const e = data.executive;
-          sections.push(`\n=== B — EXECUTIVE SUMMARY DATA ===`);
-          if (e.achievements?.filter(Boolean).length) {
-            sections.push(`Key Achievements:`);
-            e.achievements.filter(Boolean).forEach((a, i) => sections.push(`  ${i+1}. ${a}`));
-          }
-          if (e.challenges?.filter(Boolean).length) {
-            sections.push(`Strategic Challenges:`);
-            e.challenges.filter(Boolean).forEach((c, i) => sections.push(`  ${i+1}. ${c}`));
-          }
-          if (e.innovations?.filter(Boolean).length) {
-            sections.push(`Innovation Milestones:`);
-            e.innovations.filter(Boolean).forEach((n, i) => sections.push(`  ${i+1}. ${n}`));
-          }
-        }
-
-        if (data.workTickets) {
-          const w = data.workTickets;
-          sections.push(`\n=== C.1 — WORK TICKETS DATA ===`);
-          if (w.locations?.filter(r => r.location).length) {
-            sections.push(`YoY Work Ticket Comparison:`);
-            w.locations.filter(r => r.location).forEach(r => {
-              const pct = r.priorYear && r.currentYear
-                ? (((Number(r.currentYear) - Number(r.priorYear)) / Number(r.priorYear)) * 100).toFixed(1)
-                : 'N/A';
-              sections.push(`  ${r.location}: Prior Year=${r.priorYear}, Current Year=${r.currentYear}, Change=${pct}%`);
-            });
-          }
-          if (w.keyTakeaway) sections.push(`Key Takeaway: ${w.keyTakeaway}`);
-          if (w.eventsSupported) sections.push(`Events Supported:\n${w.eventsSupported}`);
-        }
-
-        if (data.audits) {
-          const a = data.audits;
-          sections.push(`\n=== C.2/C.3 — AUDITS DATA ===`);
-          const names = (a.locationNames || []).filter(Boolean);
-          if (names.length) {
-            sections.push(`Locations: ${names.join(', ')}`);
-            sections.push(`Prior Quarter Audits: ${a.priorAudits.join(', ')} (Total: ${a.priorAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
-            sections.push(`Prior Quarter Actions: ${a.priorActions.join(', ')} (Total: ${a.priorActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
-            sections.push(`Current Quarter Audits: ${a.currentAudits.join(', ')} (Total: ${a.currentAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
-            sections.push(`Current Quarter Actions: ${a.currentActions.join(', ')} (Total: ${a.currentActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
-          }
-          if (a.auditExplanation) sections.push(`Audit Change Explanation: ${a.auditExplanation}`);
-          if (a.actionExplanation) sections.push(`Action Change Explanation: ${a.actionExplanation}`);
-          if (a.topAreas?.filter(r => r.count).length) {
-            sections.push(`\nTop Corrective Action Areas:`);
-            a.topAreas.filter(r => r.count).forEach(r => sections.push(`  ${r.area}: ${r.count}`));
-          }
-        }
-
-        if (data.projects) {
-          const p = data.projects;
-          sections.push(`\n=== D — PROJECTS & SATISFACTION DATA ===`);
-          if (p.completed?.filter(r => r.description).length) {
-            sections.push(`Completed Projects:`);
-            p.completed.filter(r => r.description).forEach(r => sections.push(`  [${r.category}] ${r.description}`));
-          }
-          if (p.photos?.length) {
-            sections.push(`\nProject Photos: ${p.photos.length} uploaded`);
-            p.photos.filter(ph => ph.caption).forEach(ph =>
-              sections.push(`  Photo (${ph.type || 'general'}): "${ph.caption}"${ph.location ? ` at ${ph.location}` : ''}`)
-            );
-          }
-          if (p.testimonials?.filter(r => r.quote).length) {
-            sections.push(`\nClient Testimonials:`);
-            p.testimonials.filter(r => r.quote).forEach(r =>
-              sections.push(`  "${r.quote}" — ${r.attribution}, ${r.location}`)
-            );
-          }
-        }
-
-        if (data.challenges) {
-          const ch = data.challenges;
-          sections.push(`\n=== E — CHALLENGES & ACTIONS DATA ===`);
-          if (ch.items?.filter(r => r.challenge).length) {
-            sections.push(`Current Challenges:`);
-            ch.items.filter(r => r.challenge).forEach(r =>
-              sections.push(`  ${r.location}: Challenge="${r.challenge}" → Action="${r.action}"`)
-            );
-          }
-          if (ch.priorFollowUp?.filter(r => r.action).length) {
-            sections.push(`\nPrior Quarter Follow-Up:`);
-            ch.priorFollowUp.filter(r => r.action).forEach(r =>
-              sections.push(`  "${r.action}" — Status: ${r.status}${r.notes ? `, Notes: ${r.notes}` : ''}`)
-            );
-          }
-        }
-
-        if (data.financial) {
-          const f = data.financial;
-          sections.push(`\n=== F — FINANCIAL DATA ===`);
-          if (f.totalOutstanding) sections.push(`Total Outstanding: ${f.totalOutstanding} as of ${f.asOfDate || 'current'}`);
-          if (f.bucket30 || f.bucket60 || f.bucket90 || f.bucket91) {
-            sections.push(`Aging Breakdown:`);
-            sections.push(`  1-30 days: ${f.bucket30 || '$0'}`);
-            sections.push(`  31-60 days: ${f.bucket60 || '$0'}`);
-            sections.push(`  61-90 days: ${f.bucket90 || '$0'}`);
-            sections.push(`  91+ days: ${f.bucket91 || '$0'}`);
-          }
-          if (f.strategyNotes?.filter(Boolean).length) {
-            sections.push(`Financial Strategy Notes:`);
-            f.strategyNotes.filter(Boolean).forEach((n, i) => sections.push(`  ${i+1}. ${n}`));
-          }
-        }
-
-        if (data.roadmap) {
-          const r = data.roadmap;
-          sections.push(`\n=== G — INNOVATION & ROADMAP DATA ===`);
-          if (r.highlights?.filter(h => h.innovation).length) {
-            sections.push(`Innovation Highlights:`);
-            r.highlights.filter(h => h.innovation).forEach(h =>
-              sections.push(`  ${h.innovation}: ${h.description} → Benefit: ${h.benefit}`)
-            );
-          }
-          if (r.photos?.length) {
-            sections.push(`\nInnovation Photos: ${r.photos.length} uploaded`);
-            r.photos.filter(ph => ph.caption).forEach(ph =>
-              sections.push(`  Photo (${ph.type || 'general'}): "${ph.caption}"${ph.location ? ` at ${ph.location}` : ''}`)
-            );
-          }
-          if (r.schedule?.filter(s => s.initiative).length) {
-            sections.push(`\nNext Quarter Roadmap:`);
-            r.schedule.filter(s => s.initiative).forEach(s =>
-              sections.push(`  ${s.month}: ${s.initiative} — ${s.details}`)
-            );
-          }
-          if (r.goalStatement) sections.push(`\nQuarter Goal Statement: ${r.goalStatement}`);
-        }
-
-        sections.push(`\n=== INSTRUCTIONS ===`);
-        sections.push(`Generate the complete QBU as 16 slides following the section numbering (A.1, A.2, B.1, C.1, C.2, C.3, D.1, D.2, D.3, E.1, F.1, G.1, G.2).`);
-        sections.push(`For each slide, provide:`);
-        sections.push(`1. Polished, presentation-ready content (not just the raw data — interpret it, add context)`);
-        sections.push(`2. Speaker notes with talking points`);
-        sections.push(`3. KPI interpretation sentences where applicable`);
-        sections.push(`4. [PLACEHOLDER] markers for any missing required data`);
-        sections.push(`\nDo NOT just echo back the raw data. Your job is to transform the intake data into polished QBU content with narrative, interpretation, and delivery guidance.`);
-
+        sections.push(`REFINEMENT REQUEST\n`);
+        sections.push(`The following QBU was previously generated from the intake data below. The user has reviewed it and wants changes.\n`);
+        sections.push(`== PREVIOUS OUTPUT ==`);
+        sections.push(data.previousOutput);
+        sections.push(`\n== USER FEEDBACK ==`);
+        sections.push(data.feedback);
+        sections.push(`\n== ORIGINAL INTAKE DATA ==`);
+        sections.push(buildQBUPrompt(data.form));
+        sections.push(`\nINSTRUCTIONS:`);
+        sections.push(`- Apply the user's feedback to the previous output`);
+        sections.push(`- Keep everything else unchanged — only modify what the user requested`);
+        sections.push(`- Return the COMPLETE updated QBU (all slides), not just the changed parts`);
+        sections.push(`- Maintain the same NARRATIVE tag structure for PPTX generation`);
+        sections.push(`- Follow all existing slide density and data integrity rules`);
         return sections.join('\n');
       },
     },
   },
 };
+
+function buildQBUPrompt(data) {
+  const c = data.cover || data;
+  const sections = [];
+
+  sections.push(`Generate a complete 16-slide QBU deck following the A.1/B.1/C.1 section numbering convention.\n`);
+  sections.push(`=== COVER DATA ===`);
+  sections.push(`Client: ${c.clientName || '[Client]'}`);
+  sections.push(`Quarter: ${c.quarter || '[Quarter]'}`);
+  sections.push(`Date: ${c.date || '[Date]'}`);
+  if (c.jobName) sections.push(`Job: ${c.jobName} (${c.jobNumber || 'N/A'})`);
+  if (c.regionVP) sections.push(`Region VP: ${c.regionVP}`);
+
+  if (c.aaTeam?.filter(t => t.name).length) {
+    sections.push(`\nCompany Team Attendees:`);
+    c.aaTeam.filter(t => t.name).forEach(t => sections.push(`  - ${t.name}, ${t.title}`));
+  }
+  if (c.clientTeam?.filter(t => t.name).length) {
+    sections.push(`Client Team Attendees:`);
+    c.clientTeam.filter(t => t.name).forEach(t => sections.push(`  - ${t.name}, ${t.title}`));
+  }
+
+  // Supporting documents
+  const docs = (data.documents?.files || []).filter(d => d.extractedText);
+  if (docs.length) {
+    sections.push(`\n=== SUPPORTING DOCUMENTS ===`);
+    sections.push(`The following documents provide qualitative context from site managers and internal review calls.`);
+    sections.push(`Use this context to write richer, more situation-aware narrative throughout the QBU.\n`);
+    docs.forEach((doc, i) => {
+      sections.push(`--- Document ${i + 1}: ${doc.label} (${doc.name}) ---`);
+      sections.push(doc.extractedText);
+      sections.push('');
+    });
+  }
+
+  if (data.safety) {
+    const s = data.safety;
+    sections.push(`\n=== A — SAFETY DATA ===`);
+    if (s.theme) sections.push(`Safety Moment Theme: ${s.theme}`);
+    if (s.keyTips) sections.push(`Key Tips:\n${s.keyTips}`);
+    if (s.quickReminders) sections.push(`Quick Reminders:\n${s.quickReminders}`);
+    if (s.whyItMatters) sections.push(`Why It Matters:\n${s.whyItMatters}`);
+    if (s.incidents?.filter(r => r.location).length) {
+      sections.push(`\nRecordable Incidents by Location/Quarter:`);
+      s.incidents.filter(r => r.location).forEach(r =>
+        sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}`)
+      );
+    }
+    if (s.goodSaves?.filter(r => r.location).length) {
+      sections.push(`\nGood Saves:`);
+      s.goodSaves.filter(r => r.location).forEach(r =>
+        sections.push(`  ${r.location}: Hazard="${r.hazard}" → Action="${r.action}" → Notified="${r.notified}"`)
+      );
+    }
+    if (s.incidentDetails?.filter(r => r.location).length) {
+      sections.push(`\nRecordable Incident Details:`);
+      s.incidentDetails.filter(r => r.location).forEach(r =>
+        sections.push(`  ${r.location} on ${r.date}: Cause="${r.cause}", Treatment="${r.treatment}", RTW="${r.returnDate}"`)
+      );
+    }
+  }
+
+  if (data.executive) {
+    const e = data.executive;
+    sections.push(`\n=== B — EXECUTIVE SUMMARY DATA ===`);
+    if (e.achievements?.filter(Boolean).length) {
+      sections.push(`Key Achievements:`);
+      e.achievements.filter(Boolean).forEach((a, i) => sections.push(`  ${i+1}. ${a}`));
+    }
+    if (e.challenges?.filter(Boolean).length) {
+      sections.push(`Strategic Challenges:`);
+      e.challenges.filter(Boolean).forEach((c, i) => sections.push(`  ${i+1}. ${c}`));
+    }
+    if (e.innovations?.filter(Boolean).length) {
+      sections.push(`Innovation Milestones:`);
+      e.innovations.filter(Boolean).forEach((n, i) => sections.push(`  ${i+1}. ${n}`));
+    }
+  }
+
+  if (data.workTickets) {
+    const w = data.workTickets;
+    sections.push(`\n=== C.1 — WORK TICKETS DATA ===`);
+    if (w.locations?.filter(r => r.location).length) {
+      sections.push(`YoY Work Ticket Comparison:`);
+      w.locations.filter(r => r.location).forEach(r => {
+        const pct = r.priorYear && r.currentYear
+          ? (((Number(r.currentYear) - Number(r.priorYear)) / Number(r.priorYear)) * 100).toFixed(1)
+          : 'N/A';
+        sections.push(`  ${r.location}: Prior Year=${r.priorYear}, Current Year=${r.currentYear}, Change=${pct}%`);
+      });
+    }
+    if (w.keyTakeaway) sections.push(`Key Takeaway: ${w.keyTakeaway}`);
+    if (w.eventsSupported) sections.push(`Events Supported:\n${w.eventsSupported}`);
+  }
+
+  if (data.audits) {
+    const a = data.audits;
+    sections.push(`\n=== C.2/C.3 — AUDITS DATA ===`);
+    const names = (a.locationNames || []).filter(Boolean);
+    if (names.length) {
+      sections.push(`Locations: ${names.join(', ')}`);
+      sections.push(`Prior Quarter Audits: ${a.priorAudits.join(', ')} (Total: ${a.priorAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
+      sections.push(`Prior Quarter Actions: ${a.priorActions.join(', ')} (Total: ${a.priorActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
+      sections.push(`Current Quarter Audits: ${a.currentAudits.join(', ')} (Total: ${a.currentAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
+      sections.push(`Current Quarter Actions: ${a.currentActions.join(', ')} (Total: ${a.currentActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
+    }
+    if (a.auditExplanation) sections.push(`Audit Change Explanation: ${a.auditExplanation}`);
+    if (a.actionExplanation) sections.push(`Action Change Explanation: ${a.actionExplanation}`);
+    if (a.topAreas?.filter(r => r.count).length) {
+      sections.push(`\nTop Corrective Action Areas:`);
+      a.topAreas.filter(r => r.count).forEach(r => sections.push(`  ${r.area}: ${r.count}`));
+    }
+  }
+
+  if (data.projects) {
+    const p = data.projects;
+    sections.push(`\n=== D — PROJECTS & SATISFACTION DATA ===`);
+    if (p.completed?.filter(r => r.description).length) {
+      sections.push(`Completed Projects:`);
+      p.completed.filter(r => r.description).forEach(r => sections.push(`  [${r.category}] ${r.description}`));
+    }
+    if (p.photos?.length) {
+      sections.push(`\nProject Photos: ${p.photos.length} uploaded`);
+      p.photos.filter(ph => ph.caption).forEach(ph =>
+        sections.push(`  Photo (${ph.type || 'general'}): "${ph.caption}"${ph.location ? ` at ${ph.location}` : ''}`)
+      );
+    }
+    if (p.testimonials?.filter(r => r.quote).length) {
+      sections.push(`\nClient Testimonials:`);
+      p.testimonials.filter(r => r.quote).forEach(r =>
+        sections.push(`  "${r.quote}" — ${r.attribution}, ${r.location}`)
+      );
+    }
+  }
+
+  if (data.challenges) {
+    const ch = data.challenges;
+    sections.push(`\n=== E — CHALLENGES & ACTIONS DATA ===`);
+    if (ch.items?.filter(r => r.challenge).length) {
+      sections.push(`Current Challenges:`);
+      ch.items.filter(r => r.challenge).forEach(r =>
+        sections.push(`  ${r.location}: Challenge="${r.challenge}" → Action="${r.action}"`)
+      );
+    }
+    if (ch.priorFollowUp?.filter(r => r.action).length) {
+      sections.push(`\nPrior Quarter Follow-Up:`);
+      ch.priorFollowUp.filter(r => r.action).forEach(r =>
+        sections.push(`  "${r.action}" — Status: ${r.status}${r.notes ? `, Notes: ${r.notes}` : ''}`)
+      );
+    }
+  }
+
+  if (data.financial) {
+    const f = data.financial;
+    sections.push(`\n=== F — FINANCIAL DATA ===`);
+    if (f.totalOutstanding) sections.push(`Total Outstanding: ${f.totalOutstanding} as of ${f.asOfDate || 'current'}`);
+    if (f.bucket30 || f.bucket60 || f.bucket90 || f.bucket91) {
+      sections.push(`Aging Breakdown:`);
+      sections.push(`  1-30 days: ${f.bucket30 || '$0'}`);
+      sections.push(`  31-60 days: ${f.bucket60 || '$0'}`);
+      sections.push(`  61-90 days: ${f.bucket90 || '$0'}`);
+      sections.push(`  91+ days: ${f.bucket91 || '$0'}`);
+    }
+    if (f.strategyNotes?.filter(Boolean).length) {
+      sections.push(`Financial Strategy Notes:`);
+      f.strategyNotes.filter(Boolean).forEach((n, i) => sections.push(`  ${i+1}. ${n}`));
+    }
+  }
+
+  if (data.roadmap) {
+    const r = data.roadmap;
+    sections.push(`\n=== G — INNOVATION & ROADMAP DATA ===`);
+    if (r.highlights?.filter(h => h.innovation).length) {
+      sections.push(`Innovation Highlights:`);
+      r.highlights.filter(h => h.innovation).forEach(h =>
+        sections.push(`  ${h.innovation}: ${h.description} → Benefit: ${h.benefit}`)
+      );
+    }
+    if (r.photos?.length) {
+      sections.push(`\nInnovation Photos: ${r.photos.length} uploaded`);
+      r.photos.filter(ph => ph.caption).forEach(ph =>
+        sections.push(`  Photo (${ph.type || 'general'}): "${ph.caption}"${ph.location ? ` at ${ph.location}` : ''}`)
+      );
+    }
+    if (r.schedule?.filter(s => s.initiative).length) {
+      sections.push(`\nNext Quarter Roadmap:`);
+      r.schedule.filter(s => s.initiative).forEach(s =>
+        sections.push(`  ${s.month}: ${s.initiative} — ${s.details}`)
+      );
+    }
+    if (r.goalStatement) sections.push(`\nQuarter Goal Statement: ${r.goalStatement}`);
+  }
+
+  sections.push(`\n=== INSTRUCTIONS ===`);
+  sections.push(`Generate the complete QBU as 16 slides following the section numbering (A.1, A.2, B.1, C.1, C.2, C.3, D.1, D.2, D.3, E.1, F.1, G.1, G.2).`);
+  sections.push(`For each slide, provide:`);
+  sections.push(`1. Polished, presentation-ready content (not just the raw data — interpret it, add context)`);
+  sections.push(`2. Speaker notes with talking points`);
+  sections.push(`3. KPI interpretation sentences where applicable`);
+  sections.push(`4. [PLACEHOLDER] markers for any missing required data`);
+  sections.push(`\nDo NOT just echo back the raw data. Your job is to transform the intake data into polished QBU content with narrative, interpretation, and delivery guidance.`);
+
+  return sections.join('\n');
+}

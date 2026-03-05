@@ -6,7 +6,7 @@ import AgentActionButton from '../../components/shared/AgentActionButton';
 import StatusBadge from '../../components/shared/StatusBadge';
 import { useToast } from '../../components/shared/ToastProvider';
 import { callAgent } from '../../agents/api';
-import { getQBUHistory, saveQBU, getQBUById, deleteQBU } from '../../data/qbuHistory';
+import { getQBUHistory, saveQBU, getQBUById, deleteQBU, updateQBU } from '../../data/qbuHistory';
 import { generateQBUPptx } from '../../utils/qbuPptxTemplate';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useBranding } from '../../contexts/BrandingContext';
@@ -253,6 +253,9 @@ export default function QBUBuilder() {
   const [populatedCount, setPopulatedCount] = useState(0);
   const [showDataReview, setShowDataReview] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [refineInput, setRefineInput] = useState('');
+  const [refining, setRefining] = useState(false);
+  const [currentEntryId, setCurrentEntryId] = useState(null);
   const toast = useToast();
   const brand = useBranding();
   const photoInputRef = useRef(null);
@@ -972,13 +975,15 @@ export default function QBUBuilder() {
       const output = await callAgent('qbu', 'generateQBU', form);
       setResult(output);
       setShowResult(true);
-      await saveQBU({
+      setRefineInput('');
+      const saved = await saveQBU({
         client: form.cover.clientName,
         quarter: form.cover.quarter,
         jobName: form.cover.jobName || '',
         formData: form,
         agentOutput: output,
       });
+      setCurrentEntryId(saved.id);
       getQBUHistory().then(setHistory);
       toast('Review generated and saved');
     } finally {
@@ -1000,6 +1005,8 @@ export default function QBUBuilder() {
     setResult(entry.agentOutput);
     setShowResult(true);
     setActiveTab('cover');
+    setCurrentEntryId(id);
+    setRefineInput('');
     toast(`Loaded: ${entry.client} ${entry.quarter}`);
   };
 
@@ -1016,6 +1023,26 @@ export default function QBUBuilder() {
     await deleteQBU(id);
     getQBUHistory().then(setHistory);
     toast('Review deleted');
+  };
+
+  const handleRefine = async () => {
+    if (!refineInput.trim() || !result) return;
+    setRefining(true);
+    try {
+      const output = await callAgent('qbu', 'refineQBU', {
+        previousOutput: result,
+        feedback: refineInput.trim(),
+        form,
+      });
+      setResult(output);
+      setRefineInput('');
+      if (currentEntryId) {
+        await updateQBU(currentEntryId, { agentOutput: output });
+      }
+      toast('Review updated');
+    } finally {
+      setRefining(false);
+    }
   };
 
   // ── Render ───────────────────────
@@ -1443,6 +1470,24 @@ export default function QBUBuilder() {
           </div>
           <div className="bg-gray-50 rounded-lg p-4 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-[600px] overflow-y-auto">
             {result}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <input
+              type="text"
+              value={refineInput}
+              onChange={(e) => setRefineInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !refining && handleRefine()}
+              placeholder="Tell the agent what to change..."
+              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
+              disabled={refining}
+            />
+            <button
+              onClick={handleRefine}
+              disabled={!refineInput.trim() || refining}
+              className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
+            >
+              {refining ? 'Refining...' : 'Refine'}
+            </button>
           </div>
         </div>
       )}

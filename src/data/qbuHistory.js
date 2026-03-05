@@ -173,6 +173,21 @@ export async function getQBUById(id) {
   };
 }
 
+export async function updateQBU(id, { agentOutput }) {
+  const { data, error } = await supabase
+    .from('tool_submissions')
+    .update({ agent_output: agentOutput })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to update QBU:', error);
+    return null;
+  }
+  return data;
+}
+
 export async function deleteQBU(id) {
   const { error } = await supabase
     .from('tool_submissions')
