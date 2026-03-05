@@ -708,7 +708,7 @@ async function addBeforeAfterSlide(pptx, pair, title, logoColor) {
     addCard(slide, { x: xPos, y: 1.3, w: COL2_W, h: 3.65 });
     slide.addImage({
       data: base64, x: xPos + 0.15, y: 1.45, w: COL2_W - 0.3, h: 2.85,
-      rounding: true,
+      rounding: false, rectRadius: 0.1,
     });
 
     const caption = [photo.caption, photo.location].filter(Boolean).join(' \u2014 ') || photo.name;
@@ -761,7 +761,7 @@ async function addPhotoSlides(pptx, form, logoColor) {
       addCard(slide, { x: xPos, y: 1.15, w: COL2_W, h: 3.8 });
       slide.addImage({
         data: base64, x: xPos + 0.15, y: 1.3, w: COL2_W - 0.3, h: 3.0,
-        rounding: true,
+        rounding: false, rectRadius: 0.1,
       });
 
       const caption = [photo.caption, photo.location].filter(Boolean).join(' \u2014 ') || photo.name;
@@ -1142,7 +1142,7 @@ async function addInnovationPhotoSlides(pptx, form, logoColor) {
       addCard(slide, { x: xPos, y: 1.15, w: COL2_W, h: 3.8 });
       slide.addImage({
         data: base64, x: xPos + 0.15, y: 1.3, w: COL2_W - 0.3, h: 3.0,
-        rounding: true,
+        rounding: false, rectRadius: 0.1,
       });
 
       const caption = [photo.caption, photo.location].filter(Boolean).join(' \u2014 ') || photo.name;
