@@ -13,26 +13,38 @@ ${SHARED_RULES}
 ## TERMINOLOGY
 This tool generates Quarterly Business Updates (referred to as "QBU" internally). NEVER use "QBR." Always use QBU.
 
-## TEMPLATE STRUCTURE — 16 slides with section numbering:
+## TEMPLATE STRUCTURE — section numbering and available sections:
 
-| Slide | Section | Title |
-|-------|---------|-------|
-| 1 | — | Title: Account Name (dark bg, client name, quarter, date) |
-| 2 | — | Introductions (Company Team / Client Team) |
-| 3 | A.1 | Safety Moment – theme of the quarter |
-| 4 | A.2 | Safety & Compliance Review (recordables table, good saves, incident details) |
-| 5 | B.1 | Executive Summary (achievements, challenges, innovation milestones) |
-| 6 | C.1 | Operational Performance – Managing Demand (work tickets YoY) |
-| 7 | C.2 | Audits and Corrective Actions (QoQ comparison) |
-| 8 | C.3 | Top Action Areas (visual bar/pie breakdown) |
-| 9 | D.1 | Completed Projects Showcase (by category) |
-| 10 | D.2 | Completed Projects: Photos |
-| 11 | D.3 | Service & Client Satisfaction (testimonials) |
-| 12 | E.1 | Addressing Key Operational Challenges (challenge → action mapping) |
-| 13 | F.1 | Current Financial Overview (outstanding balance, aging, strategy) |
-| 14 | G.1 | Innovation & Technology Integration |
-| 15 | G.2 | Roadmap – Strategic Initiatives (next quarter look-ahead) |
-| 16 | — | Thank You |
+The QBU uses the following section numbering convention. Use ONLY the sections that have meaningful content. Do NOT pad the deck to a fixed slide count — a 10-slide QBU with strong content is better than a 16-slide QBU with filler.
+
+**SLIDE CONSOLIDATION RULES:**
+- If a section has very little data (e.g., only 1-2 items), combine it with a related section onto one slide rather than giving it a dedicated slide.
+- If a section has NO data and cannot be synthesized, OMIT the slide entirely — do not output an empty or placeholder-only slide.
+- The Title slide (1) and Thank You slide (last) are always included.
+- Photos slides (D.2) are only included when photos are provided.
+- C.3 (Top Action Areas) can be merged into C.2 if the data is light.
+- G.1 and G.2 can be merged into a single Innovation & Roadmap slide if content fits comfortably.
+
+**Available sections (include only when there is content):**
+
+| Section | Title |
+|---------|-------|
+| — | Title: Account Name (dark bg, client name, quarter, date) |
+| — | Introductions (Company Team / Client Team) |
+| A.1 | Safety Moment – theme of the quarter |
+| A.2 | Safety & Compliance Review (recordables table, good saves, incident details) |
+| B.1 | Executive Summary (achievements, challenges, innovation milestones) |
+| C.1 | Operational Performance – Managing Demand (work tickets YoY) |
+| C.2 | Audits and Corrective Actions (QoQ comparison) |
+| C.3 | Top Action Areas (visual bar/pie breakdown) |
+| D.1 | Completed Projects Showcase (by category) |
+| D.2 | Completed Projects: Photos |
+| D.3 | Service & Client Satisfaction (testimonials) |
+| E.1 | Addressing Key Operational Challenges (challenge → action mapping) |
+| F.1 | Current Financial Overview (outstanding balance, aging, strategy) |
+| G.1 | Innovation & Technology Integration |
+| G.2 | Roadmap – Strategic Initiatives (next quarter look-ahead) |
+| — | Thank You |
 
 ## SUPPORTING DOCUMENTS
 You may receive questionnaire responses, call transcripts, and meeting notes as supporting context.
@@ -120,12 +132,13 @@ Campus names, building names, and specific location references are CRITICAL and 
 ## EMPTY SECTION HANDLING
 When a section has NO user-provided data:
 - For sections that can be reasonably synthesized from other data (B.1 Executive Summary, F.1 Financial Strategy): generate content but keep it grounded in actual data from other sections.
-- For sections that require specific input (D.1 Projects, D.3 Testimonials, C.1 Work Tickets): use [PLACEHOLDER] markers.
-- For G.1 Innovation and G.2 Roadmap: if no data provided, use [PLACEHOLDER] markers. Do NOT fabricate future plans, technology deployments, or strategic initiatives — making up roadmap items is misleading.
+- For sections that require specific input (D.1 Projects, D.3 Testimonials, C.1 Work Tickets): OMIT the slide entirely. Do not output a slide with only placeholder markers — a shorter deck is better than one full of "[PLACEHOLDER]" slides.
+- For G.1 Innovation and G.2 Roadmap: if no data provided, omit the slide. Do NOT fabricate future plans, technology deployments, or strategic initiatives.
 - NEVER invent incident data, financial figures, project details, or client quotes.
+- The only exception: B.1 Executive Summary should always be included — synthesize from available data if needed.
 
 ## NARRATIVE FLOW
-Your job is to build a compelling, cohesive story across ALL 16 slides — not just the ones with obvious narrative sections.
+Your job is to build a compelling, cohesive story across ALL slides — not just the ones with obvious narrative sections.
 
 **Story arc:** B.1 sets the narrative (what happened this quarter). C slides prove it with data. D shows the work in action. E is transparent about challenges. F handles finances directly. G looks ahead.
 
@@ -255,7 +268,7 @@ These NARRATIVE blocks are REQUIRED — ALWAYS output them. The PPTX generator p
         sections.push(buildQBUPrompt(data.form));
         sections.push(`\nCRITICAL INSTRUCTIONS:`);
         sections.push(`- DO NOT summarize or list the changes. DO NOT write "I need to make these corrections" or any meta-commentary.`);
-        sections.push(`- Your ENTIRE response must be the full updated QBU slide content — starting with **SLIDE 1** and ending with the last slide.`);
+        sections.push(`- Your ENTIRE response must be the full updated QBU slide content — starting with **SLIDE 1** and ending with the last slide (number slides sequentially).`);
         sections.push(`- Apply the user's feedback to the previous output`);
         sections.push(`- Keep everything else unchanged — only modify what the user requested`);
         sections.push(`- Return the COMPLETE updated QBU (all slides), not just the changed parts`);
@@ -272,7 +285,7 @@ function buildQBUPrompt(data) {
   const c = data.cover || data;
   const sections = [];
 
-  sections.push(`Generate a complete 16-slide QBU deck following the A.1/B.1/C.1 section numbering convention.\n`);
+  sections.push(`Generate a complete QBU deck following the A.1/B.1/C.1 section numbering convention. Include only slides that have meaningful content — do not pad to a fixed slide count.\n`);
   sections.push(`=== COVER DATA ===`);
   sections.push(`Client: ${c.clientName || '[Client]'}`);
   sections.push(`Quarter: ${c.quarter || '[Quarter]'}`);
