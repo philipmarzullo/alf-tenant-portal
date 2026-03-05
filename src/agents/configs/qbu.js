@@ -253,12 +253,15 @@ These NARRATIVE blocks are REQUIRED — ALWAYS output them. The PPTX generator p
         sections.push(data.feedback);
         sections.push(`\n== ORIGINAL INTAKE DATA ==`);
         sections.push(buildQBUPrompt(data.form));
-        sections.push(`\nINSTRUCTIONS:`);
+        sections.push(`\nCRITICAL INSTRUCTIONS:`);
+        sections.push(`- DO NOT summarize or list the changes. DO NOT write "I need to make these corrections" or any meta-commentary.`);
+        sections.push(`- Your ENTIRE response must be the full updated QBU slide content — starting with **SLIDE 1** and ending with the last slide.`);
         sections.push(`- Apply the user's feedback to the previous output`);
         sections.push(`- Keep everything else unchanged — only modify what the user requested`);
         sections.push(`- Return the COMPLETE updated QBU (all slides), not just the changed parts`);
         sections.push(`- Maintain the same NARRATIVE tag structure for PPTX generation`);
         sections.push(`- Follow all existing slide density and data integrity rules`);
+        sections.push(`- Begin your response directly with the slide content. No preamble, no acknowledgment, no summary of changes.`);
         return sections.join('\n');
       },
     },
