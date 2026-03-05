@@ -1427,7 +1427,12 @@ export default function QBUBuilder() {
             >
               <ChevronLeft size={16} /> {canPrev ? TABS[tabIndex - 1].label : 'Previous'}
             </button>
-            <span className="text-xs text-secondary-text">{tabIndex + 1} of {TABS.length}</span>
+            <div className="flex items-center gap-3">
+              {result && (
+                <AgentActionButton label={currentEntryId ? 'Regenerate' : 'Generate Review'} variant="primary" onClick={handleGenerate} />
+              )}
+              <span className="text-xs text-secondary-text">{tabIndex + 1} of {TABS.length}</span>
+            </div>
             {canNext ? (
               <button
                 onClick={() => setActiveTab(TABS[tabIndex + 1].key)}
@@ -1436,7 +1441,7 @@ export default function QBUBuilder() {
                 {TABS[tabIndex + 1].label} <ChevronRight size={16} />
               </button>
             ) : (
-              <AgentActionButton label="Generate Review" variant="primary" onClick={handleGenerate} />
+              <AgentActionButton label={result ? 'Regenerate' : 'Generate Review'} variant="primary" onClick={handleGenerate} />
             )}
           </div>
         </>
@@ -1456,13 +1461,48 @@ export default function QBUBuilder() {
         </div>
       )}
 
+      {/* Iteration bar — visible when result exists and form is showing */}
+      {result && mode === 'manual' && (
+        <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-6">
+          <div className="text-sm text-secondary-text">
+            Review generated for <span className="font-medium text-dark-text">{form.cover.clientName}</span>
+            {form.cover.quarter ? ` — ${form.cover.quarter}` : ''}
+          </div>
+          <div className="flex items-center gap-2">
+            <AgentActionButton label="Regenerate" variant="secondary" onClick={handleGenerate} />
+            <button
+              onClick={() => {
+                setShowResult(true);
+                setTimeout(() => document.getElementById('qbu-result')?.scrollIntoView({ behavior: 'smooth' }), 50);
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-md hover:bg-aa-blue/10 transition-colors"
+            >
+              <ChevronDown size={12} /> View Result
+            </button>
+            <button onClick={handleDownload} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 transition-colors">
+              <Download size={12} /> PPTX
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Generated result */}
       {showResult && result && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
-          <div className="flex items-center justify-between mb-3">
+        <div id="qbu-result" className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
             <div className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Generated Review Content</div>
-            <div className="flex items-center gap-3">
-              <button onClick={handleDownload} className="inline-flex items-center gap-1 text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setActiveTab('cover');
+                }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-secondary-text bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
+              >
+                <ChevronUp size={12} /> Edit Form
+              </button>
+              <AgentActionButton label="Regenerate" variant="secondary" onClick={handleGenerate} />
+              <button onClick={handleDownload} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 transition-colors">
                 <Download size={12} /> Download PPTX
               </button>
               <button onClick={() => setShowResult(false)} className="text-xs text-secondary-text hover:text-dark-text transition-colors">Hide</button>
@@ -1471,23 +1511,26 @@ export default function QBUBuilder() {
           <div className="bg-gray-50 rounded-lg p-4 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-[600px] overflow-y-auto">
             {result}
           </div>
-          <div className="mt-3 flex gap-2">
-            <input
-              type="text"
-              value={refineInput}
-              onChange={(e) => setRefineInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !refining && handleRefine()}
-              placeholder="Tell the agent what to change..."
-              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
-              disabled={refining}
-            />
-            <button
-              onClick={handleRefine}
-              disabled={!refineInput.trim() || refining}
-              className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
-            >
-              {refining ? 'Refining...' : 'Refine'}
-            </button>
+          <div className="mt-3">
+            <div className="text-[11px] text-secondary-text mb-1.5">Quick refinement — describe changes without re-editing the form</div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={refineInput}
+                onChange={(e) => setRefineInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !refining && handleRefine()}
+                placeholder="e.g., Move safety moment to one slide, remove empty tables..."
+                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
+                disabled={refining}
+              />
+              <button
+                onClick={handleRefine}
+                disabled={!refineInput.trim() || refining}
+                className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
+              >
+                {refining ? 'Refining...' : 'Refine'}
+              </button>
+            </div>
           </div>
         </div>
       )}
