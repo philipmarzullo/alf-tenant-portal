@@ -252,8 +252,8 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
         items = [...items, ...customItems];
       }
 
-      // Inject admin-only QBR Templates link into TOOLS group
-      if (group.group === 'TOOLS' && items.length > 0 && !items[0]?._tierLocked && isAdmin) {
+      // Inject admin-only QBR Templates link into TOOLS group (opt-in per tenant)
+      if (group.group === 'TOOLS' && items.length > 0 && !items[0]?._tierLocked && isAdmin && tenantHasModule('qbr_templates')) {
         items = [...items, {
           label: 'QBR Templates',
           path: '/portal/tools/qbr-templates',
