@@ -252,6 +252,17 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
         items = [...items, ...customItems];
       }
 
+      // Inject admin-only QBR Templates link into TOOLS group
+      if (group.group === 'TOOLS' && items.length > 0 && !items[0]?._tierLocked && isAdmin) {
+        items = [...items, {
+          label: 'QBR Templates',
+          path: '/portal/tools/qbr-templates',
+          icon: 'FileBarChart',
+          moduleKey: 'tools',
+          adminOnly: true,
+        }];
+      }
+
       return { ...group, items };
     })
     .filter((group) => group.items.length > 0);

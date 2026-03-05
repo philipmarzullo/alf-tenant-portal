@@ -85,6 +85,8 @@ import SOPBuilder from './pages/tools/SOPBuilder';
 import SOPEditorPage from './pages/tools/SOPEditorPage';
 import CustomToolBuilder from './pages/tools/CustomToolBuilder';
 import CustomToolPage from './pages/tools/CustomToolPage';
+import QBRTemplateList from './pages/tools/QBRTemplateList';
+import QBRTemplateEditor from './pages/tools/QBRTemplateEditor';
 import RFPProjectsPage from './pages/tools/RFPProjectsPage';
 import RFPLibraryPage from './pages/tools/RFPLibraryPage';
 import RFPProjectDetail from './pages/tools/RFPProjectDetail';
@@ -531,6 +533,30 @@ export default function App() {
                       element={
                         <ProtectedRoute moduleKey="tools">
                           <CustomToolPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/qbr-templates"
+                      element={
+                        <ProtectedRoute adminOnly>
+                          <QBRTemplateList />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/qbr-templates/new"
+                      element={
+                        <ProtectedRoute adminOnly>
+                          <QBRTemplateEditor />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/qbr-templates/edit/:templateId"
+                      element={
+                        <ProtectedRoute adminOnly>
+                          <QBRTemplateEditor />
                         </ProtectedRoute>
                       }
                     />
