@@ -89,74 +89,64 @@ function addIntroductionsSlide(pptx, form, logoColor) {
 function addSafetyMomentSlide(pptx, form, logoColor, narratives) {
   const s = form.safety;
   const theme = s.theme || 'Safety Awareness';
-  const tips = getNarrativeLines(narratives, 'A1:TIPS') || (s.keyTips ? s.keyTips.split('\n').filter(Boolean) : []);
-  const reminders = getNarrativeLines(narratives, 'A1:REMINDERS') || (s.quickReminders ? s.quickReminders.split('\n').filter(Boolean) : []);
+  // Cap tips and reminders to 4 items max — MUST fit on ONE slide
+  const allTips = getNarrativeLines(narratives, 'A1:TIPS') || (s.keyTips ? s.keyTips.split('\n').filter(Boolean) : []);
+  const allReminders = getNarrativeLines(narratives, 'A1:REMINDERS') || (s.quickReminders ? s.quickReminders.split('\n').filter(Boolean) : []);
+  const tips = allTips.slice(0, 4);
+  const reminders = allReminders.slice(0, 4);
   const whyItMatters = getNarrativeText(narratives, 'A1:WHYITMATTERS') || s.whyItMatters;
   const hasWhyItMatters = !!whyItMatters;
+
+  const slide = pptx.addSlide();
+  setContentBackground(slide);
+  addSectionTitle(slide, `Safety Moment \u2014 ${theme}`);
 
   const cardY = 1.15;
   const maxCardBottom = hasWhyItMatters ? 4.05 : LOGO_SAFE_Y;
   const maxCardH = maxCardBottom - cardY;
   const headerPad = 0.65;
-  const availBulletH = maxCardH - headerPad;
   const bulletColW = COL2_W - 0.5;
 
-  // Split tips and reminders into pages that fit
-  const tipPages = splitItemsToFit(tips, availBulletH, bulletColW);
-  const reminderPages = splitItemsToFit(reminders, availBulletH, bulletColW);
-  const totalPages = Math.max(tipPages.length, reminderPages.length, 1);
+  const maxBulletH = Math.max(
+    estimateBulletH(tips, bulletColW),
+    estimateBulletH(reminders, bulletColW),
+    0.5
+  );
+  const cardH = Math.min(maxBulletH + headerPad, maxCardH);
+  const x1 = MARGIN;
+  const x2 = MARGIN + COL2_W + 0.3;
 
-  for (let page = 0; page < totalPages; page++) {
-    const slide = pptx.addSlide();
-    setContentBackground(slide);
-    const title = page === 0
-      ? `Safety Moment \u2014 ${theme}`
-      : `Safety Moment \u2014 ${theme} (cont.)`;
-    addSectionTitle(slide, title);
-
-    const pageTips = tipPages[page] || [];
-    const pageReminders = reminderPages[page] || [];
-    const maxBulletH = Math.max(
-      estimateBulletH(pageTips, bulletColW),
-      estimateBulletH(pageReminders, bulletColW),
-      0.5
-    );
-    const cardH = Math.min(maxBulletH + headerPad, maxCardH);
-    const x1 = MARGIN;
-    const x2 = MARGIN + COL2_W + 0.3;
-
-    // Key Safety Tips card (blue left border)
-    addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
-    slide.addShape('rect', { x: x1 + 0.05, y: cardY, w: 0.4, h: 0.04, fill: { color: AA_RED } });
-    slide.addText('KEY SAFETY TIPS', {
-      x: x1 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
-      fontSize: 11, fontFace: FONT, color: DARK, bold: true,
-    });
-    if (pageTips.length) {
-      addCardBullets(slide, pageTips, { x: x1, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
-    }
-
-    // Quick Reminders card (red left border)
-    addCard(slide, { x: x2, y: cardY, w: COL2_W, h: cardH, borderColor: AA_RED, borderSide: 'left' });
-    slide.addText('QUICK REMINDERS', {
-      x: x2 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
-      fontSize: 11, fontFace: FONT, color: DARK, bold: true,
-    });
-    if (pageReminders.length) {
-      addCardBullets(slide, pageReminders, { x: x2, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
-    }
-
-    // Why It Matters callout box on first page only
-    if (page === 0 && hasWhyItMatters) {
-      const callY = cardY + cardH + 0.2;
-      addCalloutBox(slide, {
-        x: MARGIN, y: callY, w: CONTENT_W, h: 0.85,
-        label: 'Why It Matters:', text: whyItMatters,
-      });
-    }
-
-    addLogoBottomRight(slide, logoColor);
+  // Key Safety Tips card (blue left border)
+  addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
+  slide.addShape('rect', { x: x1 + 0.05, y: cardY, w: 0.4, h: 0.04, fill: { color: AA_RED } });
+  slide.addText('KEY SAFETY TIPS', {
+    x: x1 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
+    fontSize: 11, fontFace: FONT, color: DARK, bold: true,
+  });
+  if (tips.length) {
+    addCardBullets(slide, tips, { x: x1, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
   }
+
+  // Quick Reminders card (red left border)
+  addCard(slide, { x: x2, y: cardY, w: COL2_W, h: cardH, borderColor: AA_RED, borderSide: 'left' });
+  slide.addText('QUICK REMINDERS', {
+    x: x2 + 0.2, y: cardY + 0.15, w: COL2_W - 0.4, h: 0.3,
+    fontSize: 11, fontFace: FONT, color: DARK, bold: true,
+  });
+  if (reminders.length) {
+    addCardBullets(slide, reminders, { x: x2, y: cardY + 0.5, w: COL2_W, h: cardH - 0.7 });
+  }
+
+  // Why It Matters callout box
+  if (hasWhyItMatters) {
+    const callY = cardY + cardH + 0.2;
+    addCalloutBox(slide, {
+      x: MARGIN, y: callY, w: CONTENT_W, h: 0.85,
+      label: 'Why It Matters:', text: whyItMatters,
+    });
+  }
+
+  addLogoBottomRight(slide, logoColor);
 }
 
 // ── Slide 4: A.2 Safety & Compliance Review ─────────────
@@ -165,6 +155,36 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
   addSectionTitle(slide, 'Safety & Compliance Review');
+
+  let contentY = 1.15;
+
+  // Safety Metrics summary row — show counts when provided
+  const inspCount = form.safety.safetyInspections;
+  const gsCount = form.safety.goodSaveCount;
+  const recCount = form.safety.recordableCount;
+  const hasMetrics = inspCount || gsCount || recCount;
+
+  if (hasMetrics) {
+    const metrics = [];
+    if (inspCount) metrics.push({ label: 'Safety Inspections', value: inspCount, color: AA_BLUE });
+    if (gsCount) metrics.push({ label: 'Good Saves', value: gsCount, color: GREEN });
+    if (recCount) metrics.push({ label: 'Recordables', value: recCount, color: AMBER });
+
+    const metricW = (CONTENT_W - (metrics.length - 1) * 0.2) / metrics.length;
+    metrics.forEach((m, i) => {
+      const mx = MARGIN + i * (metricW + 0.2);
+      addCard(slide, { x: mx, y: contentY, w: metricW, h: 0.6, borderColor: m.color });
+      slide.addText(m.value, {
+        x: mx + 0.15, y: contentY + 0.05, w: metricW - 0.3, h: 0.3,
+        fontSize: 18, fontFace: FONT, color: m.color, bold: true, align: 'center',
+      });
+      slide.addText(m.label, {
+        x: mx + 0.15, y: contentY + 0.32, w: metricW - 0.3, h: 0.2,
+        fontSize: 8, fontFace: FONT, color: MED_GREY, align: 'center',
+      });
+    });
+    contentY += 0.8;
+  }
 
   const incidents = (form.safety.incidents || []).filter((r) => r.location);
 
@@ -182,56 +202,81 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     });
     dataRows.push(['TOTAL', ...totals.map(String)]);
 
-    addBrandedTable(slide, [headerRow, ...dataRows], { y: 1.15, w: CONTENT_W });
+    addBrandedTable(slide, [headerRow, ...dataRows], { y: contentY, w: CONTENT_W });
   }
 
   // Good Saves and Recordable Details cards below the table
   const saves = (form.safety.goodSaves || []).filter((r) => r.location || r.hazard);
-  const details = (form.safety.incidentDetails || []).filter((r) => r.location);
-  const cardY = 1.15 + ((incidents.length + 2) * 0.35) + 0.25;
+  // Filter out template/placeholder entries — only real incidents with actual cause data
+  const details = (form.safety.incidentDetails || []).filter((r) =>
+    r.location && r.cause && r.cause !== 'Description/Cause' && r.cause.length > 3
+  );
+  const cardY = contentY + ((incidents.length + 2) * 0.35) + 0.25;
   const x1 = MARGIN;
   const x2 = MARGIN + COL2_W + 0.3;
   const remainingH = SLIDE_H - cardY - 0.45;
 
-  if ((saves.length || details.length) && remainingH > 0.8) {
-    const saveBulletH = estimateBulletH(
-      saves.map((r) => `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`),
-      COL2_W - 0.5
-    );
-    const detailBulletH = estimateBulletH(
-      details.map((r) => `${r.location} | ${r.date}: ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`),
-      COL2_W - 0.5
-    );
+  // Show Good Saves card only if count provided or detail rows exist
+  const showGoodSaves = gsCount || saves.length;
+  // Show Recordable Details card only if count provided or detail rows exist
+  const showRecordables = recCount || details.length;
+
+  if (remainingH > 0.8 && (showGoodSaves || showRecordables)) {
+    const saveBulletH = saves.length
+      ? estimateBulletH(saves.map((r) => `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`), COL2_W - 0.5)
+      : 0.3;
+    const detailBulletH = details.length
+      ? estimateBulletH(details.map((r) => `${r.location} | ${r.date}: ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`), COL2_W - 0.5)
+      : 0.3;
     const cardH = Math.min(Math.max(saveBulletH, detailBulletH) + 0.6, remainingH);
     const fontSize = cardH < 1.5 ? 8 : 9;
 
-    // Good Saves card (green left border)
-    addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH, borderColor: GREEN, borderSide: 'left' });
-    slide.addText('GOOD SAVES', {
-      x: x1 + 0.2, y: cardY + 0.1, w: COL2_W - 0.4, h: 0.3,
-      fontSize: 11, fontFace: FONT, color: DARK, bold: true,
-    });
-    if (saves.length) {
-      const items = saves.map((r) =>
-        `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`
-      );
-      addCardBullets(slide, items, { x: x1, y: cardY + 0.45, w: COL2_W, h: cardH - 0.6 });
+    // If only one section has data, render it full-width; otherwise two columns
+    const fullWidth = showGoodSaves && !showRecordables || !showGoodSaves && showRecordables;
+    const cardW = fullWidth ? CONTENT_W : COL2_W;
+
+    if (showGoodSaves) {
+      // Good Saves card (green left border)
+      addCard(slide, { x: x1, y: cardY, w: cardW, h: cardH, borderColor: GREEN, borderSide: 'left' });
+      slide.addText('GOOD SAVES', {
+        x: x1 + 0.2, y: cardY + 0.1, w: cardW - 0.4, h: 0.3,
+        fontSize: 11, fontFace: FONT, color: DARK, bold: true,
+      });
+      if (saves.length) {
+        const items = saves.map((r) =>
+          `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`
+        );
+        addCardBullets(slide, items, { x: x1, y: cardY + 0.45, w: cardW, h: cardH - 0.6 });
+      } else {
+        slide.addText('No Good Saves reported this quarter.', {
+          x: x1 + 0.2, y: cardY + 0.45, w: cardW - 0.4, h: 0.3,
+          fontSize: 9, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
+        });
+      }
     }
 
-    // Recordable Details card (amber left border)
-    addCard(slide, { x: x2, y: cardY, w: COL2_W, h: cardH, borderColor: AMBER, borderSide: 'left' });
-    slide.addText('RECORDABLE DETAILS', {
-      x: x2 + 0.2, y: cardY + 0.1, w: COL2_W - 0.4, h: 0.3,
-      fontSize: 11, fontFace: FONT, color: DARK, bold: true,
-    });
-    if (details.length) {
-      const items = details.map((r) =>
-        `${r.location} | ${r.date}: ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`
-      );
-      slide.addText(items.join('\n\n'), {
-        x: x2 + 0.2, y: cardY + 0.45, w: COL2_W - 0.4, h: cardH - 0.6,
-        fontSize: fontSize, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
+    if (showRecordables) {
+      const rx = fullWidth ? x1 : x2;
+      // Recordable Details card (amber left border)
+      addCard(slide, { x: rx, y: cardY, w: cardW, h: cardH, borderColor: AMBER, borderSide: 'left' });
+      slide.addText('RECORDABLE DETAILS', {
+        x: rx + 0.2, y: cardY + 0.1, w: cardW - 0.4, h: 0.3,
+        fontSize: 11, fontFace: FONT, color: DARK, bold: true,
       });
+      if (details.length) {
+        const items = details.map((r) =>
+          `${r.location} | ${r.date}: ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`
+        );
+        slide.addText(items.join('\n\n'), {
+          x: rx + 0.2, y: cardY + 0.45, w: cardW - 0.4, h: cardH - 0.6,
+          fontSize: fontSize, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
+        });
+      } else {
+        slide.addText('Zero recordable incidents this quarter.', {
+          x: rx + 0.2, y: cardY + 0.45, w: cardW - 0.4, h: 0.3,
+          fontSize: 9, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
+        });
+      }
     }
   }
 
@@ -337,16 +382,20 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
     });
   }
 
-  // Events Supported callout — dynamic height based on content
+  // Events Supported callout — clamp to fit within slide bounds
   if (form.workTickets.eventsSupported) {
     const evText = form.workTickets.eventsSupported;
-    const lines = evText.split('\n').length;
-    const evH = Math.max(0.85, Math.min(lines * 0.22 + 0.2, 2.5));
     const evY = takeawayText ? tableBottom + 1.0 : tableBottom;
-    addCalloutBox(slide, {
-      x: MARGIN, y: evY, w: CONTENT_W, h: evH,
-      label: 'Events Supported:', text: evText,
-    });
+    const maxEvH = SLIDE_H - evY - 0.35;
+    if (maxEvH > 0.5) {
+      const lines = evText.split('\n').length;
+      const evH = Math.max(0.85, Math.min(lines * 0.22 + 0.2, maxEvH));
+      addCalloutBox(slide, {
+        x: MARGIN, y: evY, w: CONTENT_W, h: evH,
+        label: 'Events Supported:', text: evText,
+        fontSize: lines > 10 ? 7 : 8,
+      });
+    }
   }
 
   addLogoBottomRight(slide, logoColor);
@@ -360,29 +409,38 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
   addSectionTitle(slide, 'Audits and Corrective Actions');
 
   const a = form.audits;
-  // Only include columns that have a location name
+  // Only include columns that have a real location name (not placeholders like "Location 3")
   const activeIndices = (a.locationNames || []).map((n, i) => n ? i : -1).filter((i) => i >= 0);
   const names = activeIndices.map((i) => a.locationNames[i]);
+  // Filter out placeholder names that have no data in any row
+  const realIndices = activeIndices.filter((i) => {
+    const hasAnyData = (Number(a.priorAudits[i]) || 0) + (Number(a.priorActions[i]) || 0)
+      + (Number(a.currentAudits[i]) || 0) + (Number(a.currentActions[i]) || 0);
+    return hasAnyData > 0 || !/^Location\s*\d+$/i.test(a.locationNames[i]);
+  });
+  const realNames = realIndices.map((i) => a.locationNames[i]);
 
-  if (names.length) {
-    const sumActive = (arr) => String(activeIndices.reduce((s, i) => s + (Number(arr[i]) || 0), 0));
-    const headerRow = ['', ...names, 'Total'];
-    const hasPriorData = activeIndices.some(i => Number(a.priorAudits[i]) > 0 || Number(a.priorActions[i]) > 0);
+  let tableRowCount = 1; // header
+  if (realNames.length) {
+    const sumActive = (arr) => String(realIndices.reduce((s, i) => s + (Number(arr[i]) || 0), 0));
+    const headerRow = ['', ...realNames, 'Total'];
+    const hasPriorData = realIndices.some(i => Number(a.priorAudits[i]) > 0 || Number(a.priorActions[i]) > 0);
     const rows = [
       headerRow,
       ...(hasPriorData ? [
-        ['Prior Qtr Audits', ...activeIndices.map((i) => String(a.priorAudits[i] || '')), sumActive(a.priorAudits)],
-        ['Prior Qtr Actions', ...activeIndices.map((i) => String(a.priorActions[i] || '')), sumActive(a.priorActions)],
+        ['Prior Qtr Audits', ...realIndices.map((i) => String(a.priorAudits[i] || '')), sumActive(a.priorAudits)],
+        ['Prior Qtr Actions', ...realIndices.map((i) => String(a.priorActions[i] || '')), sumActive(a.priorActions)],
       ] : []),
-      ['Current Qtr Audits', ...activeIndices.map((i) => String(a.currentAudits[i] || '')), sumActive(a.currentAudits)],
-      ['Current Qtr Actions', ...activeIndices.map((i) => String(a.currentActions[i] || '')), sumActive(a.currentActions)],
+      ['Current Qtr Audits', ...realIndices.map((i) => String(a.currentAudits[i] || '')), sumActive(a.currentAudits)],
+      ['Current Qtr Actions', ...realIndices.map((i) => String(a.currentActions[i] || '')), sumActive(a.currentActions)],
     ];
+    tableRowCount = rows.length;
     addBrandedTable(slide, rows, { y: 1.15 });
   }
 
   // Audit & Action Analysis card below table — prefer agent narrative
   const agentAnalysis = getNarrativeText(narratives, 'C2:ANALYSIS');
-  const cardY = 1.15 + 6 * 0.35 + 0.3;
+  const cardY = 1.15 + (tableRowCount + 1) * 0.35 + 0.3;
 
   if (agentAnalysis || a.auditExplanation || a.actionExplanation) {
     addCard(slide, { x: MARGIN, y: cardY, w: CONTENT_W, h: SLIDE_H - cardY - 0.35, borderColor: AA_BLUE, borderSide: 'left' });
@@ -761,15 +819,17 @@ function addTestimonialsSlide(pptx, form, logoColor, narratives) {
   const narrativeLines = getNarrativeLines(narratives, 'D3:TESTIMONIALS');
   let testimonials;
   if (narrativeLines) {
-    // Parse "location | quote | attribution" lines from agent
+    // Parse "location | event | quote | attribution" or "location | quote | attribution" lines from agent
     testimonials = narrativeLines.map((line) => {
       const parts = line.split('|').map(p => p.trim());
-      if (parts.length >= 3) {
-        return { location: parts[0], quote: parts[1], attribution: parts[2] };
+      if (parts.length >= 4) {
+        return { location: parts[0], event: parts[1], quote: parts[2], attribution: parts[3] };
+      } else if (parts.length >= 3) {
+        return { location: parts[0], quote: parts[1], attribution: parts[2], event: '' };
       } else if (parts.length === 2) {
-        return { quote: parts[0], attribution: parts[1], location: '' };
+        return { quote: parts[0], attribution: parts[1], location: '', event: '' };
       }
-      return { quote: line, attribution: '', location: '' };
+      return { quote: line, attribution: '', location: '', event: '' };
     }).filter((t) => t.quote);
   } else {
     testimonials = (form.projects.testimonials || []).filter((t) => t.quote);
@@ -827,9 +887,11 @@ function addTestimonialsSlide(pptx, form, logoColor, narratives) {
       addCard(pageSlide, { x: MARGIN, y: currentY, w: CONTENT_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
 
       const loc = t.location || '';
+      const evt = t.event || '';
+      const locLine = [loc, evt].filter(Boolean).join(' — ');
       let textY = currentY + 0.08;
-      if (loc) {
-        pageSlide.addText(loc.toUpperCase(), {
+      if (locLine) {
+        pageSlide.addText(locLine.toUpperCase(), {
           x: MARGIN + 0.2, y: textY, w: CONTENT_W - 0.4, h: 0.2,
           fontSize: 9, fontFace: FONT, color: AA_BLUE, bold: true,
         });

@@ -304,6 +304,7 @@ const INITIAL = {
   },
   safety: {
     theme: '', keyTips: '', quickReminders: '', whyItMatters: '',
+    safetyInspections: '', goodSaveCount: '', recordableCount: '',
     incidents: [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
     goodSaves: [{ location: '', hazard: '', action: '', notified: '' }],
     incidentDetails: [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],
@@ -335,7 +336,7 @@ const INITIAL = {
   projects: {
     completed: [{ category: 'Renovation/Deep Clean', description: '' }],
     photos: [],
-    testimonials: [{ location: '', quote: '', attribution: '' }],
+    testimonials: [{ location: '', event: '', quote: '', attribution: '' }],
   },
   challenges: {
     items: [{ location: '', challenge: '', action: '' }],
@@ -632,9 +633,16 @@ export default function QBUBuilder() {
           <SectionHeading description="Theme rotates quarterly: winter prep, slip/fall, PPE, heat illness, ergonomics, chemical safety.">Safety Moment</SectionHeading>
           <div className="space-y-4">
             <div><Label>Theme</Label><Input value={form.safety.theme} onChange={(v) => updateSection('safety', { theme: v })} placeholder="e.g., Slip/Fall Prevention" /></div>
-            <div><Label>Key Safety Tips</Label><Area value={form.safety.keyTips} onChange={(v) => updateSection('safety', { keyTips: v })} placeholder="3-4 key tips..." /></div>
-            <div><Label>Quick Reminders</Label><Area value={form.safety.quickReminders} onChange={(v) => updateSection('safety', { quickReminders: v })} placeholder="2-3 quick reminders..." rows={2} /></div>
+            <div><Label>Key Safety Tips</Label><Area value={form.safety.keyTips} onChange={(v) => updateSection('safety', { keyTips: v })} placeholder="4 key tips..." /></div>
+            <div><Label>Quick Reminders</Label><Area value={form.safety.quickReminders} onChange={(v) => updateSection('safety', { quickReminders: v })} placeholder="4 quick reminders..." rows={2} /></div>
             <div><Label>Why It Matters</Label><Area value={form.safety.whyItMatters} onChange={(v) => updateSection('safety', { whyItMatters: v })} placeholder="Why this theme matters..." rows={2} /></div>
+          </div>
+
+          <SectionHeading description="Enter counts for each category. Leave blank to omit from the slide.">Safety Metrics</SectionHeading>
+          <div className="grid grid-cols-3 gap-4">
+            <div><Label>Safety Inspections</Label><Input value={form.safety.safetyInspections} onChange={(v) => updateSection('safety', { safetyInspections: v })} placeholder="Count" /></div>
+            <div><Label>Good Saves</Label><Input value={form.safety.goodSaveCount} onChange={(v) => updateSection('safety', { goodSaveCount: v })} placeholder="Count" /></div>
+            <div><Label>Recordables</Label><Input value={form.safety.recordableCount} onChange={(v) => updateSection('safety', { recordableCount: v })} placeholder="Count" /></div>
           </div>
 
           <SectionHeading description="Enter 0 if none. Add rows for additional locations.">Recordable Incidents by Quarter</SectionHeading>
@@ -906,8 +914,9 @@ export default function QBUBuilder() {
                   <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Testimonial {i + 1}</span>
                   {form.projects.testimonials.length > 1 && <RemoveBtn onClick={() => removeArrayRow('projects', 'testimonials', i)} />}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div><Label>Location</Label><Input value={row.location} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { location: v })} placeholder="Building / campus" /></div>
+                  <div><Label>Event / Context</Label><Input value={row.event} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { event: v })} placeholder="e.g., Fox Event, Career Fair" /></div>
                   <div><Label>Attribution</Label><Input value={row.attribution} onChange={(v) => updateArrayRow('projects', 'testimonials', i, { attribution: v })} placeholder="Name & Title" /></div>
                 </div>
                 <div>
@@ -916,7 +925,7 @@ export default function QBUBuilder() {
                 </div>
               </div>
             ))}
-            <AddRowBtn onClick={() => addArrayRow('projects', 'testimonials', { location: '', quote: '', attribution: '' })} label="Add testimonial" />
+            <AddRowBtn onClick={() => addArrayRow('projects', 'testimonials', { location: '', event: '', quote: '', attribution: '' })} label="Add testimonial" />
           </div>
         </div>
       );

@@ -76,7 +76,7 @@ function concat(rows, rStart, rEnd, c) {
 const PLACEHOLDER_WORDS = new Set([
   'name', 'title', 'location', 'quote', 'attribution', 'attribution (name & title)',
   'name & title', 'hazard', 'action', 'notified', 'challenge', 'notes',
-  'description', 'innovation', 'benefit', 'initiative', 'details', 'month',
+  'description', 'innovation', 'benefit', 'initiative', 'details', 'month', 'event', 'event / context',
   'category', 'client team attendees', 'a&a team attendees', 'a&a team',
   'client team', 'date', 'cause', 'treatment', 'return to work date',
   'corrective action', 'hazard prevented', 'who notified', 'status',
@@ -128,23 +128,29 @@ function parseSafety(wb, warnings) {
   const rows = findSheet(wb, 'Safety');
   if (!rows) { warnings.push('Sheet "Safety" not found — skipping safety section'); return {}; }
 
+  // Safety Metrics (rows 11-13 in new template)
+  const safetyInspections = cell(rows, 11, 1);
+  const goodSaveCount = cell(rows, 12, 1);
+  const recordableCount = cell(rows, 13, 1);
+
+  // Recordable Incidents by Quarter (rows 18-21, shifted +6 from old rows 12-15)
   const incidents = filterPlaceholders(
-    rowObjects(rows, 11, 15, [0, 1, 2, 3, 4], ['location', 'q1', 'q2', 'q3', 'q4']),
+    rowObjects(rows, 18, 22, [0, 1, 2, 3, 4], ['location', 'q1', 'q2', 'q3', 'q4']),
     ['location']
   );
+  // Good Saves (rows 27-32, shifted +6 from old rows 21-26)
   const goodSaves = filterPlaceholders(
-    rowObjects(rows, 20, 26, [0, 1, 2, 3], ['location', 'hazard', 'action', 'notified']),
+    rowObjects(rows, 27, 32, [0, 1, 2, 3], ['location', 'hazard', 'action', 'notified']),
     ['location', 'hazard', 'action', 'notified']
   );
+  // Recordable Incident Details (rows 36-38, shifted +6 from old rows 30-32)
   const incidentDetails = filterPlaceholders(
-    rowObjects(rows, 29, 32, [0, 1, 2, 3, 4], ['location', 'date', 'cause', 'treatment', 'returnDate']),
+    rowObjects(rows, 36, 38, [0, 1, 2, 3, 4], ['location', 'date', 'cause', 'treatment', 'returnDate']),
     ['location', 'date', 'cause', 'treatment', 'returnDate']
   );
 
   // Convert date fields in incident details
   incidentDetails.forEach((row) => {
-    const raw = rows?.[/* find the original row */0]; // can't easily back-reference
-    // Best-effort: if date looks like a serial number, convert it
     const num = parseFloat(row.date);
     if (!isNaN(num) && num > 25000 && num < 80000) {
       const d = new Date((num - 25569) * 86400000);
@@ -164,6 +170,9 @@ function parseSafety(wb, warnings) {
     keyTips: cell(rows, 5, 1),
     quickReminders: cell(rows, 6, 1),
     whyItMatters: cell(rows, 7, 1),
+    safetyInspections,
+    goodSaveCount,
+    recordableCount,
     incidents: incidents.length ? incidents : [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
     goodSaves: goodSaves.length ? goodSaves : [{ location: '', hazard: '', action: '', notified: '' }],
     incidentDetails: incidentDetails.length ? incidentDetails : [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],
@@ -238,14 +247,14 @@ function parseProjects(wb, warnings) {
   if (hasPhotoRefs) warnings.push('Excel contains photo references (rows 17-25) — upload actual photos in the Photos section');
 
   const testimonials = filterPlaceholders(
-    rowObjects(rows, 28, 32, [0, 1, 2], ['location', 'quote', 'attribution']),
+    rowObjects(rows, 28, 32, [0, 1, 2, 3], ['location', 'event', 'quote', 'attribution']),
     ['location', 'quote', 'attribution']
   );
 
   return {
     completed: completed.length ? completed : [{ category: 'Renovation/Deep Clean', description: '' }],
     photos: [],
-    testimonials: testimonials.length ? testimonials : [{ location: '', quote: '', attribution: '' }],
+    testimonials: testimonials.length ? testimonials : [{ location: '', event: '', quote: '', attribution: '' }],
   };
 }
 

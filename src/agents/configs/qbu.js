@@ -89,8 +89,8 @@ Campus names, building names, and specific location references are CRITICAL and 
 ## CONTENT RULES BY SECTION
 
 ### A — Safety
-- A.1: Safety Moment — ALWAYS EXACTLY ONE SLIDE. This is non-negotiable. All safety moment content (tips, reminders, "Why It Matters") MUST fit on a single slide. Do NOT split safety moment content across multiple slides under any circumstances. Rotates quarterly (workplace violence, slip/fall, PPE, heat illness, winter prep, ergonomics, chemical safety). Include Key Safety Tips (3-5 concise bullets), Quick Reminders (3-5 concise bullets), and "Why It Matters" callout (2-3 sentences). Keep bullets short — one line each. When a safety theme is provided, BUILD OUT a complete safety moment for that theme. If specific tips or reminders are provided, incorporate and refine them. If the input is sparse, develop appropriate safety guidance grounded in the named theme — this is standard safety training content, not fabrication. NEVER fabricate incident data, metrics, or claims.
-- A.2: Safety & Compliance — ONE SLIDE. When there are NO recordable incidents for the quarter, clearly state "Zero Recordables This Quarter" and omit the empty recordables table. Same for Good Saves — if none reported, state "No Good Saves Reported" rather than showing an empty structure. When incidents DO exist: recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified. Include the FULL detail for each — do not just say "slip and fall" when the user provided specifics about what happened.
+- A.1: Safety Moment — ALWAYS EXACTLY ONE SLIDE. This is non-negotiable. All safety moment content (tips, reminders, "Why It Matters") MUST fit on a single slide. Do NOT split safety moment content across multiple slides under any circumstances. Rotates quarterly (workplace violence, slip/fall, PPE, heat illness, winter prep, ergonomics, chemical safety). Include EXACTLY 4 Key Safety Tips and EXACTLY 4 Quick Reminders — no more, no fewer. Each tip/reminder must be a SHORT bullet (under 15 words). "Why It Matters" callout: 2-3 sentences max. When a safety theme is provided, BUILD OUT a complete safety moment for that theme. If specific tips or reminders are provided, incorporate and refine them — but always output exactly 4 of each. If the input is sparse, develop appropriate safety guidance grounded in the named theme — this is standard safety training content, not fabrication. NEVER fabricate incident data, metrics, or claims.
+- A.2: Safety & Compliance — ONE SLIDE. When there are NO recordable incidents for the quarter, clearly state "Zero Recordables This Quarter" and omit the empty recordables table. Same for Good Saves — if none reported, state "No Good Saves Reported" rather than showing an empty structure. CRITICAL: Do NOT output template/placeholder text like "Description/Cause" or "Medical Treatment" as incident details — those are field labels, not data. If a recordable detail row has only placeholder text, OMIT it entirely. When incidents DO exist: recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified. Include the FULL detail for each — do not just say "slip and fall" when the user provided specifics about what happened.
 
 ### B — Executive Summary
 - ONE SLIDE. This is critical — keep it concise. Executive Summary MUST fit on exactly 1 slide. Maximum 3 achievements, 2 challenges, 2 innovations. Keep each bullet to 1-2 sentences.
@@ -101,15 +101,15 @@ Campus names, building names, and specific location references are CRITICAL and 
 - When no executive summary data is provided, synthesize one from the other sections (safety record, project completions, operational metrics). This is acceptable — but clearly mark synthesized content and keep it grounded in the data from other sections.
 
 ### C — Operational Performance
-- C.1: Work tickets MUST show YoY comparison with % change. Include a Key Takeaway narrative explaining the numbers (e.g., "11.7% decrease reflects addition of 3rd shift and improved technology adoption"). Events Supported must be listed cleanly — include ALL events provided, formatted as a simple bulleted list. Do NOT split events into a table or spread them across sections.
-- C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies. If prior quarter comparison was removed by the user, only show current quarter data. Do NOT include 'Audit Change Explanation' text in the metrics table — that belongs in the analysis narrative below. If prior quarter audit/action data is all zeros or missing, omit the prior quarter rows from the table and do NOT reference prior quarter performance.
+- C.1: Work tickets MUST show YoY comparison with % change. Include a Key Takeaway narrative explaining the numbers (e.g., "11.7% decrease reflects addition of 3rd shift and improved technology adoption"). Events Supported must be listed cleanly — include ALL events provided, formatted as a simple comma-separated or bulleted list. Keep event names SHORT (under 8 words each). Do NOT split events into a table or spread them across sections. The events callout shares the slide with the work tickets table — keep it compact.
+- C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies. If prior quarter comparison was removed by the user, only show current quarter data. Do NOT include 'Audit Change Explanation' text in the metrics table — that belongs in the analysis narrative below. If prior quarter audit/action data is all zeros or missing, omit the prior quarter rows from the table and do NOT reference prior quarter performance. IMPORTANT: If a location has zero audits, zero actions, and a generic name like "Location 3", OMIT it from the table — it's an unused template placeholder.
 - C.3: Visual data breakdown of corrective action areas with counts. Include a Key Takeaway interpreting what the top corrective action areas indicate about operational focus and priorities.
 - EVERY KPI must have an interpretation sentence AND a next action — raw numbers without context are useless.
 
 ### D — Projects & Satisfaction
 - D.1: Organize by category. Be specific: name buildings, describe what was done. Polish raw project descriptions into concise, professional summaries that convey scope and impact. INCLUDE ALL PROJECTS — do not drop any. Preserve campus/building/location details.
 - D.2: Real photos with captions. Photos tagged as Before/After will be automatically paired on slides. Reference before/after transformations in your D.1 narrative where relevant.
-- D.3: ALL client quotes MUST appear. Keep quotes EXACTLY as provided — only improve framing and organization. Include the event or context where the quote came from (e.g., "Fox Event", "Career Fair"). Attribute by name AND location.
+- D.3: ALL client quotes MUST appear. Keep quotes EXACTLY as provided — only improve framing and organization. Include the event or context where the quote came from (e.g., "Fox Event", "Career Fair") — this is now a dedicated field in the intake data. Attribute by name AND location. In the NARRATIVE block, use the 4-field pipe format: location | event | quote | attribution.
 
 ### E — Challenges
 - Must be RECURRING issues, not one-time incidents.
@@ -127,7 +127,7 @@ Campus names, building names, and specific location references are CRITICAL and 
 
 ### G — Innovation & Roadmap
 - G.1: New tech, equipment, or process improvements. Connect each to an operational benefit. Polish raw innovation descriptions into clear, benefit-driven summaries. INCLUDE ALL innovations — do not drop any. Innovation photos appear on their own slides after G.1.
-- G.2: Concrete next-quarter look-ahead. INCLUDE ALL roadmap initiatives provided — do not drop any. Use ONLY the month values from the Excel intake data — do NOT fabricate or invent month names. If a roadmap item has no month specified, use an empty month field. Use consistent date formatting throughout (all months OR all quarters — do not mix "March" with "Q1"). Polish initiative descriptions and connect the goal statement to operational outcomes. Not vague goals.
+- G.2: Concrete next-quarter look-ahead. INCLUDE ALL roadmap initiatives provided — do not drop any. This is a common failure point: if the user provides 9 initiatives, you MUST output all 9 in G2:ROADMAP. Count them. Use ONLY the month values from the Excel intake data — do NOT fabricate or invent month names. If a roadmap item has no month specified, use an empty month field. Use consistent date formatting throughout (all months OR all quarters — do not mix "March" with "Q1"). Polish initiative descriptions and connect the goal statement to operational outcomes. Not vague goals.
 
 ## EMPTY SECTION HANDLING
 When a section has NO user-provided data:
@@ -165,11 +165,11 @@ For EVERY narrative section, also output a structured NARRATIVE block that the P
 The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and G.2 — output ALL of them:
 
 <!-- NARRATIVE:A1:TIPS -->
-[3-5 actionable safety tips for the given theme, one per line. Incorporate any provided tips. Build out a complete set grounded in the theme.]
+[EXACTLY 4 actionable safety tips for the given theme, one per line. Each tip must be under 15 words. Incorporate any provided tips. Build out a complete set grounded in the theme.]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:A1:REMINDERS -->
-[3-5 quick reminders for the given theme, one per line. Incorporate any provided reminders. Build out a complete set grounded in the theme.]
+[EXACTLY 4 quick reminders for the given theme, one per line. Each reminder must be under 15 words. Incorporate any provided reminders. Build out a complete set grounded in the theme.]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:A1:WHYITMATTERS -->
@@ -210,7 +210,7 @@ The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:D3:TESTIMONIALS -->
-[Polished testimonial entries, one per line, in format: location | exact quote (do not alter the quote text) | attribution name]
+[Polished testimonial entries, one per line, in format: location | event/context | exact quote (do not alter the quote text) | attribution name]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:F1:STRATEGY -->
@@ -322,6 +322,10 @@ function buildQBUPrompt(data) {
     if (s.keyTips) sections.push(`Key Tips:\n${s.keyTips}`);
     if (s.quickReminders) sections.push(`Quick Reminders:\n${s.quickReminders}`);
     if (s.whyItMatters) sections.push(`Why It Matters:\n${s.whyItMatters}`);
+    // Safety Metrics counts
+    if (s.safetyInspections) sections.push(`Number of Safety Inspections: ${s.safetyInspections}`);
+    if (s.goodSaveCount) sections.push(`Number of Good Saves: ${s.goodSaveCount}`);
+    if (s.recordableCount) sections.push(`Number of Recordables: ${s.recordableCount}`);
     if (s.incidents?.filter(r => r.location).length) {
       sections.push(`\nRecordable Incidents by Location/Quarter:`);
       s.incidents.filter(r => r.location).forEach(r =>
@@ -409,9 +413,10 @@ function buildQBUPrompt(data) {
     }
     if (p.testimonials?.filter(r => r.quote).length) {
       sections.push(`\nClient Testimonials:`);
-      p.testimonials.filter(r => r.quote).forEach(r =>
-        sections.push(`  "${r.quote}" — ${r.attribution}, ${r.location}`)
-      );
+      p.testimonials.filter(r => r.quote).forEach(r => {
+        const ctx = [r.location, r.event].filter(Boolean).join(' — ');
+        sections.push(`  "${r.quote}" — ${r.attribution}${ctx ? `, ${ctx}` : ''}`);
+      });
     }
   }
 
@@ -474,7 +479,7 @@ function buildQBUPrompt(data) {
   }
 
   sections.push(`\n=== INSTRUCTIONS ===`);
-  sections.push(`Generate the complete QBU as 16 slides following the section numbering (A.1, A.2, B.1, C.1, C.2, C.3, D.1, D.2, D.3, E.1, F.1, G.1, G.2).`);
+  sections.push(`Generate the complete QBU following the section numbering (A.1, A.2, B.1, C.1, C.2, C.3, D.1, D.2, D.3, E.1, F.1, G.1, G.2). Include only sections with meaningful data — do NOT pad to a fixed slide count.`);
   sections.push(`For each slide, provide:`);
   sections.push(`1. Polished, presentation-ready content (not just the raw data — interpret it, add context)`);
   sections.push(`2. Speaker notes with talking points`);

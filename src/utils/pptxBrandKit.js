@@ -113,21 +113,21 @@ export function addCard(slide, { x, y, w, h, borderColor, borderSide = 'top' }) 
 }
 
 /** Light blue callout box for Key Takeaway sections */
-export function addCalloutBox(slide, { x, y, w, h, label, text }) {
+export function addCalloutBox(slide, { x, y, w, h, label, text, fontSize = 10 }) {
   slide.addShape('rect', {
     x, y, w, h,
     fill: { color: CALLOUT_BG }, rectRadius: 0.05,
   });
   const parts = [];
   if (label) {
-    parts.push({ text: label, options: { bold: true, fontSize: 10, color: DARK } });
+    parts.push({ text: label, options: { bold: true, fontSize, color: DARK } });
   }
   if (text) {
-    parts.push({ text: (label ? ' ' : '') + text, options: { bold: false, fontSize: 10, color: DARK } });
+    parts.push({ text: (label ? ' ' : '') + text, options: { bold: false, fontSize, color: DARK } });
   }
   slide.addText(parts, {
     x: x + 0.2, y: y + 0.1, w: w - 0.4, h: h - 0.2,
-    fontFace: FONT, valign: 'middle', lineSpacingMultiple: 1.3,
+    fontFace: FONT, valign: 'top', lineSpacingMultiple: 1.2,
   });
 }
 
