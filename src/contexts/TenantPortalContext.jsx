@@ -93,9 +93,10 @@ export function TenantPortalProvider({ children }) {
           .order('sort_order'),
         supabase
           .from('tenant_agents')
-          .select('id, agent_key, name, workspace_id, is_active, knowledge_scopes')
+          .select('id, agent_key, name, workspace_id, is_active, knowledge_scopes, source')
           .eq('tenant_id', tenantId)
-          .eq('is_active', true),
+          .eq('is_active', true)
+          .is('deleted_at', null),
         supabase
           .from('tenant_connections')
           .select('*')

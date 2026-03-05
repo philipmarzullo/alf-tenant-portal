@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Bot, Loader2, Plus, Power, PowerOff, Pencil, X, Check,
-  ChevronDown, Sparkles,
+  ChevronDown, Sparkles, Lock, Trash2,
 } from 'lucide-react';
 import { supabase, getFreshToken } from '../../lib/supabase';
 import { useTenantId } from '../../contexts/TenantIdContext';
@@ -33,6 +33,9 @@ export default function AgentFactoryPage() {
   const [editPrompt, setEditPrompt] = useState('');
   const [editScopes, setEditScopes] = useState([]);
 
+  // Delete confirmation
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
   const loadData = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
@@ -47,6 +50,7 @@ export default function AgentFactoryPage() {
         .from('tenant_agents')
         .select('*')
         .eq('tenant_id', tenantId)
+        .is('deleted_at', null)
         .order('created_at'),
     ]);
 
@@ -153,6 +157,28 @@ export default function AgentFactoryPage() {
       await loadData();
     } catch (err) {
       console.error('[agent-factory] save edit error:', err);
+    }
+    setSaving(null);
+  }
+
+  async function handleDelete(agentId) {
+    setSaving(agentId);
+    try {
+      const token = await getFreshToken();
+      const res = await fetch(`${BACKEND_URL}/api/tenant-workspaces/${tenantId}/agents/${agentId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setDeleteConfirmId(null);
+        setExpandedId(null);
+        setAgents(prev => prev.filter(a => a.id !== agentId));
+      } else {
+        const err = await res.json();
+        console.error('[agent-factory] delete error:', err.error);
+      }
+    } catch (err) {
+      console.error('[agent-factory] delete exception:', err);
     }
     setSaving(null);
   }
@@ -329,6 +355,7 @@ export default function AgentFactoryPage() {
             const isExpanded = expandedId === agent.id;
             const isEditing = editingId === agent.id;
             const isSaving = saving === agent.id;
+            const isPlatform = agent.source !== 'tenant';
 
             return (
               <div key={agent.id} className="bg-white rounded-lg border border-gray-200 p-4">
@@ -340,8 +367,20 @@ export default function AgentFactoryPage() {
                     <div className="flex items-center gap-3">
                       <Bot size={16} className={agent.is_active ? 'text-aa-blue' : 'text-gray-400'} />
                       <div>
-                        <div className="text-sm font-medium text-dark-text">
-                          {agent.name}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-dark-text">
+                            {agent.name}
+                          </span>
+                          {isPlatform ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-secondary-text rounded">
+                              <Lock size={9} />
+                              Platform
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-blue-50 text-aa-blue rounded">
+                              Custom
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           {ws && (
@@ -389,8 +428,46 @@ export default function AgentFactoryPage() {
                   </div>
                 </div>
 
-                {/* Expanded detail */}
-                {isExpanded && !isEditing && (
+                {/* Expanded detail — platform agents */}
+                {isExpanded && !isEditing && isPlatform && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 ml-7 space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-secondary-text">Agent Key</span>
+                        <div className="font-mono font-medium text-dark-text mt-0.5">{agent.agent_key}</div>
+                      </div>
+                      <div>
+                        <span className="text-secondary-text">Knowledge Scopes</span>
+                        <div className="font-medium text-dark-text mt-0.5">
+                          {agent.knowledge_scopes?.join(', ') || 'None'}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-secondary-text">Operational Data</span>
+                        <div className="font-medium text-dark-text mt-0.5">
+                          {agent.inject_operational_context ? 'Enabled' : 'Disabled'}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-secondary-text">Model</span>
+                        <div className="font-medium text-dark-text mt-0.5">
+                          {agent.model || 'Default'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3 text-xs text-secondary-text">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Lock size={11} />
+                        <span className="font-medium">Managed by Alf</span>
+                      </div>
+                      This agent is managed by the Alf platform. Its programming is maintained and updated automatically. Customize behavior through Knowledge Base documents and Agent Instructions.
+                    </div>
+                  </div>
+                )}
+
+                {/* Expanded detail — tenant agents */}
+                {isExpanded && !isEditing && !isPlatform && (
                   <div className="mt-3 pt-3 border-t border-gray-100 ml-7 space-y-3">
                     <div className="grid grid-cols-2 gap-4 text-xs">
                       <div>
@@ -428,7 +505,34 @@ export default function AgentFactoryPage() {
                     )}
 
                     {(isAdmin || isSuperAdmin) && (
-                      <div className="flex justify-end">
+                      <div className="flex justify-between">
+                        {deleteConfirmId === agent.id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-red-600">Delete this agent?</span>
+                            <button
+                              onClick={() => handleDelete(agent.id)}
+                              disabled={isSaving}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors disabled:opacity-50"
+                            >
+                              {isSaving ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="px-2.5 py-1 text-xs text-secondary-text hover:text-dark-text transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirmId(agent.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={12} />
+                            Delete Agent
+                          </button>
+                        )}
                         <button
                           onClick={() => startEdit(agent)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-aa-blue hover:bg-blue-50 rounded-lg transition-colors"
@@ -441,7 +545,7 @@ export default function AgentFactoryPage() {
                   </div>
                 )}
 
-                {/* Edit mode */}
+                {/* Edit mode — only for tenant agents */}
                 {isExpanded && isEditing && (
                   <div className="mt-3 pt-3 border-t border-gray-100 ml-7 space-y-3">
                     <div>
