@@ -361,8 +361,8 @@ export default function AgentFactoryPage() {
               <div key={agent.id} className="bg-white rounded-lg border border-gray-200 p-4">
                 <div className="flex items-start justify-between">
                   <button
-                    onClick={() => setExpandedId(isExpanded ? null : agent.id)}
-                    className="flex-1 text-left"
+                    onClick={() => !isPlatform && setExpandedId(isExpanded ? null : agent.id)}
+                    className={`flex-1 text-left ${isPlatform ? 'cursor-default' : ''}`}
                   >
                     <div className="flex items-center gap-3">
                       <Bot size={16} className={agent.is_active ? 'text-aa-blue' : 'text-gray-400'} />
@@ -419,54 +419,18 @@ export default function AgentFactoryPage() {
                         <PowerOff size={14} />
                       )}
                     </button>
-                    <button
-                      onClick={() => setExpandedId(isExpanded ? null : agent.id)}
-                      className="p-1 text-secondary-text hover:text-dark-text transition-colors"
-                    >
-                      <ChevronDown size={14} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                    </button>
+                    {!isPlatform && (
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : agent.id)}
+                        className="p-1 text-secondary-text hover:text-dark-text transition-colors"
+                      >
+                        <ChevronDown size={14} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Expanded detail — platform agents */}
-                {isExpanded && !isEditing && isPlatform && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 ml-7 space-y-3">
-                    <div className="grid grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <span className="text-secondary-text">Agent Key</span>
-                        <div className="font-mono font-medium text-dark-text mt-0.5">{agent.agent_key}</div>
-                      </div>
-                      <div>
-                        <span className="text-secondary-text">Knowledge Scopes</span>
-                        <div className="font-medium text-dark-text mt-0.5">
-                          {agent.knowledge_scopes?.join(', ') || 'None'}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-secondary-text">Operational Data</span>
-                        <div className="font-medium text-dark-text mt-0.5">
-                          {agent.inject_operational_context ? 'Enabled' : 'Disabled'}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-secondary-text">Model</span>
-                        <div className="font-medium text-dark-text mt-0.5">
-                          {agent.model || 'Default'}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-3 text-xs text-secondary-text">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Lock size={11} />
-                        <span className="font-medium">Managed by Alf</span>
-                      </div>
-                      This agent is managed by the Alf platform. Its programming is maintained and updated automatically. Customize behavior through Knowledge Base documents and Agent Instructions.
-                    </div>
-                  </div>
-                )}
-
-                {/* Expanded detail — tenant agents */}
+                {/* Expanded detail — tenant agents only */}
                 {isExpanded && !isEditing && !isPlatform && (
                   <div className="mt-3 pt-3 border-t border-gray-100 ml-7 space-y-3">
                     <div className="grid grid-cols-2 gap-4 text-xs">
