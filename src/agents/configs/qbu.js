@@ -63,7 +63,7 @@ If a document contradicts structured form data, flag the discrepancy.
 Each section of the QBU MUST fit on its designated slide(s). The PPTX generator maps sections to fixed slides. If your content is too verbose, it overflows and creates layout problems.
 - **A.1 Safety Moment: ONE slide.** Combine all tips, reminders, and "Why It Matters" into concise content. Do NOT separate each tip onto its own section.
 - **A.2 Safety & Compliance: ONE slide.** Recordables table + good saves + incident details all on one slide.
-- **B.1 Executive Summary: ONE slide.** Keep achievements to 3-5 concise bullets, challenges to 2-3, innovations to 2-3. Each bullet should be 1-2 lines max.
+- **B.1 Executive Summary: ONE slide.** Maximum 3 achievements, 2 challenges, 2 innovations. Each bullet should be 1-2 sentences max.
 - **E.1 Challenges: ONE slide.** If many challenges, prioritize the most impactful and condense language.
 - **F.1 Financial: ONE slide.** Keep strategy notes to 3-4 concise bullets.
 
@@ -93,16 +93,16 @@ Campus names, building names, and specific location references are CRITICAL and 
 - A.2: Safety & Compliance — ONE SLIDE. When there are NO recordable incidents for the quarter, clearly state "Zero Recordables This Quarter" and omit the empty recordables table. Same for Good Saves — if none reported, state "No Good Saves Reported" rather than showing an empty structure. When incidents DO exist: recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified. Include the FULL detail for each — do not just say "slip and fall" when the user provided specifics about what happened.
 
 ### B — Executive Summary
-- ONE SLIDE. This is critical — keep it concise.
-- Key Achievements (3–5): concrete accomplishments with specifics — name the building, cite the metric, specify the timeframe. One line per achievement.
-- Strategic Challenges (2–3): be HONEST — spin undermines trust. If something went wrong, say so directly.
-- Innovation Milestones (2–3): tech deployments, process improvements, equipment additions.
+- ONE SLIDE. This is critical — keep it concise. Executive Summary MUST fit on exactly 1 slide. Maximum 3 achievements, 2 challenges, 2 innovations. Keep each bullet to 1-2 sentences.
+- Key Achievements (3): concrete accomplishments with specifics — name the building, cite the metric, specify the timeframe. One line per achievement.
+- Strategic Challenges (2): be HONEST — spin undermines trust. If something went wrong, say so directly.
+- Innovation Milestones (2): tech deployments, process improvements, equipment additions.
 - This slide sets the narrative for the entire QBU.
 - When no executive summary data is provided, synthesize one from the other sections (safety record, project completions, operational metrics). This is acceptable — but clearly mark synthesized content and keep it grounded in the data from other sections.
 
 ### C — Operational Performance
 - C.1: Work tickets MUST show YoY comparison with % change. Include a Key Takeaway narrative explaining the numbers (e.g., "11.7% decrease reflects addition of 3rd shift and improved technology adoption"). Events Supported must be listed cleanly — include ALL events provided, formatted as a simple bulleted list. Do NOT split events into a table or spread them across sections.
-- C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies. If prior quarter comparison was removed by the user, only show current quarter data.
+- C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies. If prior quarter comparison was removed by the user, only show current quarter data. Do NOT include 'Audit Change Explanation' text in the metrics table — that belongs in the analysis narrative below. If prior quarter audit/action data is all zeros or missing, omit the prior quarter rows from the table and do NOT reference prior quarter performance.
 - C.3: Visual data breakdown of corrective action areas with counts. Include a Key Takeaway interpreting what the top corrective action areas indicate about operational focus and priorities.
 - EVERY KPI must have an interpretation sentence AND a next action — raw numbers without context are useless.
 
@@ -127,7 +127,7 @@ Campus names, building names, and specific location references are CRITICAL and 
 
 ### G — Innovation & Roadmap
 - G.1: New tech, equipment, or process improvements. Connect each to an operational benefit. Polish raw innovation descriptions into clear, benefit-driven summaries. INCLUDE ALL innovations — do not drop any. Innovation photos appear on their own slides after G.1.
-- G.2: Concrete next-quarter look-ahead. INCLUDE ALL roadmap initiatives provided — do not drop any. Use consistent date formatting throughout (all months OR all quarters — do not mix "March" with "Q1"). Polish initiative descriptions and connect the goal statement to operational outcomes. Not vague goals.
+- G.2: Concrete next-quarter look-ahead. INCLUDE ALL roadmap initiatives provided — do not drop any. Use ONLY the month values from the Excel intake data — do NOT fabricate or invent month names. If a roadmap item has no month specified, use an empty month field. Use consistent date formatting throughout (all months OR all quarters — do not mix "March" with "Q1"). Polish initiative descriptions and connect the goal statement to operational outcomes. Not vague goals.
 
 ## EMPTY SECTION HANDLING
 When a section has NO user-provided data:

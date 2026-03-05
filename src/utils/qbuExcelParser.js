@@ -109,8 +109,8 @@ function parseCover(wb, warnings) {
   const rows = findSheet(wb, 'Cover & Intros');
   if (!rows) { warnings.push('Sheet "Cover & Intros" not found — skipping cover section'); return {}; }
 
-  const aaTeam = filterTeam(rowObjects(rows, 11, 19, [0, 1], ['name', 'title']));
-  const clientTeam = filterTeam(rowObjects(rows, 21, 27, [0, 1], ['name', 'title']));
+  const aaTeam = filterTeam(rowObjects(rows, 11, 25, [0, 1], ['name', 'title']));
+  const clientTeam = filterTeam(rowObjects(rows, 27, 40, [0, 1], ['name', 'title']));
 
   return {
     clientName: cell(rows, 3, 1),
@@ -182,7 +182,7 @@ function parseWorkTickets(wb, warnings) {
   return {
     locations: locations.length ? locations : [{ location: '', priorYear: '', currentYear: '' }],
     keyTakeaway: cell(rows, 11, 1),
-    eventsSupported: concat(rows, 14, 15, 1),
+    eventsSupported: concat(rows, 14, 30, 1),
   };
 }
 
@@ -296,7 +296,7 @@ function parseRoadmap(wb, warnings) {
     ['innovation', 'description', 'benefit']
   );
   const schedule = filterPlaceholders(
-    rowObjects(rows, 15, 17, [0, 1, 2], ['month', 'initiative', 'details']),
+    rowObjects(rows, 15, 30, [0, 1, 2], ['month', 'initiative', 'details']),
     ['month', 'initiative', 'details']
   );
 

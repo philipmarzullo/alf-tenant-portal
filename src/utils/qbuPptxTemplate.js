@@ -254,24 +254,11 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
     { title: 'INNOVATION MILESTONES', items: getNarrativeLines(narratives, 'B1:INNOVATIONS') || (e.innovations || []).filter(Boolean), color: GREEN },
   ];
 
-  // Estimate tallest column bullet height at 10pt
+  // Always render on a single slide — reduce font size to fit if needed
   const maxBulletH = Math.max(...cols.map((c) => estimateBulletH(c.items, COL3_W - 0.5)));
-  const fitsOnOne = maxBulletH <= availBulletH;
-
-  // Determine how many items per column fit on one slide at 10pt
-  // Use per-item height estimates to find the split point
-  function itemsThatFit(items) {
-    let h = 0;
-    for (let i = 0; i < items.length; i++) {
-      const itemH = estimateBulletH([items[i]], COL3_W - 0.5);
-      if (h + itemH > availBulletH) return i;
-      h += itemH;
-    }
-    return items.length;
-  }
-
-  // Mild tightening: use 9pt only if just barely overflowing (within 15%)
-  const bulletFontSize = !fitsOnOne && maxBulletH <= availBulletH * 1.15 ? 9 : 10;
+  let bulletFontSize = 10;
+  if (maxBulletH > availBulletH) bulletFontSize = 9;
+  if (maxBulletH > availBulletH * 1.3) bulletFontSize = 8;
 
   /** Render one Executive Summary slide with the given column items */
   function renderExecSlide(slideTitle, colItems) {
@@ -304,25 +291,7 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
     addLogoBottomRight(slide, logoColor);
   }
 
-  if (fitsOnOne || bulletFontSize === 9) {
-    // Everything fits on one slide (at 10pt or mild 9pt tightening)
-    renderExecSlide('Executive Summary', cols);
-  } else {
-    // Split: first slide shows items that fit, second slide shows the rest
-    const firstSliceCols = cols.map((col) => {
-      const count = itemsThatFit(col.items);
-      return { ...col, items: col.items.slice(0, count) };
-    });
-    const remainderCols = cols.map((col, ci) => {
-      const count = itemsThatFit(col.items);
-      return { ...col, items: col.items.slice(count) };
-    }).filter((col) => col.items.length > 0);
-
-    renderExecSlide('Executive Summary', firstSliceCols);
-    if (remainderCols.length) {
-      renderExecSlide('Executive Summary (cont.)', remainderCols);
-    }
-  }
+  renderExecSlide('Executive Summary', cols);
 }
 
 // ── Slide 6: C.1 Operational Performance — Work Tickets ─
@@ -368,12 +337,15 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
     });
   }
 
-  // Events Supported callout
+  // Events Supported callout — dynamic height based on content
   if (form.workTickets.eventsSupported) {
+    const evText = form.workTickets.eventsSupported;
+    const lines = evText.split('\n').length;
+    const evH = Math.max(0.85, Math.min(lines * 0.22 + 0.2, 2.5));
     const evY = takeawayText ? tableBottom + 1.0 : tableBottom;
     addCalloutBox(slide, {
-      x: MARGIN, y: evY, w: CONTENT_W, h: 0.85,
-      label: 'Events Supported:', text: form.workTickets.eventsSupported,
+      x: MARGIN, y: evY, w: CONTENT_W, h: evH,
+      label: 'Events Supported:', text: evText,
     });
   }
 
@@ -395,10 +367,13 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
   if (names.length) {
     const sumActive = (arr) => String(activeIndices.reduce((s, i) => s + (Number(arr[i]) || 0), 0));
     const headerRow = ['', ...names, 'Total'];
+    const hasPriorData = activeIndices.some(i => Number(a.priorAudits[i]) > 0 || Number(a.priorActions[i]) > 0);
     const rows = [
       headerRow,
-      ['Prior Qtr Audits', ...activeIndices.map((i) => String(a.priorAudits[i] || '')), sumActive(a.priorAudits)],
-      ['Prior Qtr Actions', ...activeIndices.map((i) => String(a.priorActions[i] || '')), sumActive(a.priorActions)],
+      ...(hasPriorData ? [
+        ['Prior Qtr Audits', ...activeIndices.map((i) => String(a.priorAudits[i] || '')), sumActive(a.priorAudits)],
+        ['Prior Qtr Actions', ...activeIndices.map((i) => String(a.priorActions[i] || '')), sumActive(a.priorActions)],
+      ] : []),
       ['Current Qtr Audits', ...activeIndices.map((i) => String(a.currentAudits[i] || '')), sumActive(a.currentAudits)],
       ['Current Qtr Actions', ...activeIndices.map((i) => String(a.currentActions[i] || '')), sumActive(a.currentActions)],
     ];
@@ -935,23 +910,37 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
   const headerPad = 0.8; // card header + padding above bullets
   const availBulletH = maxCardH - headerPad;
 
-  const batches = [];
-  let batchStart = 0;
-  let batchH = 0;
-  for (let i = 0; i < allChallengeTexts.length; i++) {
-    const chH = estimateBulletH([allChallengeTexts[i]], COL2_W - 0.5);
+  // Try to fit all on one slide first — allow mild tightening (15% overflow)
+  const totalH = allChallengeTexts.reduce((sum, t, i) => {
+    const chH = estimateBulletH([t], COL2_W - 0.5);
     const acH = estimateBulletH([allActionTexts[i]], COL2_W - 0.5);
-    const itemH = Math.max(chH, acH);
-    if (i > batchStart && batchH + itemH > availBulletH) {
-      batches.push({ start: batchStart, end: i });
-      batchStart = i;
-      batchH = itemH;
-    } else {
-      batchH += itemH;
+    return sum + Math.max(chH, acH);
+  }, 0);
+  const fitsOnOne = totalH <= availBulletH * 1.15;
+
+  const batches = [];
+  if (fitsOnOne) {
+    // All items fit on one slide
+    batches.push({ start: 0, end: allChallengeTexts.length });
+  } else {
+    // Split across slides
+    let batchStart = 0;
+    let batchH = 0;
+    for (let i = 0; i < allChallengeTexts.length; i++) {
+      const chH = estimateBulletH([allChallengeTexts[i]], COL2_W - 0.5);
+      const acH = estimateBulletH([allActionTexts[i]], COL2_W - 0.5);
+      const itemH = Math.max(chH, acH);
+      if (i > batchStart && batchH + itemH > availBulletH) {
+        batches.push({ start: batchStart, end: i });
+        batchStart = i;
+        batchH = itemH;
+      } else {
+        batchH += itemH;
+      }
     }
-  }
-  if (batchStart < allChallengeTexts.length) {
-    batches.push({ start: batchStart, end: allChallengeTexts.length });
+    if (batchStart < allChallengeTexts.length) {
+      batches.push({ start: batchStart, end: allChallengeTexts.length });
+    }
   }
   if (!batches.length) batches.push({ start: 0, end: 0 });
 
@@ -1059,14 +1048,8 @@ function addFinancialSlide(pptx, form, logoColor, narratives) {
     ['91+ days', fmtCurrency(f.bucket91)],
   ];
 
-  // Color-code amounts
-  const getAmountColor = (val) => {
-    const num = parseFloat(String(val).replace(/[$,]/g, ''));
-    if (!num || num === 0) return GREEN;
-    if (num > 50000) return AA_RED;
-    if (num > 10000) return AMBER;
-    return GREEN;
-  };
+  // Color by aging bucket: 1-30 green, 31-60 green, 61-90 amber, 91+ red
+  const bucketColors = [GREEN, GREEN, AMBER, AA_RED];
 
   const agingRows = bucketData.map((row, ri) =>
     row.map((cell, ci) => ({
@@ -1075,7 +1058,7 @@ function addFinancialSlide(pptx, form, logoColor, narratives) {
         ? { bold: true, fontSize: 9, fontFace: FONT, color: DARK, align: ci === 0 ? 'left' : 'right' }
         : {
             fontSize: 10, fontFace: FONT, align: ci === 0 ? 'left' : 'right',
-            color: ci === 1 ? getAmountColor(cell) : DARK,
+            color: ci === 1 ? bucketColors[ri - 1] : DARK,
             bold: ci === 1,
           },
     }))
