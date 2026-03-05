@@ -99,8 +99,10 @@ function parseSlides(output) {
     .filter(Boolean);
 }
 
-function SlideCard({ slide, isEditing, onEdit, onCancel, slideInput, onInputChange, onRefine, refining }) {
+function SlideCard({ slide, isEditing, onEdit, onCancel, slideInput, onInputChange, onRefine, refining, onManualSave }) {
   const [expanded, setExpanded] = useState(false);
+  const [manualEditing, setManualEditing] = useState(false);
+  const [manualText, setManualText] = useState('');
 
   const displayContent = slide.raw
     .replace(/^\*\*SLIDE \d+:.*\*\*\n?/, '')
@@ -108,11 +110,28 @@ function SlideCard({ slide, isEditing, onEdit, onCancel, slideInput, onInputChan
     .replace(/<!-- \/NARRATIVE -->\n?/g, '')
     .trim();
 
+  const startManualEdit = (e) => {
+    e.stopPropagation();
+    setManualText(slide.raw);
+    setManualEditing(true);
+    setExpanded(true);
+  };
+
+  const saveManualEdit = () => {
+    onManualSave(slide.number, manualText);
+    setManualEditing(false);
+  };
+
+  const cancelManualEdit = () => {
+    setManualEditing(false);
+    setManualText('');
+  };
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => !manualEditing && setExpanded(!expanded)}
       >
         <span className="px-2 py-0.5 text-[10px] font-bold bg-aa-blue/10 text-aa-blue rounded">
           {slide.number}
@@ -128,45 +147,81 @@ function SlideCard({ slide, isEditing, onEdit, onCancel, slideInput, onInputChan
 
       {expanded && (
         <div className="border-t border-gray-100">
-          <div className="px-4 py-3 bg-gray-50 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-[400px] overflow-y-auto">
-            {displayContent}
-          </div>
-
-          <div className="px-4 py-3 border-t border-gray-100">
-            {isEditing ? (
-              <div className="flex gap-2">
-                <input
-                  value={slideInput}
-                  onChange={(e) => onInputChange(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !refining && onRefine()}
-                  placeholder="What should change on this slide?"
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
-                  autoFocus
-                  disabled={refining}
-                />
+          {manualEditing ? (
+            <div className="px-4 py-3">
+              <textarea
+                value={manualText}
+                onChange={(e) => setManualText(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue font-mono leading-relaxed resize-none"
+                rows={Math.min(manualText.split('\n').length + 2, 20)}
+                autoFocus
+              />
+              <div className="flex items-center gap-2 mt-2">
                 <button
-                  onClick={onRefine}
-                  disabled={!slideInput.trim() || refining}
-                  className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
+                  onClick={saveManualEdit}
+                  className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 transition-colors"
                 >
-                  {refining ? 'Updating...' : 'Update'}
+                  Save
                 </button>
                 <button
-                  onClick={onCancel}
+                  onClick={cancelManualEdit}
                   className="px-3 py-2 text-sm font-medium text-secondary-text bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
                 >
                   Cancel
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                className="inline-flex items-center gap-1 text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors"
-              >
-                <Pencil size={11} /> Edit with AI
-              </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="px-4 py-3 bg-gray-50 text-sm text-dark-text leading-relaxed whitespace-pre-wrap max-h-[400px] overflow-y-auto">
+              {displayContent}
+            </div>
+          )}
+
+          {!manualEditing && (
+            <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-3">
+              {isEditing ? (
+                <div className="flex gap-2 flex-1">
+                  <input
+                    value={slideInput}
+                    onChange={(e) => onInputChange(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !refining && onRefine()}
+                    placeholder="What should change on this slide?"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
+                    autoFocus
+                    disabled={refining}
+                  />
+                  <button
+                    onClick={onRefine}
+                    disabled={!slideInput.trim() || refining}
+                    className="px-4 py-2 text-sm font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
+                  >
+                    {refining ? 'Updating...' : 'Update'}
+                  </button>
+                  <button
+                    onClick={onCancel}
+                    className="px-3 py-2 text-sm font-medium text-secondary-text bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors"
+                  >
+                    <Bot size={11} /> Edit with AI
+                  </button>
+                  <button
+                    onClick={startManualEdit}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-secondary-text hover:text-dark-text transition-colors"
+                  >
+                    <Pencil size={11} /> Edit manually
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1171,6 +1226,17 @@ export default function QBUBuilder() {
     }
   };
 
+  const handleManualSave = async (slideNumber, newRaw) => {
+    const updated = slides.map(s => s.number === slideNumber ? { ...s, raw: newRaw.trim() } : s);
+    const newResult = updated.map(s => s.raw).join('\n\n---\n\n');
+    setResult(newResult);
+    setSlides(parseSlides(newResult));
+    if (currentEntryId) {
+      await updateQBU(currentEntryId, { agentOutput: newResult });
+    }
+    toast('Slide saved');
+  };
+
   // ── Render ───────────────────────
 
   return (
@@ -1620,15 +1686,6 @@ export default function QBUBuilder() {
               Generated Review — {slides.length} Slide{slides.length !== 1 ? 's' : ''}
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                  setActiveTab('cover');
-                }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-secondary-text bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                <ChevronUp size={12} /> Edit Form
-              </button>
               <AgentActionButton label="Regenerate" variant="secondary" onClick={handleGenerate} />
               <button onClick={handleDownload} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 transition-colors">
                 <Download size={12} /> Download PPTX
@@ -1650,6 +1707,7 @@ export default function QBUBuilder() {
                   onInputChange={setSlideInput}
                   onRefine={() => handleSlideRefine(slide.number)}
                   refining={refiningSlide}
+                  onManualSave={handleManualSave}
                 />
               ))}
             </div>
