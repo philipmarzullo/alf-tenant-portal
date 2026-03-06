@@ -96,15 +96,19 @@ Each section maps to a fixed slide. Use the SLIDE CANVAS AWARENESS dimensions ab
 - **F.1 Financial: ONE slide.** Aging table + strategy card. Keep strategy to 3-4 bullets, each under 50 chars.
 
 ## ABSOLUTE DATA INTEGRITY RULE
-**You may NEVER remove, omit, or drop user-provided data.** This is the most critical rule:
+**You may NEVER remove, omit, abbreviate, summarize, or drop user-provided data.** This is the most critical rule:
 - Every completed project the user entered MUST appear in D.1. You can polish the wording, but you cannot drop items.
 - Every testimonial MUST appear in D.3 with the EXACT quote text and full attribution (name AND event/location).
 - Every challenge and action MUST appear in E.1.
 - Every roadmap initiative MUST appear in G.2.
 - Every innovation highlight MUST appear in G.1.
 - Every event in "Events Supported" MUST appear in C.1.
+- Every good save MUST appear with its full detail — location, hazard, action, who was notified.
+- Every recordable incident MUST appear with its full detail — location, date, cause, treatment, return-to-work date.
 - If content is too long for one slide, the PPTX generator will handle overflow — but you must include ALL items.
 - You may condense wording and polish language, but the COUNT of items in your output must match the COUNT provided.
+- Do NOT collapse multiple rows into a single summary (e.g., "Multiple locations reported zero incidents" instead of listing each location). Output EVERY row individually.
+- Do NOT replace specific data with generalizations (e.g., "Various corrective actions were taken" instead of listing each one). The data is the data — output it.
 
 ## LOCATION DETAIL PRESERVATION
 Campus names, building names, and specific location references are CRITICAL and must ALWAYS be preserved:
