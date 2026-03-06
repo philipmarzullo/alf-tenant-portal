@@ -3,6 +3,7 @@ import { getTenantId } from '../agents/api';
 
 const LS_KEY = 'aa_qbu_history';
 const LS_MIGRATED_KEY = 'aa_qbu_migrated_to_supabase';
+const BUCKET = 'qbu-files';
 
 /** One-time: migrate any localStorage QBU entries into Supabase tool_submissions */
 async function migrateLocalStorage(tenantId) {
@@ -70,58 +71,138 @@ export async function getQBUHistory() {
     status: row.status || 'complete',
     formData: row.form_data || {},
     agentOutput: row.agent_output || '',
+    deckPath: row.deck_path || null,
   }));
 }
 
-/** Convert a File to base64 data URL */
-function fileToBase64(file) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
+// ── Photo upload helpers ─────────────────────────────────
+
+/** Upload a single photo File to Supabase Storage, return the storage path */
+async function uploadPhotoFile(tenantId, submissionId, file, index) {
+  // Sanitize filename — keep extension, replace non-alphanumeric chars
+  const ext = file.name?.split('.').pop() || 'jpg';
+  const safeName = `photo_${index}.${ext}`;
+  const path = `${tenantId}/photos/${submissionId}/${safeName}`;
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { contentType: file.type || 'image/jpeg', upsert: true });
+
+  if (error) {
+    console.error(`Failed to upload photo ${safeName}:`, error);
+    return null;
+  }
+  return path;
 }
 
-/** Convert photo array — preserve base64 so any user can generate the PPTX */
-async function serializePhotos(photos) {
+/** Upload photos to storage, return array with storagePath instead of base64 */
+async function uploadPhotos(tenantId, submissionId, photos) {
   return Promise.all(
-    (photos || []).map(async (p) => {
-      const base64 = p.file instanceof File ? await fileToBase64(p.file) : (p.base64 || null);
+    (photos || []).map(async (p, i) => {
+      let storagePath = p.storagePath || null;
+
+      // Upload File objects to storage
+      if (p.file instanceof File) {
+        storagePath = await uploadPhotoFile(tenantId, submissionId, p.file, i);
+      }
+      // If it's a legacy base64 entry with no storagePath, keep the base64
+      // (old entries that haven't been re-uploaded)
+      const base64 = (!storagePath && p.base64) ? p.base64 : undefined;
+
       return {
         name: p.name,
         caption: p.caption,
         location: p.location,
         type: p.type || 'general',
-        base64,
+        ...(storagePath ? { storagePath } : {}),
+        ...(base64 ? { base64 } : {}),
       };
     })
   );
 }
 
+/** Get a signed URL for a photo stored in Supabase Storage */
+export async function getPhotoSignedUrl(storagePath) {
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(storagePath, 3600); // 1 hour expiry
+  if (error) {
+    console.error('Failed to create signed URL:', error);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+/** Download a stored photo as base64 data URL (for PPTX generation) */
+export async function getPhotoAsBase64(storagePath) {
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .download(storagePath);
+  if (error) {
+    console.error('Failed to download photo:', error);
+    return null;
+  }
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(data);
+  });
+}
+
+// ── PPTX deck storage ────────────────────────────────────
+
+/** Upload a PPTX blob to storage, return the storage path */
+export async function uploadDeck(tenantId, filename, blob) {
+  const path = `${tenantId}/decks/${filename}.pptx`;
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, blob, {
+      contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      upsert: true,
+    });
+  if (error) {
+    console.error('Failed to upload deck:', error);
+    return null;
+  }
+  return path;
+}
+
+/** Get a signed download URL for a stored deck */
+export async function getDeckSignedUrl(deckPath) {
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(deckPath, 3600);
+  if (error) {
+    console.error('Failed to create deck signed URL:', error);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+/** Save deck_path to the tool_submissions row */
+export async function saveDeckPath(submissionId, deckPath) {
+  const { error } = await supabase
+    .from('tool_submissions')
+    .update({ deck_path: deckPath })
+    .eq('id', submissionId);
+  if (error) console.error('Failed to save deck_path:', error);
+}
+
+// ── Main save/load ───────────────────────────────────────
+
 export async function saveQBU({ client, quarter, jobName, formData, agentOutput }) {
   const tenantId = getTenantId();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Serialize photos to base64 so any user can download the PPTX with images
-  const [projectPhotos, roadmapPhotos] = await Promise.all([
-    serializePhotos(formData.projects?.photos),
-    serializePhotos(formData.roadmap?.photos),
-  ]);
-
+  // Step 1: Insert row without photos to get the submission ID
   const row = {
     tenant_id: tenantId,
     tool_key: 'qbu',
     title: `${client} — ${quarter}`,
     form_data: {
       ...formData,
-      projects: {
-        ...formData.projects,
-        photos: projectPhotos,
-      },
-      roadmap: {
-        ...formData.roadmap,
-        photos: roadmapPhotos,
-      },
+      projects: { ...formData.projects, photos: [] },
+      roadmap: { ...formData.roadmap, photos: [] },
     },
     agent_output: agentOutput,
     status: 'complete',
@@ -136,19 +217,38 @@ export async function saveQBU({ client, quarter, jobName, formData, agentOutput 
 
   if (error) {
     console.error('Failed to save QBU:', error);
-    // Fallback: return a local-only entry so the UI doesn't break
     return { id: crypto.randomUUID(), client, quarter, jobName, createdAt: new Date().toISOString(), status: 'complete', formData: row.form_data, agentOutput };
   }
 
+  const submissionId = data.id;
+
+  // Step 2: Upload photos to storage and update the row with storage paths
+  const [projectPhotos, roadmapPhotos] = await Promise.all([
+    uploadPhotos(tenantId, submissionId, formData.projects?.photos),
+    uploadPhotos(tenantId, submissionId, formData.roadmap?.photos),
+  ]);
+
+  const updatedFormData = {
+    ...formData,
+    projects: { ...formData.projects, photos: projectPhotos },
+    roadmap: { ...formData.roadmap, photos: roadmapPhotos },
+  };
+
+  await supabase
+    .from('tool_submissions')
+    .update({ form_data: updatedFormData })
+    .eq('id', submissionId);
+
   return {
-    id: data.id,
+    id: submissionId,
     client,
     quarter,
     jobName,
     createdAt: data.created_at,
     status: data.status,
-    formData: data.form_data,
+    formData: updatedFormData,
     agentOutput: data.agent_output,
+    deckPath: null,
   };
 }
 
@@ -170,6 +270,7 @@ export async function getQBUById(id) {
     status: data.status || 'complete',
     formData: data.form_data || {},
     agentOutput: data.agent_output || '',
+    deckPath: data.deck_path || null,
   };
 }
 
@@ -189,6 +290,30 @@ export async function updateQBU(id, { agentOutput }) {
 }
 
 export async function deleteQBU(id) {
+  // Also clean up storage files for this submission
+  const tenantId = getTenantId();
+  if (tenantId) {
+    // Delete photos folder
+    const { data: photoFiles } = await supabase.storage
+      .from(BUCKET)
+      .list(`${tenantId}/photos/${id}`);
+    if (photoFiles?.length) {
+      await supabase.storage
+        .from(BUCKET)
+        .remove(photoFiles.map(f => `${tenantId}/photos/${id}/${f.name}`));
+    }
+  }
+
+  // Check for deck_path and delete the deck too
+  const { data: row } = await supabase
+    .from('tool_submissions')
+    .select('deck_path')
+    .eq('id', id)
+    .single();
+  if (row?.deck_path) {
+    await supabase.storage.from(BUCKET).remove([row.deck_path]);
+  }
+
   const { error } = await supabase
     .from('tool_submissions')
     .delete()

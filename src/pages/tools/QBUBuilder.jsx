@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { FileBarChart, Plus, Trash2, Upload, X, Image, ChevronLeft, ChevronRight, Download, Clock, RotateCcw, FileText, ChevronDown, ChevronUp, FileSpreadsheet, AlertTriangle, Bot, Database, Pencil } from 'lucide-react';
+import { FileBarChart, Plus, Trash2, Upload, X, Image, ChevronLeft, ChevronRight, Download, Clock, RotateCcw, FileText, ChevronDown, ChevronUp, FileSpreadsheet, AlertTriangle, Bot, Database, Pencil, CloudUpload } from 'lucide-react';
 import { extractText } from '../../utils/docExtractor';
 import { parseQBUExcel } from '../../utils/qbuExcelParser';
 import AgentActionButton from '../../components/shared/AgentActionButton';
 import StatusBadge from '../../components/shared/StatusBadge';
 import { useToast } from '../../components/shared/ToastProvider';
-import { callAgent } from '../../agents/api';
-import { getQBUHistory, saveQBU, getQBUById, deleteQBU, updateQBU } from '../../data/qbuHistory';
+import { callAgent, getTenantId } from '../../agents/api';
+import { getQBUHistory, saveQBU, getQBUById, deleteQBU, updateQBU, getDeckSignedUrl } from '../../data/qbuHistory';
 import { generateQBUPptx } from '../../utils/qbuPptxTemplate';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import { useBranding } from '../../contexts/BrandingContext';
@@ -1156,7 +1156,14 @@ export default function QBUBuilder() {
   const handleDownload = async () => {
     if (!result) { toast('Generate review first', 'error'); return; }
     toast('Building PowerPoint...');
-    await generateQBUPptx(form, result, brand);
+    const { deckPath } = await generateQBUPptx(form, result, brand, {
+      tenantId: getTenantId(),
+      submissionId: currentEntryId,
+    });
+    if (deckPath && currentEntryId) {
+      // Update local history with deck path
+      setHistory(prev => prev.map(r => r.id === currentEntryId ? { ...r, deckPath } : r));
+    }
     toast('PPTX downloaded');
   };
 
@@ -1177,8 +1184,31 @@ export default function QBUBuilder() {
   const handleRedownload = async (id) => {
     const entry = await getQBUById(id);
     if (!entry) return;
+
+    // If deck is stored in Supabase Storage, download directly
+    if (entry.deckPath) {
+      toast('Downloading...');
+      const url = await getDeckSignedUrl(entry.deckPath);
+      if (url) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = entry.deckPath.split('/').pop() || 'QBU.pptx';
+        a.click();
+        toast('PPTX downloaded');
+        return;
+      }
+      // Fall through to regeneration if signed URL fails
+    }
+
+    // Fallback: regenerate the PPTX (for old entries without stored deck)
     toast('Building PowerPoint...');
-    await generateQBUPptx(entry.formData, entry.agentOutput, brand);
+    const { deckPath } = await generateQBUPptx(entry.formData, entry.agentOutput, brand, {
+      tenantId: getTenantId(),
+      submissionId: id,
+    });
+    if (deckPath) {
+      setHistory(prev => prev.map(r => r.id === id ? { ...r, deckPath } : r));
+    }
     toast('PPTX downloaded');
   };
 
@@ -1757,6 +1787,16 @@ export default function QBUBuilder() {
 
       {/* Recent Reviews */}
       <h2 className="text-sm font-semibold text-secondary-text uppercase tracking-wider mb-3">Recent Reviews</h2>
+
+      {/* OneDrive CTA — placeholder until Microsoft Graph integration */}
+      <div className="flex items-center gap-2 px-3 py-2 mb-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+        <CloudUpload size={14} className="shrink-0" />
+        <span>Save decks to OneDrive automatically</span>
+        <a href="/portal/admin/connections" className="ml-auto font-medium hover:underline whitespace-nowrap">
+          Connect OneDrive &rarr;
+        </a>
+      </div>
+
       <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         {history.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-secondary-text">

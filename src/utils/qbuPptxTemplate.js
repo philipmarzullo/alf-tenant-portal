@@ -10,6 +10,7 @@ import {
   parseAgentNarratives, getNarrativeLines, getNarrativeText,
   addDarkCoverSlide, addDarkThankYouSlide,
 } from './pptxBrandKit';
+import { getPhotoAsBase64, uploadDeck, saveDeckPath } from '../data/qbuHistory';
 
 // ── Cover Slide (thin wrapper) ───────────────────────────
 
@@ -825,9 +826,10 @@ async function addBeforeAfterSlide(pptx, pair, title, logoColor) {
   addLogoBottomRight(slide, logoColor);
 }
 
-/** Resolve photo image data — handles both File objects and stored base64 strings */
+/** Resolve photo image data — handles File objects, storage paths, and legacy base64 */
 async function resolvePhotoData(photo) {
   if (photo.file instanceof File) return fileToBase64(photo.file);
+  if (photo.storagePath) return getPhotoAsBase64(photo.storagePath);
   if (photo.base64) return photo.base64;
   return null;
 }
@@ -1475,7 +1477,7 @@ function addThankYouSlide(pptx, form, logoWhite, websiteUrl) {
 
 // ── Main Export ───────────────────────────────────────────
 
-export async function generateQBUPptx(form, agentOutput, branding) {
+export async function generateQBUPptx(form, agentOutput, branding, { tenantId, submissionId } = {}) {
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'QBU_16x9', width: SLIDE_W, height: SLIDE_H });
   pptx.layout = 'QBU_16x9';
@@ -1514,10 +1516,30 @@ export async function generateQBUPptx(form, agentOutput, branding) {
   addRoadmapSlide(pptx, form, logoColor, narratives);               // 15 — G.2
   addThankYouSlide(pptx, form, logoWhite, websiteUrl);               // 16 — Thank You
 
-  // Generate filename and trigger download
+  // Generate filename
   const client = (form.cover.clientName || 'QBU').replace(/[^a-zA-Z0-9]/g, '-');
   const quarter = (form.cover.quarter || '').replace(/\s+/g, '');
   const filename = `QBU_${client}_${quarter}`;
 
-  await pptx.writeFile({ fileName: filename });
+  // Generate blob for storage + trigger browser download
+  const blob = await pptx.write({ outputType: 'blob' });
+
+  // Browser download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}.pptx`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  // Upload to Supabase Storage if we have tenant context
+  let deckPath = null;
+  if (tenantId && submissionId) {
+    deckPath = await uploadDeck(tenantId, filename, blob);
+    if (deckPath) {
+      await saveDeckPath(submissionId, deckPath);
+    }
+  }
+
+  return { deckPath };
 }
