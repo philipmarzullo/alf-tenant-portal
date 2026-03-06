@@ -233,17 +233,6 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     });
     dataRows.push(['TOTAL', ...totals.map(String)]);
 
-    // Check if Q4 has zero recordables — add callout if so
-    const q4Total = totals[3]; // Q4 is index 3 (Q1=0, Q2=1, Q3=2, Q4=3)
-    if (q4Total === 0) {
-      addCard(slide, { x: MARGIN, y: contentY, w: CONTENT_W, h: 0.45, borderColor: GREEN });
-      slide.addText('ZERO RECORDABLES THIS QUARTER', {
-        x: MARGIN, y: contentY, w: CONTENT_W, h: 0.45,
-        fontSize: 13, fontFace: FONT, color: GREEN, bold: true, align: 'center', valign: 'middle',
-      });
-      contentY += 0.55;
-    }
-
     addBrandedTable(slide, [headerRow, ...dataRows], { y: contentY, w: CONTENT_W });
   }
 

@@ -158,17 +158,8 @@ function parseSafety(wb, warnings) {
     return safetyLocationHeaders.map((_, ci) => cell(rows, row, 1 + ci));
   }
   const safetyInspections = sumMetric(12);
-  const goodSaveCount = sumMetric(13);
+  let goodSaveCount = sumMetric(13);
   const recordableCount = sumMetric(14);
-  // Per-campus breakdown for table display
-  const safetyMetricsByLocation = safetyLocationHeaders.length > 1
-    ? safetyLocationHeaders.map((loc, i) => ({
-        location: loc,
-        inspections: cell(rows, 12, 1 + i),
-        goodSaves: cell(rows, 13, 1 + i),
-        recordables: cell(rows, 14, 1 + i),
-      }))
-    : [];
 
   // Recordable Incidents by Quarter (rows 18-21 — stop before TOTAL row at 22)
   const incidents = filterPlaceholders(
@@ -180,6 +171,30 @@ function parseSafety(wb, warnings) {
     rowObjects(rows, 27, 32, [0, 1, 2, 3], ['location', 'hazard', 'action', 'notified']),
     ['location', 'hazard', 'action', 'notified']
   );
+
+  // Auto-count good saves from detail rows when count cell is blank
+  if (!goodSaveCount && goodSaves.length) {
+    goodSaveCount = String(goodSaves.length);
+  }
+
+  // Per-campus breakdown for table display
+  const safetyMetricsByLocation = safetyLocationHeaders.length > 1
+    ? safetyLocationHeaders.map((loc, i) => {
+        let gs = cell(rows, 13, 1 + i);
+        // Auto-count per-campus good saves from detail rows when count cell is blank
+        if (!gs && goodSaves.length) {
+          const locLower = loc.toLowerCase();
+          gs = String(goodSaves.filter(s => (s.location || '').toLowerCase().includes(locLower.split(' ')[0])).length);
+          if (gs === '0') gs = '';
+        }
+        return {
+          location: loc,
+          inspections: cell(rows, 12, 1 + i),
+          goodSaves: gs,
+          recordables: cell(rows, 14, 1 + i),
+        };
+      })
+    : [];
   // Recordable Incident Details (rows 36-38, shifted +6 from old rows 30-32)
   const incidentDetails = filterPlaceholders(
     rowObjects(rows, 36, 38, [0, 1, 2, 3, 4], ['location', 'date', 'cause', 'treatment', 'returnDate']),
