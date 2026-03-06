@@ -463,7 +463,7 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
       const col2 = events.slice(mid);
       const evCardY = 1.15;
       const evCardH = Math.min(events.length * 0.12 + 1.0, 3.8);
-      const evFs = events.length > 20 ? 7.5 : 8.5;
+      const evFs = events.length > 20 ? 9 : 10;
 
       // Left column
       addCard(evSlide, { x: MARGIN, y: evCardY, w: COL2_W, h: evCardH, borderColor: AA_BLUE, borderSide: 'top' });
@@ -687,68 +687,81 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
     return;
   }
 
-  // MAX 2 content slides — pack categories densely
+  // Smart layout: try different column counts and font sizes to fit content
   const allCatKeys = Object.keys(categories);
   const cardY = 1.15;
   const gap = 0.3;
   const maxCardH = LOGO_SAFE_Y - cardY;
-  const headerPad = 0.65;
+  const headerPad = 0.55;
 
-  // Try to fit all categories on 1 slide first, then 2 slides max
-  // Use smaller font to fit more content — scale down based on total items
-  const totalItems = allCatKeys.reduce((s, k) => s + categories[k].length, 0);
-  let bulletFs = 10;
-  if (totalItems > 8 || allCatKeys.length > 3) bulletFs = 8.5;
-  if (totalItems > 14 || allCatKeys.length > 5) bulletFs = 7.5;
-  const bulletLs = bulletFs <= 8.5 ? 1.15 : 1.3;
-
-  // Split categories into max 2 slides
-  const slides = [[]];
-  for (const catKey of allCatKeys) {
-    const currentSlide = slides[slides.length - 1];
-    if (currentSlide.length >= 3 && slides.length < 2) {
-      slides.push([catKey]);
-    } else if (currentSlide.length >= 3 && slides.length >= 2) {
-      // Already at 2 slides — merge into last category on last slide
-      const lastKey = currentSlide[currentSlide.length - 1];
-      categories[lastKey].push(...categories[catKey].map(d => `${catKey}: ${d}`));
-    } else {
-      currentSlide.push(catKey);
-    }
+  // Helper: check if a set of categories fits on one slide at given cols/font
+  function layoutFits(keys, cols, fontSize) {
+    const colW = cols === 1 ? CONTENT_W : cols === 2 ? COL2_W : COL3_W;
+    // estimateBulletH assumes fontSize 10 — scale proportionally
+    const scale = fontSize / 10;
+    const tallest = Math.max(...keys.map(k => estimateBulletH(categories[k], colW - 0.5) * scale));
+    return tallest + headerPad <= maxCardH;
   }
 
-  slides.forEach((slideKeys, slideIdx) => {
+  // Render one projects slide with given categories, cols, and font
+  function renderProjectsSlide(keys, slideTitle, fontSize) {
     const slide = pptx.addSlide();
     setContentBackground(slide);
-    addSectionTitle(slide, slideIdx === 0
-      ? 'Completed Projects Showcase'
-      : 'Completed Projects Showcase (cont.)');
+    addSectionTitle(slide, slideTitle);
 
-    const batchSize = slideKeys.length;
-    const colW = batchSize === 1 ? CONTENT_W : batchSize === 2 ? COL2_W : COL3_W;
-    const colGap = batchSize === 2 ? 0.3 : gap;
+    // Try column counts from max down to 1 to find best fit
+    let cols = Math.min(keys.length, 3);
+    while (cols > 1 && !layoutFits(keys, cols, fontSize)) cols--;
+    // If still doesn't fit at 1 column, shrink font further
+    let fs = fontSize;
+    if (!layoutFits(keys, cols, fs)) fs = Math.max(6.5, fs - 1);
 
-    // Calculate card height — fit within available space
-    const maxBulletH = Math.max(...slideKeys.map((k) => estimateBulletH(categories[k], colW - 0.5)));
-    const cardH = Math.min(maxBulletH + headerPad, maxCardH);
+    const colW = cols === 1 ? CONTENT_W : cols === 2 ? COL2_W : COL3_W;
+    const colGap = cols === 2 ? 0.3 : gap;
+    const scale = fs / 10;
+    const tallest = Math.max(...keys.map(k => estimateBulletH(categories[k], colW - 0.5) * scale));
+    const cardH = Math.min(tallest + headerPad, maxCardH);
+    const ls = fs <= 8.5 ? 1.1 : 1.2;
 
-    slideKeys.forEach((cat, i) => {
+    keys.forEach((cat, i) => {
       const x = MARGIN + i * (colW + colGap);
       addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
       slide.addText(cat.toUpperCase(), {
-        x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
-        fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+        x: x + 0.15, y: cardY + 0.12, w: colW - 0.3, h: 0.25,
+        fontSize: 9, fontFace: FONT, color: DARK, bold: true,
       });
       if (categories[cat].length) {
         addCardBullets(slide, categories[cat], {
-          x, y: cardY + 0.5, w: colW, h: cardH - 0.6,
-          fontSize: bulletFs, lineSpacing: bulletLs,
+          x, y: cardY + 0.4, w: colW, h: cardH - 0.5,
+          fontSize: fs, lineSpacing: ls,
         });
       }
     });
 
     addLogoBottomRight(slide, logoColor);
-  });
+  }
+
+  // Determine font size based on total content
+  const totalItems = allCatKeys.reduce((s, k) => s + categories[k].length, 0);
+  let bulletFs = 9;
+  if (totalItems > 10) bulletFs = 8;
+  if (totalItems > 16) bulletFs = 7.5;
+
+  // Try to fit everything on 1 slide first
+  if (allCatKeys.length <= 3 && layoutFits(allCatKeys, Math.min(allCatKeys.length, 3), bulletFs)) {
+    renderProjectsSlide(allCatKeys, 'Completed Projects Showcase', bulletFs);
+  } else if (allCatKeys.length <= 3 && layoutFits(allCatKeys, Math.min(allCatKeys.length, 2), bulletFs)) {
+    // Try fewer columns on 1 slide
+    renderProjectsSlide(allCatKeys, 'Completed Projects Showcase', bulletFs);
+  } else {
+    // Split across 2 slides — first slide gets up to 3 categories, rest on second
+    const firstBatch = allCatKeys.slice(0, Math.min(3, Math.ceil(allCatKeys.length / 2)));
+    const secondBatch = allCatKeys.slice(firstBatch.length);
+    renderProjectsSlide(firstBatch, 'Completed Projects Showcase', bulletFs);
+    if (secondBatch.length) {
+      renderProjectsSlide(secondBatch, 'Completed Projects Showcase (cont.)', bulletFs);
+    }
+  }
 }
 
 // ── Slide 10: D.2 Project Photos ────────────────────────
