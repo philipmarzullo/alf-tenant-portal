@@ -202,6 +202,17 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     });
     dataRows.push(['TOTAL', ...totals.map(String)]);
 
+    // Check if Q4 has zero recordables — add callout if so
+    const q4Total = totals[3]; // Q4 is index 3 (Q1=0, Q2=1, Q3=2, Q4=3)
+    if (q4Total === 0) {
+      addCard(slide, { x: MARGIN, y: contentY, w: CONTENT_W, h: 0.45, borderColor: GREEN });
+      slide.addText('ZERO RECORDABLES THIS QUARTER', {
+        x: MARGIN, y: contentY, w: CONTENT_W, h: 0.45,
+        fontSize: 13, fontFace: FONT, color: GREEN, bold: true, align: 'center', valign: 'middle',
+      });
+      contentY += 0.55;
+    }
+
     addBrandedTable(slide, [headerRow, ...dataRows], { y: contentY, w: CONTENT_W });
   }
 
@@ -388,18 +399,28 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
       : q ? `${q} (Prior Year)` : 'Prior Year';
     const currentLabel = q || 'Current Year';
 
-    const headerRow = ['Location', priorLabel, currentLabel, 'Change'];
+    // Check if any location has prior year data — if none, hide that column
+    const hasPriorYear = locs.some((r) => r.priorYear && String(r.priorYear).trim() !== '');
+
+    const headerRow = hasPriorYear
+      ? ['Location', `${q || 'Q#'} (Prior Year)`, q || 'Current', 'Change']
+      : ['Location', q || 'Current'];
     const dataRows = locs.map((r) => {
-      const prior = Number(r.priorYear) || 0;
       const current = Number(r.currentYear) || 0;
+      if (!hasPriorYear) return [r.location, String(current)];
+      const prior = Number(r.priorYear) || 0;
       const pct = prior ? (((current - prior) / prior) * 100).toFixed(1) + '%' : '\u2014';
-      return [r.location, String(r.priorYear || 0), String(r.currentYear || 0), pct];
+      return [r.location, String(prior), String(current), pct];
     });
     // Total row
-    const totalPrior = locs.reduce((s, r) => s + (Number(r.priorYear) || 0), 0);
     const totalCurrent = locs.reduce((s, r) => s + (Number(r.currentYear) || 0), 0);
-    const totalPct = totalPrior ? (((totalCurrent - totalPrior) / totalPrior) * 100).toFixed(1) + '%' : '\u2014';
-    dataRows.push(['TOTAL', String(totalPrior), String(totalCurrent), totalPct]);
+    if (hasPriorYear) {
+      const totalPrior = locs.reduce((s, r) => s + (Number(r.priorYear) || 0), 0);
+      const totalPct = totalPrior ? (((totalCurrent - totalPrior) / totalPrior) * 100).toFixed(1) + '%' : '\u2014';
+      dataRows.push(['TOTAL', String(totalPrior), String(totalCurrent), totalPct]);
+    } else {
+      dataRows.push(['TOTAL', String(totalCurrent)]);
+    }
 
     addBrandedTable(slide, [headerRow, ...dataRows], { y: 1.15 });
   }
@@ -414,19 +435,54 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
     });
   }
 
-  // Events Supported callout — clamp to fit within slide bounds
+  // Events Supported — try to fit on same slide, otherwise separate slide with 2 columns
   if (form.workTickets.eventsSupported) {
     const evText = form.workTickets.eventsSupported;
+    const events = evText.split('\n').filter(Boolean);
     const evY = takeawayText ? tableBottom + 1.0 : tableBottom;
     const maxEvH = SLIDE_H - evY - 0.35;
-    if (maxEvH > 0.5) {
-      const lines = evText.split('\n').length;
-      const evH = Math.max(0.85, Math.min(lines * 0.22 + 0.2, maxEvH));
+    const neededH = events.length * 0.2 + 0.3;
+
+    if (neededH <= maxEvH && events.length <= 8) {
+      // Fits on same slide
+      const evH = Math.max(0.85, Math.min(neededH, maxEvH));
       addCalloutBox(slide, {
         x: MARGIN, y: evY, w: CONTENT_W, h: evH,
         label: 'Events Supported:', text: evText,
-        fontSize: lines > 10 ? 7 : 8,
+        fontSize: events.length > 10 ? 7 : 8,
       });
+    } else {
+      // Separate slide with 2-column layout
+      addLogoBottomRight(slide, logoColor);
+      const evSlide = pptx.addSlide();
+      setContentBackground(evSlide);
+      addSectionTitle(evSlide, 'Events Supported');
+
+      const mid = Math.ceil(events.length / 2);
+      const col1 = events.slice(0, mid);
+      const col2 = events.slice(mid);
+      const evCardY = 1.15;
+      const evCardH = Math.min(events.length * 0.12 + 1.0, 3.8);
+      const evFs = events.length > 20 ? 7.5 : 8.5;
+
+      // Left column
+      addCard(evSlide, { x: MARGIN, y: evCardY, w: COL2_W, h: evCardH, borderColor: AA_BLUE, borderSide: 'top' });
+      evSlide.addText(
+        col1.map(e => ({ text: e, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 3 } })),
+        { x: MARGIN + 0.2, y: evCardY + 0.15, w: COL2_W - 0.4, h: evCardH - 0.3, fontSize: evFs, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.2 }
+      );
+
+      // Right column
+      addCard(evSlide, { x: MARGIN + COL2_W + 0.3, y: evCardY, w: COL2_W, h: evCardH, borderColor: AA_BLUE, borderSide: 'top' });
+      if (col2.length) {
+        evSlide.addText(
+          col2.map(e => ({ text: e, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 3 } })),
+          { x: MARGIN + COL2_W + 0.5, y: evCardY + 0.15, w: COL2_W - 0.4, h: evCardH - 0.3, fontSize: evFs, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.2 }
+        );
+      }
+
+      addLogoBottomRight(evSlide, logoColor);
+      return; // Already added logo to both slides
     }
   }
 
@@ -470,40 +526,28 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
     addBrandedTable(slide, rows, { y: 1.15 });
   }
 
-  // Audit & Action Analysis card below table — prefer agent narrative
+  // Audit & Action Analysis card below table
+  // Prefer form explanation text when substantial — it's the user's actual input
   const agentAnalysis = getNarrativeText(narratives, 'C2:ANALYSIS');
+  const formExplanation = [a.auditExplanation, a.actionExplanation].filter(Boolean).join('\n\n');
+  // Use form text when it has real content (>50 chars), otherwise fall back to agent
+  const analysisText = (formExplanation.length > 50) ? formExplanation : (agentAnalysis || formExplanation);
   const cardY = 1.15 + (tableRowCount + 1) * 0.35 + 0.3;
 
-  if (agentAnalysis || a.auditExplanation || a.actionExplanation) {
-    addCard(slide, { x: MARGIN, y: cardY, w: CONTENT_W, h: SLIDE_H - cardY - 0.35, borderColor: AA_BLUE, borderSide: 'left' });
+  if (analysisText) {
+    const cardH = SLIDE_H - cardY - 0.35;
+    addCard(slide, { x: MARGIN, y: cardY, w: CONTENT_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
     slide.addText('AUDIT & ACTION ANALYSIS', {
       x: MARGIN + 0.2, y: cardY + 0.1, w: CONTENT_W - 0.4, h: 0.25,
       fontSize: 11, fontFace: FONT, color: DARK, bold: true,
     });
-
-    if (agentAnalysis) {
-      // Use the agent's polished narrative
-      slide.addText(agentAnalysis, {
-        x: MARGIN + 0.2, y: cardY + 0.4, w: CONTENT_W - 0.4, h: SLIDE_H - cardY - 0.9,
-        fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
-      });
-    } else {
-      // Fallback to raw form data
-      let textY = cardY + 0.4;
-      if (a.auditExplanation) {
-        slide.addText(a.auditExplanation, {
-          x: MARGIN + 0.2, y: textY, w: CONTENT_W - 0.4, h: 0.8,
-          fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
-        });
-        textY += 0.85;
-      }
-      if (a.actionExplanation) {
-        slide.addText(a.actionExplanation, {
-          x: MARGIN + 0.2, y: textY, w: CONTENT_W - 0.4, h: 0.8,
-          fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
-        });
-      }
-    }
+    // Auto-scale font for longer text
+    const textLen = analysisText.length;
+    const fontSize = textLen > 500 ? 8 : textLen > 300 ? 8.5 : 9;
+    slide.addText(analysisText, {
+      x: MARGIN + 0.2, y: cardY + 0.4, w: CONTENT_W - 0.4, h: cardH - 0.55,
+      fontSize, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
+    });
   }
 
   addLogoBottomRight(slide, logoColor);
