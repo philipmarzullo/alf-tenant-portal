@@ -168,13 +168,6 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
 
   if (perCampus.length > 1) {
     // Per-campus table for inspections, good saves, recordables
-    slide.addText('SAFETY METRICS BY LOCATION', {
-      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.3,
-      fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
-    });
-    contentY += 0.3;
-
-    // Build header: Location | Inspections | Good Saves | Recordables
     const metricHeader = ['Location', 'Safety Inspections', 'Good Saves', 'Recordables'];
     const metricRows = perCampus
       .filter(loc => loc.inspections || loc.goodSaves || loc.recordables)
@@ -186,7 +179,7 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     metricRows.push(['TOTAL', String(totInsp), String(totGS), String(totRec)]);
 
     addBrandedTable(slide, [metricHeader, ...metricRows], { y: contentY, w: CONTENT_W });
-    contentY += (metricRows.length + 1) * 0.35 + 0.15;
+    contentY += (metricRows.length + 1) * 0.35 + 0.1;
   } else if (hasMetrics) {
     // Single location — show summary cards
     const metrics = [];
@@ -236,95 +229,50 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     addBrandedTable(slide, [headerRow, ...dataRows], { y: contentY, w: CONTENT_W });
   }
 
-  // Good Saves and Recordable Details cards below the table
+  // Good Saves and Recordable Details — compact callouts below tables
   const saves = (form.safety.goodSaves || []).filter((r) => r.location || r.hazard);
-  // Filter out template/placeholder entries — only real incidents with actual cause data
   const details = (form.safety.incidentDetails || []).filter((r) =>
     r.location && r.cause && r.cause !== 'Description/Cause' && r.cause.length > 3
   );
 
-  // Show Good Saves card only if count provided or detail rows exist
   const showGoodSaves = gsCount || saves.length;
-  // Show Recordable Details card only if count provided or detail rows exist
   const showRecordables = recCount || details.length;
 
-  if (showGoodSaves || showRecordables) {
-    // Calculate where cards would go below the recordables table
-    let detailCardY = contentY + ((incidents.length + 2) * 0.35) + 0.25;
-    let remainingH = SLIDE_H - detailCardY - 0.45;
+  // Track Y position after the recordables table
+  let bottomY = contentY + ((incidents.length + 2) * 0.35) + 0.15;
+  const bottomLimit = SLIDE_H - 0.35;
 
-    // If not enough room on this slide, overflow to a new slide
-    let detailSlide = slide;
-    if (remainingH < 0.8) {
-      addLogoBottomRight(slide, logoColor);
-      detailSlide = pptx.addSlide();
-      setContentBackground(detailSlide);
-      addSectionTitle(detailSlide, 'Safety & Compliance Review (cont.)');
-      detailCardY = 1.15;
-      remainingH = SLIDE_H - detailCardY - 0.45;
-    }
-
-    const x1 = MARGIN;
-    const x2 = MARGIN + COL2_W + 0.3;
-    const saveBulletH = saves.length
-      ? estimateBulletH(saves.map((r) => `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`), COL2_W - 0.5)
-      : 0.3;
-    const detailBulletH = details.length
-      ? estimateBulletH(details.map((r) => `${r.location} | ${r.date}: ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`), COL2_W - 0.5)
-      : 0.3;
-    const cardH = Math.min(Math.max(saveBulletH, detailBulletH) + 0.6, remainingH);
-    const fontSize = cardH < 1.5 ? 9 : 10;
-
-    // If only one section has data, render it full-width; otherwise two columns
-    const fullWidth = (showGoodSaves && !showRecordables) || (!showGoodSaves && showRecordables);
-    const cardW = fullWidth ? CONTENT_W : COL2_W;
-
-    if (showGoodSaves) {
-      // Good Saves card (green left border)
-      addCard(detailSlide, { x: x1, y: detailCardY, w: cardW, h: cardH, borderColor: GREEN, borderSide: 'left' });
-      detailSlide.addText('GOOD SAVES', {
-        x: x1 + 0.2, y: detailCardY + 0.1, w: cardW - 0.4, h: 0.3,
-        fontSize: 11, fontFace: FONT, color: DARK, bold: true,
+  // Good Saves — compact green callout on same slide
+  if (showGoodSaves && saves.length) {
+    const saveText = saves.map((r) =>
+      `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`
+    ).join(' | ');
+    const calloutH = Math.min(0.7, bottomLimit - bottomY);
+    if (calloutH >= 0.4) {
+      addCalloutBox(slide, {
+        x: MARGIN, y: bottomY, w: CONTENT_W, h: calloutH,
+        label: `Good Save${saves.length > 1 ? 's' : ''} (${saves.length}):`,
+        text: saveText,
+        fontSize: 8,
       });
-      if (saves.length) {
-        const items = saves.map((r) =>
-          `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`
-        );
-        addCardBullets(detailSlide, items, { x: x1, y: detailCardY + 0.45, w: cardW, h: cardH - 0.6 });
-      } else {
-        detailSlide.addText('No Good Saves reported this quarter.', {
-          x: x1 + 0.2, y: detailCardY + 0.45, w: cardW - 0.4, h: 0.3,
-          fontSize: 9, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
-        });
-      }
+      bottomY += calloutH + 0.1;
     }
+  }
 
-    if (showRecordables) {
-      const rx = fullWidth ? x1 : x2;
-      // Recordable Details card (amber left border)
-      addCard(detailSlide, { x: rx, y: detailCardY, w: cardW, h: cardH, borderColor: AMBER, borderSide: 'left' });
-      detailSlide.addText('RECORDABLE DETAILS', {
-        x: rx + 0.2, y: detailCardY + 0.1, w: cardW - 0.4, h: 0.3,
-        fontSize: 11, fontFace: FONT, color: DARK, bold: true,
+  // Recordable Details — compact amber callout on same slide if room
+  if (showRecordables && details.length) {
+    const detailText = details.map((r) =>
+      `${r.location} (${r.date}): ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`
+    ).join(' | ');
+    const calloutH = Math.min(0.7, bottomLimit - bottomY);
+    if (calloutH >= 0.4) {
+      addCalloutBox(slide, {
+        x: MARGIN, y: bottomY, w: CONTENT_W, h: calloutH,
+        label: 'Recordable Details:',
+        text: detailText,
+        fontSize: 8,
       });
-      if (details.length) {
-        const items = details.map((r) =>
-          `${r.location} | ${r.date}: ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`
-        );
-        detailSlide.addText(items.join('\n\n'), {
-          x: rx + 0.2, y: detailCardY + 0.45, w: cardW - 0.4, h: cardH - 0.6,
-          fontSize: fontSize, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
-        });
-      } else {
-        detailSlide.addText('Zero recordable incidents this quarter.', {
-          x: rx + 0.2, y: detailCardY + 0.45, w: cardW - 0.4, h: 0.3,
-          fontSize: 9, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
-        });
-      }
     }
-
-    addLogoBottomRight(detailSlide, logoColor);
-    if (detailSlide !== slide) return; // Logo already added to overflow slide
   }
 
   addLogoBottomRight(slide, logoColor);
