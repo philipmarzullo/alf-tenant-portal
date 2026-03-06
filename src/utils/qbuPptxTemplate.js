@@ -603,51 +603,57 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
   const q = form.cover.quarter || 'Current';
 
   if (hasMultiLocation) {
-    // ── Multi-location: Per-location pie charts (left) + explanation card (right) ──
-    addCard(slide, { x: MARGIN, y: 1.15, w: COL2_W, h: 3.7 });
-    // Reserve space for shared legend at bottom — both pies get equal height
-    const legendH = 0.3;
-    const availH = 3.7 - 0.2 - legendH; // card padding top + legend at bottom
-    const pieH = locations.length <= 2
-      ? (availH - locations.length * 0.25 - (locations.length - 1) * 0.1) / locations.length
-      : 1.0;
+    // ── Multi-location: pie charts side by side (top) + analysis bullets (bottom) ──
+    const pieW = COL2_W;
+    const pieCardH = 2.6;
+    const pieChartH = 2.0;
+    const legendH = 0.25;
+
+    // Render each location's pie chart side by side
     locations.forEach((loc, li) => {
-      const yOff = 1.25 + li * (pieH + 0.35);
+      const px = MARGIN + li * (pieW + 0.3);
+      addCard(slide, { x: px, y: 1.15, w: pieW, h: pieCardH });
       slide.addText(loc, {
-        x: MARGIN + 0.15, y: yOff, w: COL2_W - 0.3, h: 0.2,
-        fontSize: 9, fontFace: FONT, color: DARK, bold: true, align: 'center',
+        x: px + 0.15, y: 1.2, w: pieW - 0.3, h: 0.22,
+        fontSize: 10, fontFace: FONT, color: DARK, bold: true, align: 'center',
       });
       const pieValues = areas.map((a) => Number((a.values || [])[li]) || 0);
       if (pieValues.some((v) => v > 0)) {
-        const isLast = li === locations.length - 1;
         slide.addChart(pptx.charts.PIE, [{
           name: loc,
           labels: areas.map((a) => a.area),
           values: pieValues,
         }], {
-          x: MARGIN + 0.15, y: yOff + 0.2, w: COL2_W - 0.3, h: isLast ? pieH + legendH : pieH,
+          x: px + 0.15, y: 1.45, w: pieW - 0.3, h: pieChartH,
           showPercent: true,
-          showLegend: isLast,
+          showLegend: li === 0,
           legendPos: 'b',
           legendFontSize: 6,
-          dataLabelFontSize: 7,
+          dataLabelFontSize: 8,
           chartColors: chartColors.slice(0, areas.length),
         });
       }
     });
 
-    // Right side: explanation / analysis card
+    // Bottom: analysis card with bullets
     const analysisText = getNarrativeText(narratives, 'C3:TAKEAWAY') || '';
     if (analysisText) {
-      addCard(slide, { x: MARGIN + COL2_W + 0.3, y: 1.15, w: COL2_W, h: 3.7, borderColor: AA_BLUE, borderSide: 'left' });
-      slide.addText('ANALYSIS', {
-        x: MARGIN + COL2_W + 0.5, y: 1.25, w: COL2_W - 0.4, h: 0.25,
+      const analysisY = 1.15 + pieCardH + 0.15;
+      const analysisH = LOGO_SAFE_Y - analysisY;
+      addCard(slide, { x: MARGIN, y: analysisY, w: CONTENT_W, h: analysisH, borderColor: AA_BLUE, borderSide: 'left' });
+      slide.addText('KEY FINDINGS', {
+        x: MARGIN + 0.2, y: analysisY + 0.08, w: CONTENT_W - 0.4, h: 0.22,
         fontSize: 10, fontFace: FONT, color: DARK, bold: true,
       });
-      slide.addText(analysisText, {
-        x: MARGIN + COL2_W + 0.5, y: 1.55, w: COL2_W - 0.4, h: 3.15,
-        fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.4,
-      });
+      // Split into bullet points — by sentence or newline
+      const bullets = analysisText.split(/(?<=[.!])\s+/).filter(Boolean).map(s => s.trim());
+      slide.addText(
+        bullets.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 3 } })),
+        {
+          x: MARGIN + 0.3, y: analysisY + 0.32, w: CONTENT_W - 0.5, h: analysisH - 0.4,
+          fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.2,
+        }
+      );
     }
   } else {
     // ── Single location: pie chart (left) + explanation card (right) ──

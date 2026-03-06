@@ -235,7 +235,7 @@ The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:C3:TAKEAWAY -->
-[1-2 sentence interpretation of the top corrective action areas and what they indicate about operational focus]
+[3-4 concise bullet points analyzing the corrective action areas. Each bullet = one sentence. Cover: top areas and why they dominate, location differences, operational impact, and recommended focus. Keep each bullet under 20 words.]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:D1:PROJECTS -->
