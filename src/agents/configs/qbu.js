@@ -47,18 +47,44 @@ The QBU uses the following section numbering convention. Use ONLY the sections t
 | G.2 | Roadmap – Strategic Initiatives (next quarter look-ahead) |
 | — | Thank You |
 
-## SUPPORTING DOCUMENTS
-You may receive questionnaire responses, call transcripts, and meeting notes as supporting context.
-Use these to:
-- Write more specific, situationally-aware Executive Summary content
-- Identify the real challenges and frame them in operational language
-- Pull actual client quotes for testimonials (attribute by name)
-- Understand the "vibe" of the account — is it stable, growing, troubled?
-- Extract completed project details that may not be in the structured fields
-- Inform the tone and emphasis of speaker notes
+## DOCUMENT SYNTHESIS & STORY ARC
+You will receive two types of input: **structured form data** (Excel intake with numbers, tables, project lists) and **supporting documents** (questionnaire responses, call transcripts, meeting notes). The form data is the skeleton. The documents are the soul. Your job is to fuse them into a compelling story.
 
-Do NOT just quote documents verbatim. Synthesize the information into polished QBU content.
-If a document contradicts structured form data, flag the discrepancy.
+### Step 1: Read Documents First — Extract Themes
+Before writing any slide content, read ALL supporting documents and identify:
+1. **Account health signal** — Is this account stable, growing, troubled, or at a turning point? Look for tone, concerns raised, praise given, and unspoken tensions.
+2. **2-3 key themes** — What are the dominant threads? Examples: "staffing challenges but strong safety culture", "rapid expansion straining operations", "client relationship strengthening after rocky start." These themes will thread through every slide.
+3. **Specific details worth surfacing** — A site manager mentioning a specific win, a client expressing concern about a specific issue, a concrete example that brings a dry metric to life.
+4. **Quotes and attributable statements** — Direct quotes from questionnaire responses or calls that can be used as testimonials or woven into narrative sections.
+
+### Step 2: Thread Themes Through Every Section
+Each slide should reinforce the overall story, not exist in isolation:
+- **B.1 Executive Summary** — Frame achievements and challenges through the lens of your identified themes. This slide sets the narrative for the entire deck.
+- **C.1 Work Tickets** — If documents mention workload changes, staffing shifts, or event volume, use that context to explain the numbers. Don't just say "11.7% decrease" — say WHY from the documents.
+- **C.2 Audits** — If a questionnaire mentions specific facility issues (sand residue, salt damage, vendor problems), that context belongs here, not generic analysis.
+- **D.1 Projects** — If a call transcript highlights a particular project success, emphasize that project. Polish descriptions using the richer context from documents.
+- **E.1 Challenges** — Cross-reference: if the same challenge appears in both form data AND documents, it's a priority item. Frame it with the specific language used in the documents.
+- **F.1 Financial** — If documents reveal payment concerns, collection friction, or budget context, weave that into the strategy notes.
+- **G.1/G.2 Roadmap** — If documents mention future plans, staffing goals, or expansion timelines, incorporate those into the forward-looking narrative.
+- **Speaker Notes** — This is where document context is MOST valuable. Use specific details from calls and questionnaires to give the presenter insider knowledge for the conversation.
+
+### Step 3: Prioritize Document Context Over Generic Analysis
+When you have specific context from documents, ALWAYS prefer it over generic analysis:
+- BAD: "Corrective actions focused on common facility maintenance areas including restrooms and common spaces."
+- GOOD: "Sand residue from construction tracked into buildings drove 40% of corrective actions; salt vendor performance remains under review."
+
+The first is something any AI could write. The second comes from actually reading the documents and understanding the account.
+
+### Document Types and How to Use Them
+- **Questionnaire responses** — Direct input from site managers. Treat as ground truth for operational context. These people are on-site daily. Their observations about what's working, what's broken, and what they need should directly inform your narrative.
+- **Call transcripts** — Conversations between account managers and clients. Listen for: relationship dynamics, unspoken concerns, specific wins mentioned casually, commitments made, and the overall tone. A client who says "we're really happy with the team" in a call is a testimonial opportunity.
+- **Meeting notes** — Action items, decisions made, follow-ups needed. These reveal what matters most to the stakeholders RIGHT NOW.
+
+### Rules
+- Do NOT just quote documents verbatim — synthesize into polished presentation language
+- If a document contradicts structured form data, flag the discrepancy
+- NEVER fabricate document content — if documents don't mention something, don't pretend they do
+- When documents provide richer detail than form data for the same topic, use the document version
 
 ## CRITICAL SLIDE DENSITY RULES
 Each section maps to a fixed slide. Use the SLIDE CANVAS AWARENESS dimensions above to self-regulate. If your content won't fit in the safe area (8.8" × 3.9"), it WILL overflow. Write to the constraints.
@@ -141,15 +167,13 @@ When a section has NO user-provided data:
 - The only exception: B.1 Executive Summary should always be included — synthesize from available data if needed.
 
 ## NARRATIVE FLOW
-Your job is to build a compelling, cohesive story across ALL slides — not just the ones with obvious narrative sections.
+Follow the story arc from the DOCUMENT SYNTHESIS section above. Every slide reinforces the 2-3 themes you identified from documents.
 
-**Story arc:** B.1 sets the narrative (what happened this quarter). C slides prove it with data. D shows the work in action. E is transparent about challenges. F handles finances directly. G looks ahead.
-
-**Supporting documents** (questionnaires, call transcripts, meeting notes) provide the texture. Use them throughout the entire QBU to add specificity and context — not just in B.1. If a site manager mentioned a specific project success in a call transcript, that should inform how you describe it in D.1. If a questionnaire reveals financial concerns, that shapes F.1's tone.
+**Slide arc:** B.1 sets the narrative → C slides prove it with data → D shows the work → E is transparent about challenges → F handles finances → G looks ahead. Each slide should feel like the next chapter of the same story, not an isolated data dump.
 
 **Rules:**
 - KPI data (numbers, tables, financial figures, aging buckets) must NEVER be altered — they flow from form data directly
-- Narrative text (descriptions, interpretations, strategy notes, project summaries, roadmap details) should be polished for presentation delivery
+- Narrative text (descriptions, interpretations, strategy notes, project summaries, roadmap details) should be polished for presentation delivery and enriched with document context
 - For D.3 testimonials: keep quotes EXACT as provided — only polish the framing and organization
 - Every NARRATIVE block below is REQUIRED — the PPTX generator depends on them
 
@@ -303,19 +327,6 @@ function buildQBUPrompt(data) {
   if (c.clientTeam?.filter(t => t.name).length) {
     sections.push(`Client Team Attendees:`);
     c.clientTeam.filter(t => t.name).forEach(t => sections.push(`  - ${t.name}, ${t.title}`));
-  }
-
-  // Supporting documents
-  const docs = (data.documents?.files || []).filter(d => d.extractedText);
-  if (docs.length) {
-    sections.push(`\n=== SUPPORTING DOCUMENTS ===`);
-    sections.push(`The following documents provide qualitative context from site managers and internal review calls.`);
-    sections.push(`Use this context to write richer, more situation-aware narrative throughout the QBU.\n`);
-    docs.forEach((doc, i) => {
-      sections.push(`--- Document ${i + 1}: ${doc.label} (${doc.name}) ---`);
-      sections.push(doc.extractedText);
-      sections.push('');
-    });
   }
 
   if (data.safety) {
@@ -481,14 +492,34 @@ function buildQBUPrompt(data) {
     if (r.goalStatement) sections.push(`\nQuarter Goal Statement: ${r.goalStatement}`);
   }
 
+  // Supporting documents — placed AFTER form data so they're fresh in context when the agent writes
+  const docs = (data.documents?.files || []).filter(d => d.extractedText);
+  if (docs.length) {
+    sections.push(`\n=== SUPPORTING DOCUMENTS ===`);
+    sections.push(`CRITICAL: These documents are the most important input for building the QBU narrative.`);
+    sections.push(`Read them carefully BEFORE writing any slide content. Follow the DOCUMENT SYNTHESIS & STORY ARC process from your system instructions:`);
+    sections.push(`1. Identify the account health signal (stable, growing, troubled, turning point)`);
+    sections.push(`2. Extract 2-3 key themes that will thread through every slide`);
+    sections.push(`3. Note specific details, quotes, and context that bring the data to life`);
+    sections.push(`4. Cross-reference with the form data above — where documents and data overlap, that's a priority item\n`);
+    docs.forEach((doc, i) => {
+      sections.push(`--- Document ${i + 1}: ${doc.label} (${doc.name}) ---`);
+      sections.push(doc.extractedText);
+      sections.push('');
+    });
+  }
+
   sections.push(`\n=== INSTRUCTIONS ===`);
   sections.push(`Generate the complete QBU following the section numbering (A.1, A.2, B.1, C.1, C.2, C.3, D.1, D.2, D.3, E.1, F.1, G.1, G.2). Include only sections with meaningful data — do NOT pad to a fixed slide count.`);
-  sections.push(`For each slide, provide:`);
-  sections.push(`1. Polished, presentation-ready content (not just the raw data — interpret it, add context)`);
-  sections.push(`2. Speaker notes with talking points`);
-  sections.push(`3. KPI interpretation sentences where applicable`);
+  if (docs.length) {
+    sections.push(`\nSTORY-FIRST APPROACH: You have supporting documents. Before writing, identify your 2-3 key themes from them. Then write every slide through the lens of those themes. The form data provides the facts — the documents provide the story.`);
+  }
+  sections.push(`\nFor each slide, provide:`);
+  sections.push(`1. Polished, presentation-ready content enriched with document context (not just raw data)`);
+  sections.push(`2. Speaker notes with talking points — use specific details from documents to give the presenter insider knowledge`);
+  sections.push(`3. KPI interpretation sentences informed by what documents reveal about WHY the numbers look the way they do`);
   sections.push(`4. [PLACEHOLDER] markers for any missing required data`);
-  sections.push(`\nDo NOT just echo back the raw data. Your job is to transform the intake data into polished QBU content with narrative, interpretation, and delivery guidance.`);
+  sections.push(`\nDo NOT just echo back the raw data. Your job is to fuse the structured data with the qualitative context from documents into a cohesive, story-driven QBU.`);
 
   return sections.join('\n');
 }
