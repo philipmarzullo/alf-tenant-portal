@@ -248,7 +248,7 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
       ? estimateBulletH(details.map((r) => `${r.location} | ${r.date}: ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`), COL2_W - 0.5)
       : 0.3;
     const cardH = Math.min(Math.max(saveBulletH, detailBulletH) + 0.6, remainingH);
-    const fontSize = cardH < 1.5 ? 8 : 9;
+    const fontSize = cardH < 1.5 ? 9 : 10;
 
     // If only one section has data, render it full-width; otherwise two columns
     const fullWidth = showGoodSaves && !showRecordables || !showGoodSaves && showRecordables;
@@ -564,7 +564,14 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
 // ── Slide 8: C.3 Top Action Areas (Charts) ──────────────
 
 function addTopAreasSlide(pptx, form, logoColor, narratives) {
-  const areas = (form.audits.topAreas || []).filter((a) => a.count);
+  const locations = form.audits.topAreaLocations || [];
+  const hasMultiLocation = locations.length > 1;
+
+  // Filter areas with data — check both single count and per-location values
+  const areas = (form.audits.topAreas || []).filter((a) => {
+    if (hasMultiLocation) return (a.values || []).some((v) => Number(v) > 0);
+    return a.count;
+  });
   if (!areas.length) return; // Skip slide entirely when no data
 
   const slide = pptx.addSlide();
@@ -572,64 +579,138 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
   addSectionTitle(slide, 'Top Action Areas');
 
   const chartColors = [AA_BLUE, '0077B6', '48CAE4', NEAR_BLACK, AA_RED, MED_GREY];
-  const total = areas.reduce((s, a) => s + (Number(a.count) || 0), 0);
+  const locationColors = [AA_BLUE, '0077B6', '48CAE4', NEAR_BLACK];
   const q = form.cover.quarter || 'Current';
 
-  // Left side: Bar chart
-  addCard(slide, { x: MARGIN, y: 1.15, w: COL2_W, h: 3.7 });
-  slide.addText(`${q} Corrective Actions by Area`, {
-    x: MARGIN + 0.15, y: 1.25, w: COL2_W - 0.3, h: 0.3,
-    fontSize: 10, fontFace: FONT, color: DARK, bold: true, align: 'center',
-  });
+  // Detect if values are percentages (all values between 0 and 1 exclusive)
+  const allValues = hasMultiLocation
+    ? areas.flatMap((a) => (a.values || []).map(Number).filter(Boolean))
+    : areas.map((a) => Number(a.count) || 0);
+  const isPercent = allValues.length > 0 && allValues.every((v) => v > 0 && v < 1);
 
-  slide.addChart(pptx.charts.BAR, [
-    {
+  if (hasMultiLocation) {
+    // ── Multi-location: Grouped bar chart (left) + per-location pie charts (right) ──
+    addCard(slide, { x: MARGIN, y: 1.15, w: COL2_W, h: 3.7 });
+    slide.addText(`${q} Corrective Actions by Area`, {
+      x: MARGIN + 0.15, y: 1.25, w: COL2_W - 0.3, h: 0.3,
+      fontSize: 10, fontFace: FONT, color: DARK, bold: true, align: 'center',
+    });
+
+    // Grouped bar chart — one series per location
+    const chartData = locations.map((loc, li) => ({
+      name: loc,
+      labels: areas.map((a) => a.area),
+      values: areas.map((a) => {
+        const raw = Number((a.values || [])[li]) || 0;
+        return isPercent ? Math.round(raw * 100) : raw;
+      }),
+    }));
+
+    slide.addChart(pptx.charts.BAR, chartData, {
+      x: MARGIN + 0.15, y: 1.6, w: COL2_W - 0.3, h: 3.0,
+      barDir: 'col',
+      barGrouping: 'clustered',
+      showValue: true,
+      valueFontSize: 7,
+      valueFontColor: DARK,
+      catAxisLabelFontSize: 7,
+      catAxisLabelRotate: 315,
+      valAxisHidden: false,
+      valAxisLabelFontSize: 7,
+      chartColors: locationColors.slice(0, locations.length),
+      showLegend: true,
+      legendPos: 't',
+      legendFontSize: 7,
+      barGapWidthPct: 60,
+    });
+
+    // Right side: stacked pie charts, one per location
+    addCard(slide, { x: MARGIN + COL2_W + 0.3, y: 1.15, w: COL2_W, h: 3.7 });
+    const pieH = locations.length <= 2 ? 1.55 : 1.1;
+    locations.forEach((loc, li) => {
+      const yOff = 1.35 + li * (pieH + 0.35);
+      slide.addText(loc, {
+        x: MARGIN + COL2_W + 0.45, y: yOff, w: COL2_W - 0.3, h: 0.2,
+        fontSize: 9, fontFace: FONT, color: DARK, bold: true, align: 'center',
+      });
+      const pieValues = areas.map((a) => Number((a.values || [])[li]) || 0);
+      if (pieValues.some((v) => v > 0)) {
+        slide.addChart(pptx.charts.PIE, [{
+          name: loc,
+          labels: areas.map((a) => a.area),
+          values: pieValues,
+        }], {
+          x: MARGIN + COL2_W + 0.45, y: yOff + 0.2, w: COL2_W - 0.5, h: pieH,
+          showPercent: true,
+          showLegend: li === locations.length - 1,
+          legendPos: 'b',
+          legendFontSize: 6,
+          dataLabelFontSize: 7,
+          chartColors: chartColors.slice(0, areas.length),
+        });
+      }
+    });
+  } else {
+    // ── Single location / legacy: original bar + pie layout ──
+    const total = areas.reduce((s, a) => s + (Number(a.count) || 0), 0);
+    const displayValues = areas.map((a) => {
+      const raw = Number(a.count) || 0;
+      return isPercent ? Math.round(raw * 100) : raw;
+    });
+
+    addCard(slide, { x: MARGIN, y: 1.15, w: COL2_W, h: 3.7 });
+    slide.addText(`${q} Corrective Actions by Area`, {
+      x: MARGIN + 0.15, y: 1.25, w: COL2_W - 0.3, h: 0.3,
+      fontSize: 10, fontFace: FONT, color: DARK, bold: true, align: 'center',
+    });
+
+    slide.addChart(pptx.charts.BAR, [{
       name: 'Actions',
       labels: areas.map((a) => a.area),
-      values: areas.map((a) => Number(a.count) || 0),
-    },
-  ], {
-    x: MARGIN + 0.15, y: 1.6, w: COL2_W - 0.3, h: 3.0,
-    barDir: 'col',
-    showValue: true,
-    valueFontSize: 8,
-    valueFontColor: AA_BLUE,
-    catAxisLabelFontSize: 7,
-    catAxisLabelRotate: 315,
-    valAxisHidden: false,
-    valAxisLabelFontSize: 7,
-    chartColors: [AA_BLUE],
-    showLegend: false,
-    barGapWidthPct: 80,
-  });
+      values: displayValues,
+    }], {
+      x: MARGIN + 0.15, y: 1.6, w: COL2_W - 0.3, h: 3.0,
+      barDir: 'col',
+      showValue: true,
+      valueFontSize: 8,
+      valueFontColor: AA_BLUE,
+      catAxisLabelFontSize: 7,
+      catAxisLabelRotate: 315,
+      valAxisHidden: false,
+      valAxisLabelFontSize: 7,
+      chartColors: [AA_BLUE],
+      showLegend: false,
+      barGapWidthPct: 80,
+    });
 
-  // Right side: Pie chart
-  addCard(slide, { x: MARGIN + COL2_W + 0.3, y: 1.15, w: COL2_W, h: 3.7 });
-  slide.addText('Action Area Distribution', {
-    x: MARGIN + COL2_W + 0.45, y: 1.25, w: COL2_W - 0.3, h: 0.3,
-    fontSize: 10, fontFace: FONT, color: DARK, bold: true, align: 'center',
-  });
+    addCard(slide, { x: MARGIN + COL2_W + 0.3, y: 1.15, w: COL2_W, h: 3.7 });
+    slide.addText('Action Area Distribution', {
+      x: MARGIN + COL2_W + 0.45, y: 1.25, w: COL2_W - 0.3, h: 0.3,
+      fontSize: 10, fontFace: FONT, color: DARK, bold: true, align: 'center',
+    });
 
-  slide.addChart(pptx.charts.PIE, [
-    {
+    slide.addChart(pptx.charts.PIE, [{
       name: 'Distribution',
       labels: areas.map((a) => a.area),
       values: areas.map((a) => Number(a.count) || 0),
-    },
-  ], {
-    x: MARGIN + COL2_W + 0.45, y: 1.55, w: COL2_W - 0.5, h: 2.6,
-    showPercent: true,
-    showLegend: true,
-    legendPos: 'b',
-    legendFontSize: 7,
-    dataLabelFontSize: 8,
-    chartColors: chartColors.slice(0, areas.length),
-  });
+    }], {
+      x: MARGIN + COL2_W + 0.45, y: 1.55, w: COL2_W - 0.5, h: 2.6,
+      showPercent: true,
+      showLegend: true,
+      legendPos: 'b',
+      legendFontSize: 7,
+      dataLabelFontSize: 8,
+      chartColors: chartColors.slice(0, areas.length),
+    });
+  }
 
   // Key Takeaway callout at bottom — prefer agent narrative over auto-generated
+  const total = hasMultiLocation
+    ? areas.reduce((s, a) => (a.values || []).reduce((vs, v) => vs + (Number(v) || 0), s), 0)
+    : areas.reduce((s, a) => s + (Number(a.count) || 0), 0);
   const takeawayText = getNarrativeText(narratives, 'C3:TAKEAWAY')
     || (total > 0
-      ? `${areas[0].area} accounts for ${((Number(areas[0].count) / total) * 100).toFixed(0)}% of corrective actions this quarter.`
+      ? `${areas[0].area} accounts for the highest share of corrective actions this quarter${isPercent ? `, averaging ${Math.round(allValues.reduce((s, v, _, arr) => s + v / arr.length, 0) * 100)}% across locations` : ''}.`
       : '');
   addCalloutBox(slide, {
     x: MARGIN, y: 5.0, w: CONTENT_W, h: 0.5,
@@ -1426,10 +1507,10 @@ function addRoadmapSlide(pptx, form, logoColor, narratives) {
     { text: 'Initiative', options: { bold: true, color: WHITE, fill: { color: AA_BLUE }, fontSize: 9, fontFace: FONT, align: 'center', valign: 'middle' } },
   ];
   const dataRows = schedule.map((item) => hasDetails ? [
-    { text: item.initiative || '', options: { fontSize: 8.5, fontFace: FONT, color: DARK, bold: true, valign: 'middle' } },
-    { text: item.details || '', options: { fontSize: 8, fontFace: FONT, color: DARK, valign: 'middle' } },
+    { text: item.initiative || '', options: { fontSize: 9, fontFace: FONT, color: DARK, bold: true, valign: 'middle' } },
+    { text: item.details || '', options: { fontSize: 9, fontFace: FONT, color: DARK, valign: 'middle' } },
   ] : [
-    { text: item.initiative || '', options: { fontSize: 8.5, fontFace: FONT, color: DARK, valign: 'middle' } },
+    { text: item.initiative || '', options: { fontSize: 9, fontFace: FONT, color: DARK, valign: 'middle' } },
   ]);
 
   const tableY = 1.15;

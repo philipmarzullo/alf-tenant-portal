@@ -140,10 +140,16 @@ function parseSafety(wb, warnings) {
   const rows = findSheet(wb, 'Safety');
   if (!rows) { warnings.push('Sheet "Safety" not found — skipping safety section'); return {}; }
 
-  // Safety Metrics (rows 11-13 in new template)
-  const safetyInspections = cell(rows, 11, 1);
-  const goodSaveCount = cell(rows, 12, 1);
-  const recordableCount = cell(rows, 13, 1);
+  // Safety Metrics — row 11 has location headers (Post Campus, Brooklyn Campus),
+  // rows 12-14 have the counts per campus. Sum across campuses for aggregate.
+  function sumMetric(row) {
+    const a = Number(cell(rows, row, 1)) || 0;
+    const b = Number(cell(rows, row, 2)) || 0;
+    return (a + b) > 0 ? String(a + b) : '';
+  }
+  const safetyInspections = sumMetric(12);
+  const goodSaveCount = sumMetric(13);
+  const recordableCount = sumMetric(14);
 
   // Recordable Incidents by Quarter (rows 18-21 — stop before TOTAL row at 22)
   const incidents = filterPlaceholders(
@@ -212,10 +218,24 @@ function parseAudits(wb, warnings) {
   if (!rows) { warnings.push('Sheet "Audits & Actions" not found — skipping audits section'); return {}; }
 
   const AREAS = ['Restrooms', 'Common Areas', 'Classrooms', 'Cafeteria', 'Stairwells', 'Other'];
-  const topAreas = AREAS.map((area, i) => ({
-    area,
-    count: cell(rows, 14 + i, 1),
-  }));
+  // Read location names from header row 13 (cols B, C, ...)
+  const areaLocationNames = [];
+  for (let c = 1; c <= 4; c++) {
+    const name = cell(rows, 13, c);
+    if (name && !['count', 'total'].includes(name.toLowerCase())) areaLocationNames.push(name);
+  }
+  // Read per-location values for each area
+  const topAreas = AREAS.map((area, i) => {
+    const row = 14 + i;
+    if (areaLocationNames.length > 1) {
+      // Multi-location: read one value per location column
+      const values = areaLocationNames.map((_, ci) => cell(rows, row, 1 + ci));
+      return { area, count: '', values };
+    }
+    // Single location or no headers: read column B as count
+    return { area, count: cell(rows, row, 1), values: [] };
+  });
+  const topAreaLocations = areaLocationNames.length > 1 ? areaLocationNames : [];
 
   return {
     locationNames: [cell(rows, 4, 1), cell(rows, 4, 2), cell(rows, 4, 3)],
@@ -227,6 +247,7 @@ function parseAudits(wb, warnings) {
     auditExplanation: cell(rows, 8, 1),
     actionExplanation: cell(rows, 9, 1),
     topAreas,
+    topAreaLocations,
   };
 }
 

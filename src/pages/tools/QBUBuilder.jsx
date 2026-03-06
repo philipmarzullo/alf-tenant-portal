@@ -323,10 +323,11 @@ const INITIAL = {
     auditExplanation: '',
     actionExplanation: '',
     topAreas: [
-      { area: 'Restrooms', count: '' }, { area: 'Common Areas', count: '' },
-      { area: 'Classrooms', count: '' }, { area: 'Cafeteria', count: '' },
-      { area: 'Stairwells', count: '' }, { area: 'Other', count: '' },
+      { area: 'Restrooms', count: '', values: [] }, { area: 'Common Areas', count: '', values: [] },
+      { area: 'Classrooms', count: '', values: [] }, { area: 'Cafeteria', count: '', values: [] },
+      { area: 'Stairwells', count: '', values: [] }, { area: 'Other', count: '', values: [] },
     ],
+    topAreaLocations: [],
   },
   executive: {
     achievements: ['', '', ''],
@@ -763,15 +764,42 @@ export default function QBUBuilder() {
           <div><Label>Audit Change Explanation</Label><Area value={form.audits.auditExplanation} onChange={(v) => updateSection('audits', { auditExplanation: v })} placeholder="Why did audit counts change?" rows={2} /></div>
           <div><Label>Action Change Explanation</Label><Area value={form.audits.actionExplanation} onChange={(v) => updateSection('audits', { actionExplanation: v })} placeholder="Why did corrective action counts change?" rows={2} /></div>
 
-          <SectionHeading>Top Corrective Action Areas</SectionHeading>
-          <div className="grid grid-cols-2 gap-2">
-            {form.audits.topAreas.map((row, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="text-sm text-dark-text w-32">{row.area}</span>
-                <Input value={row.count} onChange={(v) => updateArrayRow('audits', 'topAreas', i, { count: v })} placeholder="0" type="number" />
+          <SectionHeading description={form.audits.topAreaLocations?.length > 1
+            ? `Values per location. Use counts or percentages (e.g., 0.21 = 21%).`
+            : `Enter count of corrective actions per area.`}>Top Corrective Action Areas</SectionHeading>
+          {form.audits.topAreaLocations?.length > 1 ? (
+            /* Per-location layout when Excel has multiple location columns */
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="w-32" />
+                {form.audits.topAreaLocations.map((loc) => (
+                  <span key={loc} className="flex-1 text-xs font-semibold text-secondary-text text-center">{loc}</span>
+                ))}
               </div>
-            ))}
-          </div>
+              {form.audits.topAreas.map((row, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-sm text-dark-text w-32">{row.area}</span>
+                  {(row.values || []).map((v, vi) => (
+                    <Input key={vi} value={v} onChange={(val) => {
+                      const newValues = [...(row.values || [])];
+                      newValues[vi] = val;
+                      updateArrayRow('audits', 'topAreas', i, { values: newValues });
+                    }} placeholder="0" type="number" className="flex-1" />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Single count layout */
+            <div className="grid grid-cols-2 gap-2">
+              {form.audits.topAreas.map((row, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-sm text-dark-text w-32">{row.area}</span>
+                  <Input value={row.count} onChange={(v) => updateArrayRow('audits', 'topAreas', i, { count: v })} placeholder="0" type="number" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
 

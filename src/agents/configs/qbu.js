@@ -5,7 +5,7 @@ export const qbuAgent = {
   department: 'tools',
   status: 'active',
   model: 'claude-sonnet-4-20250514',
-  maxTokens: 16384,
+  maxTokens: 32768,
   systemPrompt: `You are a Quarterly Business Update (QBU) generator for a facility services company. You create polished, presentation-ready QBU content from raw intake data.
 
 ${SHARED_RULES}
@@ -135,7 +135,7 @@ Campus names, building names, and specific location references are CRITICAL and 
 ### C — Operational Performance
 - C.1: Work tickets MUST show YoY comparison with % change. Include a Key Takeaway narrative explaining the numbers (e.g., "11.7% decrease reflects addition of 3rd shift and improved technology adoption"). Events Supported must be listed cleanly — include ALL events provided, formatted as a simple comma-separated or bulleted list. Keep event names SHORT (under 8 words each). Do NOT split events into a table or spread them across sections. The events callout shares the slide with the work tickets table — keep it compact.
 - C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies. If prior quarter comparison was removed by the user, only show current quarter data. Do NOT include 'Audit Change Explanation' text in the metrics table — that belongs in the analysis narrative below. If prior quarter audit/action data is all zeros or missing, omit the prior quarter rows from the table and do NOT reference prior quarter performance. IMPORTANT: If a location has zero audits, zero actions, and a generic name like "Location 3", OMIT it from the table — it's an unused template placeholder.
-- C.3: Visual data breakdown of corrective action areas with counts. Include a Key Takeaway interpreting what the top corrective action areas indicate about operational focus and priorities.
+- C.3: Visual data breakdown of corrective action areas with counts (or percentages). When per-location data is provided (e.g., Post Campus and Brooklyn Campus), compare the locations — note which areas are proportionally higher at each location and what that suggests about facility usage patterns. Include a Key Takeaway interpreting what the top corrective action areas indicate about operational focus and priorities.
 - EVERY KPI must have an interpretation sentence AND a next action — raw numbers without context are useless.
 
 ### D — Projects & Satisfaction
@@ -410,9 +410,26 @@ function buildQBUPrompt(data) {
     }
     if (a.auditExplanation) sections.push(`Audit Change Explanation: ${a.auditExplanation}`);
     if (a.actionExplanation) sections.push(`Action Change Explanation: ${a.actionExplanation}`);
-    if (a.topAreas?.filter(r => r.count).length) {
-      sections.push(`\nTop Corrective Action Areas:`);
-      a.topAreas.filter(r => r.count).forEach(r => sections.push(`  ${r.area}: ${r.count}`));
+    const hasMultiLocAreas = a.topAreaLocations?.length > 1;
+    const areasWithData = (a.topAreas || []).filter(r => hasMultiLocAreas
+      ? (r.values || []).some(v => Number(v) > 0)
+      : r.count
+    );
+    if (areasWithData.length) {
+      if (hasMultiLocAreas) {
+        sections.push(`\nTop Corrective Action Areas (by location):`);
+        sections.push(`  Locations: ${a.topAreaLocations.join(', ')}`);
+        const allVals = areasWithData.flatMap(r => (r.values || []).map(Number).filter(Boolean));
+        const isPercent = allVals.every(v => v > 0 && v < 1);
+        if (isPercent) sections.push(`  Note: Values are percentages (e.g., 0.21 = 21%)`);
+        areasWithData.forEach(r => {
+          const vals = a.topAreaLocations.map((loc, i) => `${loc}=${r.values?.[i] || 0}`).join(', ');
+          sections.push(`  ${r.area}: ${vals}`);
+        });
+      } else {
+        sections.push(`\nTop Corrective Action Areas:`);
+        areasWithData.forEach(r => sections.push(`  ${r.area}: ${r.count}`));
+      }
     }
   }
 
