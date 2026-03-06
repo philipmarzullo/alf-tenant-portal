@@ -89,7 +89,7 @@ Campus names, building names, and specific location references are CRITICAL and 
 ## CONTENT RULES BY SECTION
 
 ### A — Safety
-- A.1: Safety Moment — ALWAYS EXACTLY ONE SLIDE. This is non-negotiable. All safety moment content (tips, reminders, "Why It Matters") MUST fit on a single slide. Do NOT split safety moment content across multiple slides under any circumstances. Rotates quarterly (workplace violence, slip/fall, PPE, heat illness, winter prep, ergonomics, chemical safety). Include EXACTLY 4 Key Safety Tips and EXACTLY 4 Quick Reminders — no more, no fewer. Each tip/reminder must be a SHORT bullet (under 15 words). "Why It Matters" callout: 2-3 sentences max. When a safety theme is provided, BUILD OUT a complete safety moment for that theme. If specific tips or reminders are provided, incorporate and refine them — but always output exactly 4 of each. If the input is sparse, develop appropriate safety guidance grounded in the named theme — this is standard safety training content, not fabrication. NEVER fabricate incident data, metrics, or claims.
+- A.1: Safety Moment — ALWAYS EXACTLY ONE SLIDE. This is non-negotiable. All safety moment content (tips, reminders, "Why It Matters") MUST fit on a single slide. Do NOT split safety moment content across multiple slides under any circumstances. Rotates quarterly (workplace violence, slip/fall, PPE, heat illness, winter prep, ergonomics, chemical safety). Include EXACTLY 4 Key Safety Tips and EXACTLY 4 Quick Reminders — no more, no fewer. Each tip/reminder must be a SHORT bullet (under 15 words). "Why It Matters" callout: 2-3 sentences max. When a safety theme is provided, BUILD OUT a complete safety moment for that theme. If specific tips or reminders are provided, incorporate and refine them — but always output exactly 4 of each. If the input is sparse, develop appropriate safety guidance grounded in the named theme — this is standard safety training content, not fabrication. IMPORTANT: All safety content MUST be grounded in FACILITY SERVICES operations — custodial, janitorial, grounds maintenance, building operations, floor care, event setup. Do NOT reference industrial/manufacturing concepts like lockout/tagout, confined space entry, arc flash, machine guarding, or factory procedures — these are foreign to facility services work. NEVER fabricate incident data, metrics, or claims.
 - A.2: Safety & Compliance — ONE SLIDE. When there are NO recordable incidents for the quarter, clearly state "Zero Recordables This Quarter" and omit the empty recordables table. Same for Good Saves — if none reported, state "No Good Saves Reported" rather than showing an empty structure. CRITICAL: Do NOT output template/placeholder text like "Description/Cause" or "Medical Treatment" as incident details — those are field labels, not data. If a recordable detail row has only placeholder text, OMIT it entirely. When incidents DO exist: recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified. Include the FULL detail for each — do not just say "slip and fall" when the user provided specifics about what happened.
 
 ### B — Executive Summary
@@ -112,6 +112,7 @@ Campus names, building names, and specific location references are CRITICAL and 
 - D.3: ALL client quotes MUST appear. Keep quotes EXACTLY as provided — only improve framing and organization. Include the event or context where the quote came from (e.g., "Fox Event", "Career Fair") — this is now a dedicated field in the intake data. Attribute by name AND location. In the NARRATIVE block, use the 4-field pipe format: location | event | quote | attribution.
 
 ### E — Challenges
+- **ONE SLIDE. Challenges MUST fit on exactly 1 slide.** Keep each challenge bullet to ONE concise sentence (under 20 words). Keep each action bullet to ONE concise sentence (under 25 words). Include the location in parentheses at the end.
 - Must be RECURRING issues, not one-time incidents.
 - Every challenge MUST map to an action taken or planned. If an action is missing, use [PLACEHOLDER: action plan needed] — this is valuable because it flags gaps.
 - Tag each challenge AND each action with specific location (campus, building).
@@ -127,7 +128,7 @@ Campus names, building names, and specific location references are CRITICAL and 
 
 ### G — Innovation & Roadmap
 - G.1: New tech, equipment, or process improvements. Connect each to an operational benefit. Polish raw innovation descriptions into clear, benefit-driven summaries. INCLUDE ALL innovations — do not drop any. Innovation photos appear on their own slides after G.1.
-- G.2: Concrete next-quarter look-ahead. INCLUDE ALL roadmap initiatives provided — do not drop any. This is a common failure point: if the user provides 9 initiatives, you MUST output all 9 in G2:ROADMAP. Count them. Use ONLY the month values from the Excel intake data — do NOT fabricate or invent month names. If a roadmap item has no month specified, use an empty month field. Use consistent date formatting throughout (all months OR all quarters — do not mix "March" with "Q1"). Polish initiative descriptions and connect the goal statement to operational outcomes. Not vague goals.
+- G.2: **ONE SLIDE. Roadmap MUST fit on exactly 1 slide.** Concrete next-quarter look-ahead. INCLUDE ALL roadmap initiatives provided — do not drop any. IMPORTANT: When multiple items share the same initiative/category name (e.g., all items are "Scaling - Grounds, Events & Expansion"), consolidate them — use the specific detail (e.g., "Dormitory Plow Repairs", "Campus-Wide Fertilization") as the initiative name, NOT the shared category. Keep each initiative description concise (under 15 words). Use ONLY the month values from the Excel intake data — do NOT fabricate or invent month names. If a roadmap item has no month specified, use an empty month field. Polish initiative descriptions and connect the goal statement to operational outcomes. Not vague goals.
 
 ## EMPTY SECTION HANDLING
 When a section has NO user-provided data:
@@ -197,8 +198,8 @@ The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:E1:CHALLENGES -->
-[location | polished challenge text (do NOT include the location in this text — it goes in the first field only) | polished action text]
-[location | polished challenge text | polished action text]
+[location | concise challenge (under 20 words, do NOT include location — it goes in first field) | concise action (under 25 words)]
+[one line per challenge — keep SHORT to fit on one slide]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:C3:TAKEAWAY -->
@@ -222,7 +223,7 @@ The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:G2:ROADMAP -->
-[Polished roadmap entries, one per line, in format: month | initiative name | details]
+[Polished roadmap entries, one per line, in format: month | specific initiative name (NOT the shared category) | concise details (under 15 words)]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:G2:GOAL -->

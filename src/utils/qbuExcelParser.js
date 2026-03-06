@@ -71,6 +71,16 @@ function concat(rows, rStart, rEnd, c) {
   return parts.join('\n');
 }
 
+/** Read multiple columns from a single row and join non-empty values */
+function cellsAcross(rows, r, cStart, cEnd, separator = '\n') {
+  const parts = [];
+  for (let c = cStart; c <= cEnd; c++) {
+    const v = cell(rows, r, c);
+    if (v) parts.push(v);
+  }
+  return parts.join(separator);
+}
+
 // ── Placeholder / Header Row Filtering ───────────────────
 
 const PLACEHOLDER_WORDS = new Set([
@@ -81,6 +91,7 @@ const PLACEHOLDER_WORDS = new Set([
   'category', 'client team attendees', 'a&a team attendees', 'a&a team',
   'client team', 'date', 'cause', 'treatment', 'return to work date',
   'corrective action', 'hazard prevented', 'who notified', 'status',
+  'total', 'annual total',
 ]);
 
 /** Check if a value looks like a header/placeholder label rather than real data */
@@ -134,9 +145,9 @@ function parseSafety(wb, warnings) {
   const goodSaveCount = cell(rows, 12, 1);
   const recordableCount = cell(rows, 13, 1);
 
-  // Recordable Incidents by Quarter (rows 18-21, shifted +6 from old rows 12-15)
+  // Recordable Incidents by Quarter (rows 18-21 — stop before TOTAL row at 22)
   const incidents = filterPlaceholders(
-    rowObjects(rows, 18, 22, [0, 1, 2, 3, 4], ['location', 'q1', 'q2', 'q3', 'q4']),
+    rowObjects(rows, 18, 21, [0, 1, 2, 3, 4], ['location', 'q1', 'q2', 'q3', 'q4']),
     ['location']
   );
   // Good Saves (rows 27-32, shifted +6 from old rows 21-26)
@@ -168,9 +179,9 @@ function parseSafety(wb, warnings) {
 
   return {
     theme: cell(rows, 4, 1),
-    keyTips: cell(rows, 5, 1),
-    quickReminders: cell(rows, 6, 1),
-    whyItMatters: cell(rows, 7, 1),
+    keyTips: cellsAcross(rows, 5, 1, 4),
+    quickReminders: cellsAcross(rows, 6, 1, 4),
+    whyItMatters: cellsAcross(rows, 7, 1, 4),
     safetyInspections,
     goodSaveCount,
     recordableCount,
@@ -192,7 +203,7 @@ function parseWorkTickets(wb, warnings) {
   return {
     locations: locations.length ? locations : [{ location: '', priorYear: '', currentYear: '' }],
     keyTakeaway: cell(rows, 11, 1),
-    eventsSupported: concat(rows, 14, 30, 1),
+    eventsSupported: concat(rows, 17, 31, 0),
   };
 }
 
@@ -203,17 +214,18 @@ function parseAudits(wb, warnings) {
   const AREAS = ['Restrooms', 'Common Areas', 'Classrooms', 'Cafeteria', 'Stairwells', 'Other'];
   const topAreas = AREAS.map((area, i) => ({
     area,
-    count: cell(rows, 16 + i, 1),
+    count: cell(rows, 14 + i, 1),
   }));
 
   return {
     locationNames: [cell(rows, 4, 1), cell(rows, 4, 2), cell(rows, 4, 3)],
-    priorAudits: [cell(rows, 5, 1), cell(rows, 5, 2), cell(rows, 5, 3)],
-    priorActions: [cell(rows, 6, 1), cell(rows, 6, 2), cell(rows, 6, 3)],
-    currentAudits: [cell(rows, 7, 1), cell(rows, 7, 2), cell(rows, 7, 3)],
-    currentActions: [cell(rows, 8, 1), cell(rows, 8, 2), cell(rows, 8, 3)],
-    auditExplanation: cell(rows, 10, 1),
-    actionExplanation: cell(rows, 11, 1),
+    // Template has current quarter only — no prior quarter rows
+    priorAudits: [],
+    priorActions: [],
+    currentAudits: [cell(rows, 5, 1), cell(rows, 5, 2), cell(rows, 5, 3)],
+    currentActions: [cell(rows, 6, 1), cell(rows, 6, 2), cell(rows, 6, 3)],
+    auditExplanation: cell(rows, 8, 1),
+    actionExplanation: cell(rows, 9, 1),
     topAreas,
   };
 }

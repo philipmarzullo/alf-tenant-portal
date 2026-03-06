@@ -39,11 +39,19 @@ export async function fetchLogoBase64(path) {
   try {
     const resp = await fetch(path);
     const blob = await resp.blob();
-    return await new Promise((resolve) => {
+    const data = await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);
       reader.readAsDataURL(blob);
     });
+    // Detect actual aspect ratio to prevent stretching
+    const ratio = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img.naturalWidth / img.naturalHeight);
+      img.onerror = () => resolve(2.83); // fallback
+      img.src = data;
+    });
+    return { data, ratio };
   } catch {
     return null;
   }
@@ -77,11 +85,14 @@ export function addSectionTitle(slide, title) {
   });
 }
 
-/** Logo in bottom-right corner — actual ratio is 2.83:1 */
+/** Logo in bottom-right corner — uses actual image aspect ratio */
 export function addLogoBottomRight(slide, logoColor) {
-  if (logoColor) {
-    slide.addImage({ data: logoColor, x: 8.85, y: 5.15, w: 0.65, h: 0.23 });
-  }
+  if (!logoColor) return;
+  const { data, ratio } = typeof logoColor === 'string' ? { data: logoColor, ratio: 2.83 } : logoColor;
+  const maxW = 0.65, maxH = 0.3;
+  const w = Math.min(maxW, maxH * ratio);
+  const h = w / ratio;
+  slide.addImage({ data, x: SLIDE_W - MARGIN - w, y: SLIDE_H - 0.15 - h, w, h });
 }
 
 /** White card with optional colored top border */
@@ -168,14 +179,14 @@ export function addBrandedTable(slide, rows, opts = {}) {
 }
 
 /** Bullet list inside a card */
-export function addCardBullets(slide, items, { x, y, w, h }) {
+export function addCardBullets(slide, items, { x, y, w, h, fontSize: fs, lineSpacing } = {}) {
   const filtered = (items || []).filter(Boolean);
   if (!filtered.length) return;
   slide.addText(
     filtered.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
     {
       x: x + 0.25, y, w: w - 0.5, h,
-      fontSize: 10, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
+      fontSize: fs || 10, fontFace: FONT, color: DARK, lineSpacingMultiple: lineSpacing || 1.3,
       valign: 'top',
     }
   );
@@ -346,9 +357,13 @@ export function addDarkCoverSlide(pptx, { primaryText, subtitleText, dateLine, t
     });
   }
 
-  // Logo bottom-left — actual ratio is 2.83:1
+  // Logo bottom-left — uses actual aspect ratio
   if (logoWhite) {
-    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.7, w: 1.1, h: 0.39 });
+    const { data, ratio } = typeof logoWhite === 'string' ? { data: logoWhite, ratio: 2.83 } : logoWhite;
+    const maxW = 1.1, maxH = 0.45;
+    const w = Math.min(maxW, maxH * ratio);
+    const h = w / ratio;
+    slide.addImage({ data, x: MARGIN, y: 5.0 - h, w, h });
   }
 
   // Website URL bottom-right
@@ -403,9 +418,13 @@ export function addDarkThankYouSlide(pptx, { closingMessage, logoWhite, websiteU
     });
   }
 
-  // Logo bottom-left — actual ratio is 2.83:1
+  // Logo bottom-left — uses actual aspect ratio
   if (logoWhite) {
-    slide.addImage({ data: logoWhite, x: MARGIN, y: 4.7, w: 1.1, h: 0.39 });
+    const { data, ratio } = typeof logoWhite === 'string' ? { data: logoWhite, ratio: 2.83 } : logoWhite;
+    const maxW = 1.1, maxH = 0.45;
+    const w = Math.min(maxW, maxH * ratio);
+    const h = w / ratio;
+    slide.addImage({ data, x: MARGIN, y: 5.0 - h, w, h });
   }
 
   // Red diamond accent
