@@ -141,15 +141,34 @@ function parseSafety(wb, warnings) {
   if (!rows) { warnings.push('Sheet "Safety" not found — skipping safety section'); return {}; }
 
   // Safety Metrics — row 11 has location headers (Post Campus, Brooklyn Campus),
-  // rows 12-14 have the counts per campus. Sum across campuses for aggregate.
+  // rows 12-14 have the counts per campus. Preserve per-campus AND aggregate.
+  const safetyLocationHeaders = [];
+  for (let c = 1; c <= 4; c++) {
+    const name = cell(rows, 11, c);
+    if (name && name.toLowerCase() !== 'total') safetyLocationHeaders.push(name);
+  }
   function sumMetric(row) {
-    const a = Number(cell(rows, row, 1)) || 0;
-    const b = Number(cell(rows, row, 2)) || 0;
-    return (a + b) > 0 ? String(a + b) : '';
+    let total = 0;
+    for (let c = 1; c <= Math.max(safetyLocationHeaders.length, 1); c++) {
+      total += Number(cell(rows, row, c)) || 0;
+    }
+    return total > 0 ? String(total) : '';
+  }
+  function perCampusMetric(row) {
+    return safetyLocationHeaders.map((_, ci) => cell(rows, row, 1 + ci));
   }
   const safetyInspections = sumMetric(12);
   const goodSaveCount = sumMetric(13);
   const recordableCount = sumMetric(14);
+  // Per-campus breakdown for table display
+  const safetyMetricsByLocation = safetyLocationHeaders.length > 1
+    ? safetyLocationHeaders.map((loc, i) => ({
+        location: loc,
+        inspections: cell(rows, 12, 1 + i),
+        goodSaves: cell(rows, 13, 1 + i),
+        recordables: cell(rows, 14, 1 + i),
+      }))
+    : [];
 
   // Recordable Incidents by Quarter (rows 18-21 — stop before TOTAL row at 22)
   const incidents = filterPlaceholders(
@@ -191,6 +210,7 @@ function parseSafety(wb, warnings) {
     safetyInspections,
     goodSaveCount,
     recordableCount,
+    safetyMetricsByLocation,
     incidents: incidents.length ? incidents : [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
     goodSaves: goodSaves.length ? goodSaves : [{ location: '', hazard: '', action: '', notified: '' }],
     incidentDetails: incidentDetails.length ? incidentDetails : [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],

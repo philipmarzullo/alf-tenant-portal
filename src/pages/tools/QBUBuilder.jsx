@@ -304,7 +304,7 @@ const INITIAL = {
   },
   safety: {
     theme: '', keyTips: '', quickReminders: '', whyItMatters: '',
-    safetyInspections: '', goodSaveCount: '', recordableCount: '',
+    safetyInspections: '', goodSaveCount: '', recordableCount: '', safetyMetricsByLocation: [],
     incidents: [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
     goodSaves: [{ location: '', hazard: '', action: '', notified: '' }],
     incidentDetails: [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],

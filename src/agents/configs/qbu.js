@@ -37,7 +37,7 @@ The QBU uses the following section numbering convention. Use ONLY the sections t
 | B.1 | Executive Summary (achievements, challenges, innovation milestones) |
 | C.1 | Operational Performance – Managing Demand (work tickets YoY) |
 | C.2 | Audits and Corrective Actions (QoQ comparison) |
-| C.3 | Top Action Areas (visual bar/pie breakdown) |
+| C.3 | Top Action Areas (pie chart breakdown + analysis) |
 | D.1 | Completed Projects Showcase (by category) |
 | D.2 | Completed Projects: Photos |
 | D.3 | Service & Client Satisfaction (testimonials) |
@@ -59,7 +59,7 @@ Before writing any slide content, read ALL supporting documents and identify:
 
 ### Step 2: Thread Themes Through Every Section
 Each slide should reinforce the overall story, not exist in isolation:
-- **B.1 Executive Summary** — Frame achievements and challenges through the lens of your identified themes. This slide sets the narrative for the entire deck.
+- **B.1 Executive Summary** — Frame achievements and challenges through the lens of your identified themes. The Audit Change Explanation and Action Change Explanation fields are often the richest source of challenge and achievement context — a salt vendor switch that drove up deficiencies is a strategic challenge; proactively diversifying suppliers is an achievement. Use these to ground the executive summary in real operational events, not generic statements. This slide sets the narrative for the entire deck.
 - **C.1 Work Tickets** — If documents mention workload changes, staffing shifts, or event volume, use that context to explain the numbers. Don't just say "11.7% decrease" — say WHY from the documents.
 - **C.2 Audits** — If a questionnaire mentions specific facility issues (sand residue, salt damage, vendor problems), that context belongs here, not generic analysis.
 - **D.1 Projects** — If a call transcript highlights a particular project success, emphasize that project. Polish descriptions using the richer context from documents.
@@ -125,21 +125,22 @@ Campus names, building names, and specific location references are CRITICAL and 
 - A.2: Safety & Compliance — ONE SLIDE. When there are NO recordable incidents for the quarter, clearly state "Zero Recordables This Quarter" and omit the empty recordables table. Same for Good Saves — if none reported, state "No Good Saves Reported" rather than showing an empty structure. CRITICAL: Do NOT output template/placeholder text like "Description/Cause" or "Medical Treatment" as incident details — those are field labels, not data. If a recordable detail row has only placeholder text, OMIT it entirely. When incidents DO exist: recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified. Include the FULL detail for each — do not just say "slip and fall" when the user provided specifics about what happened.
 
 ### B — Executive Summary
-- ONE SLIDE. This is critical — keep it concise. Executive Summary MUST fit on exactly 1 slide. Maximum 3 achievements, 2 challenges, 2 innovations. Keep each bullet to 1-2 sentences.
-- Key Achievements (3): concrete accomplishments with specifics — name the building, cite the metric, specify the timeframe. One line per achievement.
-- Strategic Challenges (2): be HONEST — spin undermines trust. If something went wrong, say so directly.
-- Innovation Milestones (2): tech deployments, process improvements, equipment additions.
-- This slide sets the narrative for the entire QBU.
-- CRITICAL: When no executive summary data is provided in the intake form, you MUST STILL produce NARRATIVE:B1:ACHIEVEMENTS, NARRATIVE:B1:CHALLENGES, and NARRATIVE:B1:INNOVATIONS blocks. Synthesize from the other sections: use project completions for achievements, use challenges section data for strategic challenges, use roadmap/innovation data for milestones. The Executive Summary MUST NEVER be empty — it is the most important narrative slide. An empty executive summary is unacceptable.
+- ONE SLIDE. This is critical — keep it concise. Executive Summary MUST fit on exactly 1 slide. Keep each bullet to 1-2 sentences.
+- Key Achievements (3): concrete accomplishments with specifics — name the building, cite the metric, specify the timeframe. One line per achievement. When audit/action explanations show proactive responses to challenges (e.g., diversifying salt vendors, implementing new procedures), these ARE achievements worth highlighting.
+- Strategic Challenges (2): be HONEST — spin undermines trust. If something went wrong, say so directly. The Audit Change Explanation and Action Change Explanation fields often contain the most important challenge context (e.g., vendor supply disruptions, environmental factors driving deficiency spikes). Use this to write specific, grounded challenges — not generic platitudes.
+- Innovation Milestones (2): tech deployments, process improvements, equipment additions. ONLY include when the intake data explicitly provides innovation milestones. Do NOT fabricate or infer innovations.
+- CRITICAL: When NO innovation milestones are provided in the intake form, output an EMPTY NARRATIVE:B1:INNOVATIONS block. The PPTX generator will automatically switch to a 2-column layout (achievements + challenges only). Do NOT invent innovations — a clean 2-column exec summary is better than fabricated milestones.
+- When no executive summary data is provided at all, you MUST STILL produce NARRATIVE:B1:ACHIEVEMENTS and NARRATIVE:B1:CHALLENGES blocks. Synthesize from the other sections: use project completions for achievements, use challenges section data for strategic challenges. The Executive Summary MUST NEVER be empty — it is the most important narrative slide.
+- NEVER fabricate specific program names, system deployments, or technology rollouts that are not in the intake data. If Lighthouse, AI agents, or any other specific initiative is not mentioned in the intake, do NOT reference it.
 
 ### C — Operational Performance
 - C.1: Work tickets MUST show YoY comparison with % change. Include a Key Takeaway narrative explaining the numbers (e.g., "11.7% decrease reflects addition of 3rd shift and improved technology adoption"). Events Supported must be listed cleanly — include ALL events provided, formatted as a simple comma-separated or bulleted list. Keep event names SHORT (under 8 words each). Do NOT split events into a table or spread them across sections. The events callout shares the slide with the work tickets table — keep it compact.
-- C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies. If prior quarter comparison was removed by the user, only show current quarter data. Do NOT include 'Audit Change Explanation' text in the metrics table — that belongs in the analysis narrative below. If prior quarter audit/action data is all zeros or missing, omit the prior quarter rows from the table and do NOT reference prior quarter performance. IMPORTANT: If a location has zero audits, zero actions, and a generic name like "Location 3", OMIT it from the table — it's an unused template placeholder.
-- C.3: Visual data breakdown of corrective action areas with counts (or percentages). When per-location data is provided (e.g., Post Campus and Brooklyn Campus), compare the locations — note which areas are proportionally higher at each location and what that suggests about facility usage patterns. Include a Key Takeaway interpreting what the top corrective action areas indicate about operational focus and priorities.
+- C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies. If prior quarter comparison was removed by the user, only show current quarter data. Do NOT include 'Audit Change Explanation' text in the metrics table — that belongs in the analysis narrative below. If prior quarter audit/action data is all zeros or missing, omit the prior quarter rows from the table and do NOT reference prior quarter performance. IMPORTANT: If a location has zero audits, zero actions, and a generic name like "Location 3", OMIT it from the table — it's an unused template placeholder. The Audit Change Explanation and Action Change Explanation fields are CRITICAL story context — they explain WHY deficiencies happened (e.g., salt vendor changes, sand residue, construction debris). Use this context to build the C.2 analysis narrative AND carry it forward into C.3 and B.1.
+- C.3: Pie chart breakdown of corrective action areas with an ANALYSIS section explaining the data. When per-location data is provided (e.g., Post Campus and Brooklyn Campus), compare the locations — note which areas are proportionally higher at each location and what that suggests about facility usage patterns. The NARRATIVE:C3:TAKEAWAY block should be a DETAILED analysis (3-5 sentences) that CONNECTS the corrective action distribution to the story from the Audit/Action Change Explanations. Example: if the explanation mentions sand residue from a salt vendor switch, the C.3 analysis should explain how that drove up common area and restroom corrective actions. Don't just describe the pie chart — explain WHY the numbers look the way they do. This text appears in a dedicated analysis card alongside the pie charts.
 - EVERY KPI must have an interpretation sentence AND a next action — raw numbers without context are useless.
 
 ### D — Projects & Satisfaction
-- D.1: Organize by category. Be specific: name buildings, describe what was done. Polish raw project descriptions into concise, professional summaries that convey scope and impact. INCLUDE ALL PROJECTS — do not drop any. Preserve campus/building/location details. CRITICAL DENSITY: Each project bullet MUST be ONE sentence, under 30 words. Do NOT expand short descriptions into long paragraphs. The completed projects section must fit on 1-2 slides maximum. Do NOT create an "Events Supported" category in D.1 — events belong ONLY on the C.1 Work Tickets slide.
+- D.1: Organize by category. Be specific: name buildings, describe what was done. Polish raw project descriptions into concise, professional summaries that convey scope and impact. INCLUDE ALL PROJECTS — do not drop any. Preserve campus/building/location details. CRITICAL DENSITY: Each project bullet MUST be ONE sentence, under 20 words. Trim detail ruthlessly — "Parking lot landscape restoration with soil, irrigation, and regrading" not "Lower Facilities Parking Lot landscape restoration with 160 cubic yards of soil, irrigation system installation, and full regrading across the entire area." The completed projects section must fit on 1-2 slides maximum. Do NOT create an "Events Supported" category in D.1 — events belong ONLY on the C.1 Work Tickets slide.
 - D.2: Real photos with captions. Photos tagged as Before/After will be automatically paired on slides. Reference before/after transformations in your D.1 narrative where relevant.
 - D.3: ALL client quotes MUST appear. Keep quotes EXACTLY as provided — only improve framing and organization. Include the event or context where the quote came from (e.g., "Fox Event", "Career Fair") — this is now a dedicated field in the intake data. Attribute by name AND location. In the NARRATIVE block, use the 4-field pipe format: location | event | quote | attribution.
 
@@ -167,8 +168,9 @@ When a section has NO user-provided data:
 - For sections that can be reasonably synthesized from other data (B.1 Executive Summary, F.1 Financial Strategy): generate content but keep it grounded in actual data from other sections.
 - For sections that require specific input (D.1 Projects, D.3 Testimonials, C.1 Work Tickets): OMIT the slide entirely. Do not output a slide with only placeholder markers — a shorter deck is better than one full of "[PLACEHOLDER]" slides.
 - For G.1 Innovation and G.2 Roadmap: if no data provided, omit the slide. Do NOT fabricate future plans, technology deployments, or strategic initiatives.
-- NEVER invent incident data, financial figures, project details, or client quotes.
-- The only exception: B.1 Executive Summary should always be included — synthesize from available data if needed.
+- For B.1 Innovation Milestones specifically: if no innovation data is provided, output an EMPTY NARRATIVE:B1:INNOVATIONS block. The slide will render as 2-column (achievements + challenges only). Do NOT synthesize or fabricate innovations from other sections.
+- NEVER invent incident data, financial figures, project details, client quotes, or innovation milestones.
+- The only exception: B.1 Executive Summary (achievements + challenges) should always be included — synthesize from available data if needed. But innovations MUST come from actual intake data.
 
 ## NARRATIVE FLOW
 Follow the story arc from the DOCUMENT SYNTHESIS section above. Every slide reinforces the 2-3 themes you identified from documents.
@@ -341,9 +343,18 @@ function buildQBUPrompt(data) {
     if (s.quickReminders) sections.push(`Quick Reminders:\n${s.quickReminders}`);
     if (s.whyItMatters) sections.push(`Why It Matters:\n${s.whyItMatters}`);
     // Safety Metrics counts
-    if (s.safetyInspections) sections.push(`Number of Safety Inspections: ${s.safetyInspections}`);
-    if (s.goodSaveCount) sections.push(`Number of Good Saves: ${s.goodSaveCount}`);
-    if (s.recordableCount) sections.push(`Number of Recordables: ${s.recordableCount}`);
+    if (s.safetyMetricsByLocation?.length > 1) {
+      sections.push(`\nSafety Metrics by Location:`);
+      s.safetyMetricsByLocation.forEach(loc => {
+        const parts = [`Inspections=${loc.inspections || 0}`, `Good Saves=${loc.goodSaves || 0}`, `Recordables=${loc.recordables || 0}`];
+        sections.push(`  ${loc.location}: ${parts.join(', ')}`);
+      });
+      sections.push(`  Totals: Inspections=${s.safetyInspections || 0}, Good Saves=${s.goodSaveCount || 0}, Recordables=${s.recordableCount || 0}`);
+    } else {
+      if (s.safetyInspections) sections.push(`Number of Safety Inspections: ${s.safetyInspections}`);
+      if (s.goodSaveCount) sections.push(`Number of Good Saves: ${s.goodSaveCount}`);
+      if (s.recordableCount) sections.push(`Number of Recordables: ${s.recordableCount}`);
+    }
     if (s.incidents?.filter(r => r.location).length) {
       sections.push(`\nRecordable Incidents by Location/Quarter:`);
       s.incidents.filter(r => r.location).forEach(r =>
@@ -408,8 +419,8 @@ function buildQBUPrompt(data) {
       sections.push(`Current Quarter Audits: ${a.currentAudits.join(', ')} (Total: ${a.currentAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
       sections.push(`Current Quarter Actions: ${a.currentActions.join(', ')} (Total: ${a.currentActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
     }
-    if (a.auditExplanation) sections.push(`Audit Change Explanation: ${a.auditExplanation}`);
-    if (a.actionExplanation) sections.push(`Action Change Explanation: ${a.actionExplanation}`);
+    if (a.auditExplanation) sections.push(`\nAudit Change Explanation (CRITICAL CONTEXT — use in C.2 analysis, C.3 takeaway, AND B.1 Executive Summary): ${a.auditExplanation}`);
+    if (a.actionExplanation) sections.push(`Action Change Explanation (CRITICAL CONTEXT — use in C.2 analysis, C.3 takeaway, AND B.1 Executive Summary): ${a.actionExplanation}`);
     const hasMultiLocAreas = a.topAreaLocations?.length > 1;
     const areasWithData = (a.topAreas || []).filter(r => hasMultiLocAreas
       ? (r.values || []).some(v => Number(v) > 0)
