@@ -504,15 +504,14 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
   }
 
   // Audit & Action Analysis card below table
-  // Prefer form explanation text when substantial — it's the user's actual input
+  // Always prefer agent analysis — it synthesizes the raw explanation text into a narrative
   const agentAnalysis = getNarrativeText(narratives, 'C2:ANALYSIS');
   const formExplanation = [a.auditExplanation, a.actionExplanation].filter(Boolean).join('\n\n');
-  // Use form text when it has real content (>50 chars), otherwise fall back to agent
-  const analysisText = (formExplanation.length > 50) ? formExplanation : (agentAnalysis || formExplanation);
+  const analysisText = agentAnalysis || formExplanation;
   const cardY = 1.15 + (tableRowCount + 1) * 0.35 + 0.3;
 
   if (analysisText) {
-    const cardH = SLIDE_H - cardY - 0.35;
+    const cardH = SLIDE_H - cardY - 0.55;
     addCard(slide, { x: MARGIN, y: cardY, w: CONTENT_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
     slide.addText('AUDIT & ACTION ANALYSIS', {
       x: MARGIN + 0.2, y: cardY + 0.1, w: CONTENT_W - 0.4, h: 0.25,
@@ -551,13 +550,12 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
   const q = form.cover.quarter || 'Current';
 
   if (hasMultiLocation) {
-    // ── Multi-location: pie charts side by side (top) + analysis bullets (bottom) ──
+    // ── Multi-location: pie charts side by side (top) + shared legend + analysis (bottom) ──
     const pieW = COL2_W;
-    const pieCardH = 2.6;
-    const pieChartH = 2.0;
-    const legendH = 0.25;
+    const pieCardH = 2.1;
+    const pieChartH = 1.75;
 
-    // Render each location's pie chart side by side
+    // Render each location's pie chart side by side — no per-chart legend
     locations.forEach((loc, li) => {
       const px = MARGIN + li * (pieW + 0.3);
       addCard(slide, { x: px, y: 1.15, w: pieW, h: pieCardH });
@@ -574,19 +572,28 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
         }], {
           x: px + 0.15, y: 1.45, w: pieW - 0.3, h: pieChartH,
           showPercent: true,
-          showLegend: li === 0,
-          legendPos: 'b',
-          legendFontSize: 6,
+          showLegend: false,
           dataLabelFontSize: 8,
           chartColors: chartColors.slice(0, areas.length),
         });
       }
     });
 
+    // Shared legend row centered below both pie cards
+    const legendY = 1.15 + pieCardH + 0.08;
+    const legendItems = areas.map((a, i) => ([
+      { text: '\u25A0 ', options: { fontSize: 8, color: chartColors[i % chartColors.length], fontFace: FONT } },
+      { text: `${a.area}   `, options: { fontSize: 7, color: MED_GREY, fontFace: FONT } },
+    ])).flat();
+    slide.addText(legendItems, {
+      x: MARGIN, y: legendY, w: CONTENT_W, h: 0.2,
+      align: 'center', valign: 'middle',
+    });
+
     // Bottom: analysis card with bullets
     const analysisText = getNarrativeText(narratives, 'C3:TAKEAWAY') || '';
     if (analysisText) {
-      const analysisY = 1.15 + pieCardH + 0.15;
+      const analysisY = legendY + 0.25;
       const analysisH = LOGO_SAFE_Y - analysisY;
       addCard(slide, { x: MARGIN, y: analysisY, w: CONTENT_W, h: analysisH, borderColor: AA_BLUE, borderSide: 'left' });
       slide.addText('KEY FINDINGS', {
@@ -599,7 +606,7 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
         bullets.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 3 } })),
         {
           x: MARGIN + 0.3, y: analysisY + 0.32, w: CONTENT_W - 0.5, h: analysisH - 0.4,
-          fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.2,
+          fontSize: 9, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.15,
         }
       );
     }
@@ -1070,9 +1077,11 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
   const x2 = MARGIN + COL2_W + 0.3;
   const cardH = maxCardH;
 
-  // Shrink font for 5+ items to fit on one slide
-  const bulletFontSize = allChallengeTexts.length > 4 ? 8.5 : 10;
-  const bulletSpacing = allChallengeTexts.length > 4 ? 1.15 : 1.3;
+  // Scale font based on item count and available space
+  const itemCount = allChallengeTexts.length;
+  const totalChars = Math.max(...[allChallengeTexts, allActionTexts].map(a => a.join(' ').length));
+  const bulletFontSize = itemCount > 6 ? 8 : itemCount > 4 ? 9 : totalChars > 400 ? 9.5 : 11;
+  const bulletSpacing = itemCount > 5 ? 1.15 : 1.3;
 
   // Challenges Identified card (amber header)
   addCard(slide, { x: x1, y: cardY, w: COL2_W, h: cardH });
