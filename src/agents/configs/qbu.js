@@ -195,7 +195,7 @@ For each slide, output:
 *Speaker Notes: [talking points for the presenter]*
 
 For EVERY narrative section, also output a structured NARRATIVE block that the PPTX generator can parse.
-The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and G.2 — output ALL of them:
+Output ALL narrative blocks below. IMPORTANT: Generate B.1 (Executive Summary) LAST — after all other sections — so it accurately summarizes what was actually produced.
 
 <!-- NARRATIVE:A1:TIPS -->
 [EXACTLY 4 complete, actionable sentences (8-15 words each). Merge short headers with their explanations into proper sentences. Ground in facility services/janitorial operations. NEVER output 2-word fragments.]
@@ -207,18 +207,6 @@ The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and
 
 <!-- NARRATIVE:A1:WHYITMATTERS -->
 [2-3 sentences connecting the safety theme to real facility services outcomes. Synthesize the "Why It Matters" explanations from the intake into a cohesive paragraph.]
-<!-- /NARRATIVE -->
-
-<!-- NARRATIVE:B1:ACHIEVEMENTS -->
-[Polished achievement bullets, one per line]
-<!-- /NARRATIVE -->
-
-<!-- NARRATIVE:B1:CHALLENGES -->
-[Polished challenge bullets, one per line]
-<!-- /NARRATIVE -->
-
-<!-- NARRATIVE:B1:INNOVATIONS -->
-[ONLY if innovation data was explicitly provided in the intake. Otherwise leave this block EMPTY — no text between the tags. Do NOT fabricate innovations.]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:C1:TAKEAWAY -->
@@ -260,6 +248,21 @@ The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and
 
 <!-- NARRATIVE:G2:GOAL -->
 [Polished quarter goal statement — 1-2 sentences connecting the roadmap to operational outcomes]
+<!-- /NARRATIVE -->
+
+=== B.1 EXECUTIVE SUMMARY — GENERATE THIS LAST ===
+Summarize the content you just generated above. Achievements come from completed projects, safety wins, and operational successes. Challenges come from E.1 and audit explanations. Innovations ONLY from G.1 data — if G.1 had no innovation data, leave INNOVATIONS empty.
+
+<!-- NARRATIVE:B1:ACHIEVEMENTS -->
+[3 polished achievement bullets summarizing the deck content above, one per line]
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:B1:CHALLENGES -->
+[2 polished challenge bullets summarizing the deck content above, one per line]
+<!-- /NARRATIVE -->
+
+<!-- NARRATIVE:B1:INNOVATIONS -->
+[ONLY if G.1 innovation data exists above. Otherwise this block MUST be completely empty — no text between the tags.]
 <!-- /NARRATIVE -->
 
 These NARRATIVE blocks are REQUIRED — ALWAYS output them. The PPTX generator parses these blocks to build the slides. Without them, slides fall back to raw form data and lose your polished content.

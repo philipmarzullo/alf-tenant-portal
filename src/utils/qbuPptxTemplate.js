@@ -1081,7 +1081,7 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
   // Scale font based on item count and available space
   const itemCount = allChallengeTexts.length;
   const totalChars = Math.max(...[allChallengeTexts, allActionTexts].map(a => a.join(' ').length));
-  const bulletFontSize = itemCount > 6 ? 8 : itemCount > 4 ? 9 : totalChars > 400 ? 9.5 : 11;
+  const bulletFontSize = itemCount > 7 ? 8 : itemCount > 6 ? 9 : totalChars > 500 ? 9.5 : 11;
   const bulletSpacing = itemCount > 5 ? 1.15 : 1.3;
 
   // Challenges Identified card (amber header)
