@@ -317,6 +317,15 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
   }
   // No fallback for innovations — if none provided, render 2-column layout
 
+  // Hard truncation: cap exec summary bullets for consistent layout
+  const capWords = (arr, max) => arr.map(t => {
+    const w = t.split(/\s+/);
+    return w.length > max ? w.slice(0, max).join(' ') : t;
+  });
+  achievements = capWords(achievements, 15);
+  challenges = capWords(challenges, 15);
+  innovations = capWords(innovations, 15);
+
   // Determine layout: 2-column (no innovations) vs 3-column
   const hasInnovations = innovations.length > 0;
   const colW = hasInnovations ? COL3_W : COL2_W;
@@ -713,6 +722,14 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
   const eventsKey = Object.keys(categories).find(k => k.toLowerCase().includes('events supported'));
   if (eventsKey) delete categories[eventsKey];
 
+  // Hard truncation: cap each bullet to 20 words for consistent layout
+  for (const cat of Object.keys(categories)) {
+    categories[cat] = categories[cat].map(text => {
+      const words = text.split(/\s+/);
+      return words.length > 20 ? words.slice(0, 20).join(' ') : text;
+    });
+  }
+
   if (!Object.keys(categories).length) {
     const slide = pptx.addSlide();
     setContentBackground(slide);
@@ -1088,6 +1105,14 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
       ? items.map((r) => r.action || '\u2014')
       : [];
   }
+
+  // Hard truncation: cap bullets to 25 words for consistent layout
+  const truncate = (arr, max) => arr.map(t => {
+    const w = t.split(/\s+/);
+    return w.length > max ? w.slice(0, max).join(' ') : t;
+  });
+  allChallengeTexts = truncate(allChallengeTexts, 25);
+  allActionTexts = truncate(allActionTexts, 25);
 
   // Always render on ONE slide — shrink font if needed to fit
   const slide = pptx.addSlide();
