@@ -293,10 +293,42 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
   const headerPad = 0.8; // space for card header + padding above bullets
   const availBulletH = maxCardH - headerPad;
 
+  // Build fallback bullets from other sections when exec summary is empty
+  let achievements = getNarrativeLines(narratives, 'B1:ACHIEVEMENTS') || (e.achievements || []).filter(Boolean);
+  let challenges = getNarrativeLines(narratives, 'B1:CHALLENGES') || (e.challenges || []).filter(Boolean);
+  let innovations = getNarrativeLines(narratives, 'B1:INNOVATIONS') || (e.innovations || []).filter(Boolean);
+
+  // Fallback: synthesize from available form data when agent didn't produce content
+  if (!achievements.length) {
+    const fb = [];
+    const projCount = (form.projects?.completed || []).filter(p => p.description).length;
+    if (projCount) fb.push(`Completed ${projCount} project${projCount > 1 ? 's' : ''} across campus facilities this quarter`);
+    const recCount = form.safety?.recordableCount;
+    if (recCount === '0' || recCount === 0) fb.push('Maintained zero recordable incidents — strong safety culture');
+    const evtText = form.workTickets?.eventsSupported;
+    if (evtText) {
+      const evtCount = evtText.split('\n').filter(Boolean).length;
+      if (evtCount) fb.push(`Supported ${evtCount} campus event${evtCount > 1 ? 's' : ''} this quarter`);
+    }
+    if (fb.length) achievements = fb;
+  }
+  if (!challenges.length) {
+    const chItems = (form.challenges?.items || []).filter(r => r.challenge);
+    if (chItems.length) challenges = chItems.slice(0, 2).map(r => `${r.challenge}${r.location ? ` (${r.location})` : ''}`);
+  }
+  if (!innovations.length) {
+    const hl = (form.roadmap?.highlights || []).filter(h => h.innovation);
+    if (hl.length) innovations = hl.slice(0, 2).map(h => `${h.innovation}: ${h.description}`);
+    else {
+      const sched = (form.roadmap?.schedule || []).filter(s => s.initiative);
+      if (sched.length) innovations = [`${sched.length} strategic initiative${sched.length > 1 ? 's' : ''} planned for next quarter`];
+    }
+  }
+
   const cols = [
-    { title: 'KEY ACHIEVEMENTS', items: getNarrativeLines(narratives, 'B1:ACHIEVEMENTS') || (e.achievements || []).filter(Boolean), color: AA_BLUE },
-    { title: 'STRATEGIC CHALLENGES', items: getNarrativeLines(narratives, 'B1:CHALLENGES') || (e.challenges || []).filter(Boolean), color: AMBER },
-    { title: 'INNOVATION MILESTONES', items: getNarrativeLines(narratives, 'B1:INNOVATIONS') || (e.innovations || []).filter(Boolean), color: GREEN },
+    { title: 'KEY ACHIEVEMENTS', items: achievements, color: AA_BLUE },
+    { title: 'STRATEGIC CHALLENGES', items: challenges, color: AMBER },
+    { title: 'INNOVATION MILESTONES', items: innovations, color: GREEN },
   ];
 
   // Always render on a single slide — reduce font size to fit if needed
@@ -595,102 +627,84 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
     });
   }
 
-  // Dynamic batch sizing — try 3, then 2, then 1 category per slide
+  // Filter out "Events Supported" category — events are already on Work Tickets slide
+  const eventsKey = Object.keys(categories).find(k => k.toLowerCase().includes('events supported'));
+  if (eventsKey) delete categories[eventsKey];
+
+  if (!Object.keys(categories).length) {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, 'Completed Projects Showcase');
+    slide.addText('No completed projects reported this quarter.', {
+      x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
+      fontSize: 12, fontFace: FONT, color: MED_GREY, italic: true, align: 'center',
+    });
+    addLogoBottomRight(slide, logoColor);
+    return;
+  }
+
+  // MAX 2 content slides — pack categories densely
   const allCatKeys = Object.keys(categories);
   const cardY = 1.15;
   const gap = 0.3;
   const maxCardH = LOGO_SAFE_Y - cardY;
-  const headerPad = 0.8;
-  let slideIdx = 0;
-  let catIdx = 0;
+  const headerPad = 0.65;
 
-  while (catIdx < allCatKeys.length) {
-    // Try fitting 3, then 2, then 1 categories on one slide
-    let batchSize = Math.min(3, allCatKeys.length - catIdx);
-    let chosenColW, chosenGap, chosenKeys, fits;
+  // Try to fit all categories on 1 slide first, then 2 slides max
+  // Use smaller font to fit more content — scale down based on total items
+  const totalItems = allCatKeys.reduce((s, k) => s + categories[k].length, 0);
+  let bulletFs = 10;
+  if (totalItems > 8 || allCatKeys.length > 3) bulletFs = 8.5;
+  if (totalItems > 14 || allCatKeys.length > 5) bulletFs = 7.5;
+  const bulletLs = bulletFs <= 8.5 ? 1.15 : 1.3;
 
-    while (batchSize >= 1) {
-      chosenKeys = allCatKeys.slice(catIdx, catIdx + batchSize);
-      chosenColW = batchSize === 1 ? CONTENT_W : batchSize === 2 ? COL2_W : COL3_W;
-      chosenGap = batchSize === 2 ? 0.3 : gap;
-      const tallestBulletH = Math.max(...chosenKeys.map((k) => estimateBulletH(categories[k], chosenColW - 0.5)));
-      fits = tallestBulletH + headerPad <= maxCardH;
-      if (fits) break;
-      batchSize--;
-    }
-    if (batchSize < 1) batchSize = 1;
-    chosenKeys = allCatKeys.slice(catIdx, catIdx + batchSize);
-    chosenColW = batchSize === 1 ? CONTENT_W : batchSize === 2 ? COL2_W : COL3_W;
-    chosenGap = batchSize === 2 ? 0.3 : gap;
-
-    // Single category that overflows — split its items across pages
-    if (batchSize === 1 && !fits) {
-      const catKey = chosenKeys[0];
-      const availBulletH = maxCardH - headerPad;
-      const itemPages = splitItemsToFit(categories[catKey], availBulletH, chosenColW - 0.5);
-
-      for (let p = 0; p < itemPages.length; p++) {
-        const slide = pptx.addSlide();
-        setContentBackground(slide);
-        addSectionTitle(slide, slideIdx === 0 && p === 0
-          ? 'Completed Projects Showcase'
-          : 'Completed Projects Showcase (cont.)');
-
-        const pageItems = itemPages[p];
-        const bulletH = estimateBulletH(pageItems, chosenColW - 0.5);
-        const pageCardH = Math.min(bulletH + headerPad, maxCardH);
-        const x = MARGIN;
-
-        addCard(slide, { x, y: cardY, w: chosenColW, h: pageCardH, borderColor: AA_BLUE, borderSide: 'top' });
-        slide.addText(catKey.toUpperCase(), {
-          x: x + 0.15, y: cardY + 0.15, w: chosenColW - 0.3, h: 0.3,
-          fontSize: 10, fontFace: FONT, color: DARK, bold: true,
-        });
-        slide.addText(
-          pageItems.map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
-          {
-            x: x + 0.25, y: cardY + 0.6, w: chosenColW - 0.5, h: pageCardH - headerPad,
-            fontSize: 10, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
-            valign: 'top',
-          }
-        );
-        addLogoBottomRight(slide, logoColor);
-        slideIdx++;
-      }
+  // Split categories into max 2 slides
+  const slides = [[]];
+  for (const catKey of allCatKeys) {
+    const currentSlide = slides[slides.length - 1];
+    if (currentSlide.length >= 3 && slides.length < 2) {
+      slides.push([catKey]);
+    } else if (currentSlide.length >= 3 && slides.length >= 2) {
+      // Already at 2 slides — merge into last category on last slide
+      const lastKey = currentSlide[currentSlide.length - 1];
+      categories[lastKey].push(...categories[catKey].map(d => `${catKey}: ${d}`));
     } else {
-      // Normal case — categories fit on one slide
-      const slide = pptx.addSlide();
-      setContentBackground(slide);
-      addSectionTitle(slide, slideIdx === 0
-        ? 'Completed Projects Showcase'
-        : 'Completed Projects Showcase (cont.)');
-
-      const maxBulletH = Math.max(...chosenKeys.map((k) => estimateBulletH(categories[k], chosenColW - 0.5)));
-      const cardH = Math.min(maxBulletH + headerPad, maxCardH);
-
-      chosenKeys.forEach((cat, i) => {
-        const x = MARGIN + i * (chosenColW + chosenGap);
-        addCard(slide, { x, y: cardY, w: chosenColW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
-        slide.addText(cat.toUpperCase(), {
-          x: x + 0.15, y: cardY + 0.15, w: chosenColW - 0.3, h: 0.3,
-          fontSize: 10, fontFace: FONT, color: DARK, bold: true,
-        });
-        slide.addText(
-          categories[cat].map((t) => ({ text: t, options: { bullet: { code: '2022' }, breakLine: true, paraSpaceBefore: 4 } })),
-          {
-            x: x + 0.25, y: cardY + 0.6, w: chosenColW - 0.5, h: cardH - headerPad,
-            fontSize: 10, fontFace: FONT, color: DARK, lineSpacingMultiple: 1.3,
-            valign: 'top',
-          }
-        );
-      });
-
-      addLogoBottomRight(slide, logoColor);
-      slideIdx++;
+      currentSlide.push(catKey);
     }
-
-    catIdx += batchSize;
   }
+
+  slides.forEach((slideKeys, slideIdx) => {
+    const slide = pptx.addSlide();
+    setContentBackground(slide);
+    addSectionTitle(slide, slideIdx === 0
+      ? 'Completed Projects Showcase'
+      : 'Completed Projects Showcase (cont.)');
+
+    const batchSize = slideKeys.length;
+    const colW = batchSize === 1 ? CONTENT_W : batchSize === 2 ? COL2_W : COL3_W;
+    const colGap = batchSize === 2 ? 0.3 : gap;
+
+    // Calculate card height — fit within available space
+    const maxBulletH = Math.max(...slideKeys.map((k) => estimateBulletH(categories[k], colW - 0.5)));
+    const cardH = Math.min(maxBulletH + headerPad, maxCardH);
+
+    slideKeys.forEach((cat, i) => {
+      const x = MARGIN + i * (colW + colGap);
+      addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
+      slide.addText(cat.toUpperCase(), {
+        x: x + 0.15, y: cardY + 0.15, w: colW - 0.3, h: 0.3,
+        fontSize: 10, fontFace: FONT, color: DARK, bold: true,
+      });
+      if (categories[cat].length) {
+        addCardBullets(slide, categories[cat], {
+          x, y: cardY + 0.5, w: colW, h: cardH - 0.6,
+          fontSize: bulletFs, lineSpacing: bulletLs,
+        });
+      }
+    });
+
+    addLogoBottomRight(slide, logoColor);
+  });
 }
 
 // ── Slide 10: D.2 Project Photos ────────────────────────
@@ -1098,7 +1112,26 @@ function addFinancialSlide(pptx, form, logoColor, narratives) {
     fontSize: 11, fontFace: FONT, color: DARK, bold: true,
   });
   const strategyNarrative = getNarrativeLines(narratives, 'F1:STRATEGY');
-  const notes = strategyNarrative || (f.strategyNotes || []).filter(Boolean);
+  let notes = strategyNarrative || (f.strategyNotes || []).filter(Boolean);
+  // Fallback: generate basic strategy from aging data when agent didn't produce content
+  if (!notes.length && f.totalOutstanding) {
+    const fb = [];
+    const total = parseFloat(String(f.totalOutstanding).replace(/[$,]/g, '')) || 0;
+    const b30 = parseFloat(String(f.bucket30).replace(/[$,]/g, '')) || 0;
+    const b60 = parseFloat(String(f.bucket60).replace(/[$,]/g, '')) || 0;
+    const b90 = parseFloat(String(f.bucket90).replace(/[$,]/g, '')) || 0;
+    const b91 = parseFloat(String(f.bucket91).replace(/[$,]/g, '')) || 0;
+    if (total > 0) {
+      const pct30 = ((b30 / total) * 100).toFixed(0);
+      const pct60 = (((b30 + b60) / total) * 100).toFixed(0);
+      fb.push(`${pct60}% of outstanding balance within 60 days — standard payment processing`);
+      if (b90 > 0) fb.push(`${fmtCurrency(b90)} in 61-90 day range requires follow-up with accounts payable`);
+      if (b91 > 0) fb.push(`${fmtCurrency(b91)} aged 91+ days — escalate collection efforts`);
+      else fb.push('No balances past 90 days — strong collection performance');
+      fb.push('Continue proactive invoice follow-up to maintain aging profile');
+    }
+    notes = fb;
+  }
   if (notes.length) {
     // Clip to items that fit within the card to prevent overflow
     const availH = cardH - 0.8;
@@ -1306,19 +1339,38 @@ function addRoadmapSlide(pptx, form, logoColor, narratives) {
   // Goal statement — prefer agent narrative, fall back to form data
   const goalText = getNarrativeText(narratives, 'G2:GOAL') || r.goalStatement;
 
+  // Detect when all initiative names are the same (shared category) — swap with details
+  if (schedule.length > 1) {
+    const initiatives = schedule.map(s => (s.initiative || '').trim().toLowerCase());
+    const unique = new Set(initiatives);
+    if (unique.size === 1 && schedule[0].initiative) {
+      // All rows share the same category — use details as initiative name
+      schedule = schedule.map(s => ({
+        month: s.month,
+        initiative: s.details || s.initiative,
+        details: '',
+      }));
+    }
+  }
+
   // Always render on ONE slide — use a compact table layout
   const slide = pptx.addSlide();
   setContentBackground(slide);
   addSectionTitle(slide, titleBase);
 
   // Build table rows: Initiative | Details
-  const headerRow = [
+  const hasDetails = schedule.some(s => s.details);
+  const headerRow = hasDetails ? [
     { text: 'Initiative', options: { bold: true, color: WHITE, fill: { color: AA_BLUE }, fontSize: 9, fontFace: FONT, align: 'center', valign: 'middle' } },
     { text: 'Details', options: { bold: true, color: WHITE, fill: { color: AA_BLUE }, fontSize: 9, fontFace: FONT, align: 'center', valign: 'middle' } },
+  ] : [
+    { text: 'Initiative', options: { bold: true, color: WHITE, fill: { color: AA_BLUE }, fontSize: 9, fontFace: FONT, align: 'center', valign: 'middle' } },
   ];
-  const dataRows = schedule.map((item) => [
+  const dataRows = schedule.map((item) => hasDetails ? [
     { text: item.initiative || '', options: { fontSize: 8.5, fontFace: FONT, color: DARK, bold: true, valign: 'middle' } },
     { text: item.details || '', options: { fontSize: 8, fontFace: FONT, color: DARK, valign: 'middle' } },
+  ] : [
+    { text: item.initiative || '', options: { fontSize: 8.5, fontFace: FONT, color: DARK, valign: 'middle' } },
   ]);
 
   const tableY = 1.15;
@@ -1330,7 +1382,7 @@ function addRoadmapSlide(pptx, form, logoColor, narratives) {
     x: MARGIN, y: tableY, w: CONTENT_W,
     border: { type: 'solid', pt: 0.5, color: 'E0E0E0' },
     rowH,
-    colW: [CONTENT_W * 0.35, CONTENT_W * 0.65],
+    colW: hasDetails ? [CONTENT_W * 0.35, CONTENT_W * 0.65] : [CONTENT_W],
     autoPage: false,
   });
 
