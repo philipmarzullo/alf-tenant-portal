@@ -291,7 +291,11 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
   // Build fallback bullets from other sections when exec summary is empty
   let achievements = getNarrativeLines(narratives, 'B1:ACHIEVEMENTS') || (e.achievements || []).filter(Boolean);
   let challenges = getNarrativeLines(narratives, 'B1:CHALLENGES') || (e.challenges || []).filter(Boolean);
-  let innovations = getNarrativeLines(narratives, 'B1:INNOVATIONS') || (e.innovations || []).filter(Boolean);
+  // Only show innovations if the intake form actually has G.1 innovation data
+  const hasFormInnovations = (form.roadmap?.highlights || []).some(h => h.innovation);
+  let innovations = hasFormInnovations
+    ? (getNarrativeLines(narratives, 'B1:INNOVATIONS') || (e.innovations || []).filter(Boolean))
+    : [];
 
   // Fallback: synthesize from available form data when agent didn't produce content
   if (!achievements.length) {
