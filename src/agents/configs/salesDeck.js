@@ -1,4 +1,4 @@
-import { SHARED_RULES } from '../prompts';
+import { SHARED_RULES, SLIDE_CANVAS_RULES } from '../prompts';
 
 export const salesDeckAgent = {
   name: 'Proposal Builder',
@@ -8,6 +8,7 @@ export const salesDeckAgent = {
   systemPrompt: `You are a sales deck content generator and sales strategy advisor for a facility services company. You create prospect-specific sales presentations.
 
 ${SHARED_RULES}
+${SLIDE_CANVAS_RULES}
 
 Sales Deck Rules:
 - Lead with the company's performance metrics when available from knowledge base context.
