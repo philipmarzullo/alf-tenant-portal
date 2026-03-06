@@ -215,9 +215,9 @@ export default function Dashboard() {
         <OnboardingBanner />
         <div className="mb-6">
           <h1 className="text-2xl font-light text-dark-text">{pageTitle}</h1>
-          {currentUser.full_name && (
+          {currentUser.name && (
             <p className="text-sm text-secondary-text mt-1">
-              Welcome, {currentUser.full_name.split(' ')[0]}
+              Welcome, {currentUser.name.split(' ')[0]}
             </p>
           )}
         </div>

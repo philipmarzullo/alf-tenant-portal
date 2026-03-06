@@ -49,7 +49,7 @@ export default function AgentInstructionsPage({ embedded = false, initialAgent }
     setError(null);
     const { data, error: err } = await supabase
       .from('agent_instructions')
-      .select('*, profiles:created_by(full_name), reviewer:reviewed_by(full_name), propagated_from')
+      .select('*, profiles:created_by(name), reviewer:reviewed_by(name), propagated_from')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false });
 
@@ -515,10 +515,10 @@ export default function AgentInstructionsPage({ embedded = false, initialAgent }
                       </div>
                       <p className="text-sm text-dark-text whitespace-pre-wrap">{instr.instruction_text}</p>
                       <div className="text-xs text-secondary-text mt-1">
-                        {instr.profiles?.full_name || 'Unknown'} · {new Date(instr.created_at).toLocaleDateString()}
-                        {instr.reviewer?.full_name && (
+                        {instr.profiles?.name || 'Unknown'} · {new Date(instr.created_at).toLocaleDateString()}
+                        {instr.reviewer?.name && (
                           <span className="ml-2 text-gray-400">
-                            Reviewed by {instr.reviewer.full_name}
+                            Reviewed by {instr.reviewer.name}
                             {instr.reviewed_at && ` · ${new Date(instr.reviewed_at).toLocaleDateString()}`}
                           </span>
                         )}

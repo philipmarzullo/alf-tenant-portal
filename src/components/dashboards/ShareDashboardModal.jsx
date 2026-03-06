@@ -36,11 +36,11 @@ export default function ShareDashboardModal({ open, onClose, dashboardKey, dashb
         if (!supabase) return;
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('id, full_name, email, role')
+          .select('id, name, email, role')
           .eq('tenant_id', tenantId)
           .eq('active', true)
           .not('role', 'in', '("admin","super-admin")')
-          .order('full_name');
+          .order('name');
 
         if (!cancelled && profiles) setUsers(profiles);
       } catch (err) {
@@ -128,7 +128,7 @@ export default function ShareDashboardModal({ open, onClose, dashboardKey, dashb
               >
                 <option value="">Select a user...</option>
                 {availableUsers.map(u => (
-                  <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
+                  <option key={u.id} value={u.id}>{u.name || u.email}</option>
                 ))}
               </select>
               <button
@@ -150,7 +150,7 @@ export default function ShareDashboardModal({ open, onClose, dashboardKey, dashb
                   {existingShares.map(share => (
                     <div key={share.id} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg">
                       <div className="text-sm text-dark-text">
-                        {share.shared_with_profile?.full_name || share.shared_with_profile?.email || share.shared_with}
+                        {share.shared_with_profile?.name || share.shared_with_profile?.email || share.shared_with}
                       </div>
                       <button
                         onClick={() => handleRevoke(share.id)}
