@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Cable, Plus, Trash2, Play, Power, PowerOff, Loader, CheckCircle, XCircle,
   X, History, ExternalLink, Unplug, Zap, Mail, Database, FolderOpen,
-  Users, MessageSquare,
+  Users, MessageSquare, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useUser } from '../../contexts/UserContext';
@@ -123,6 +123,9 @@ export default function ConnectionsPage() {
   const [msDisconnecting, setMsDisconnecting] = useState(false);
   const [msMessage, setMsMessage] = useState(null);
 
+  // Setup guide state
+  const [setupGuideOpen, setSetupGuideOpen] = useState(false);
+
   // Add Snowflake form state
   const [showAddSnowflake, setShowAddSnowflake] = useState(false);
   const [formLabel, setFormLabel] = useState('');
@@ -142,8 +145,13 @@ export default function ConnectionsPage() {
         access_denied: 'Microsoft sign-in was cancelled or denied.',
         token_exchange_failed: 'Failed to complete Microsoft authentication. Please try again.',
         server_error: 'A server error occurred. Please try again.',
+        not_configured: 'Microsoft 365 integration is not configured yet. Follow the setup guide below to enable it.',
       };
-      setMsMessage({ type: 'error', text: messages[error] || `Microsoft connection failed: ${error}` });
+      setMsMessage({
+        type: 'error',
+        text: messages[error] || `Microsoft connection failed: ${error}`,
+        showSetupGuide: error === 'not_configured',
+      });
     }
 
     if (success || error) {
@@ -428,12 +436,63 @@ export default function ConnectionsPage() {
 
               {/* Status message (Microsoft only) */}
               {cat.key === 'email' && msMessage && (
-                <div className={`mt-3 ml-11 flex items-center gap-2 text-xs ${msMessage.type === 'success' ? 'text-green-700' : 'text-red-600'}`}>
-                  {msMessage.type === 'success' ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                  {msMessage.text}
-                  <button onClick={() => setMsMessage(null)} className="ml-auto text-secondary-text hover:text-dark-text">
-                    <X size={12} />
-                  </button>
+                <div className="mt-3 ml-11">
+                  <div className={`flex items-center gap-2 text-xs ${msMessage.type === 'success' ? 'text-green-700' : 'text-red-600'}`}>
+                    {msMessage.type === 'success' ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                    {msMessage.text}
+                    <button onClick={() => { setMsMessage(null); setSetupGuideOpen(false); }} className="ml-auto text-secondary-text hover:text-dark-text">
+                      <X size={12} />
+                    </button>
+                  </div>
+
+                  {/* Setup guide for not_configured error */}
+                  {msMessage.showSetupGuide && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setSetupGuideOpen(!setupGuideOpen)}
+                        className="flex items-center gap-1 text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors"
+                      >
+                        {setupGuideOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        Azure AD Setup Guide
+                      </button>
+                      {setupGuideOpen && (
+                        <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-dark-text space-y-3">
+                          <div>
+                            <div className="font-medium mb-1">1. Register an app in Azure AD</div>
+                            <ol className="list-decimal list-inside space-y-0.5 text-secondary-text">
+                              <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener noreferrer" className="text-aa-blue underline">Azure Portal &rarr; App registrations</a></li>
+                              <li>Click <span className="font-medium text-dark-text">New registration</span></li>
+                              <li>Name it (e.g. "Alf Platform")</li>
+                              <li>Set <span className="font-medium text-dark-text">Supported account types</span> to "Accounts in any organizational directory"</li>
+                              <li>Set <span className="font-medium text-dark-text">Redirect URI</span> (Web) to:<br />
+                                <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">
+                                  https://&#123;your-backend-url&#125;/api/oauth/microsoft/callback
+                                </code>
+                              </li>
+                            </ol>
+                          </div>
+                          <div>
+                            <div className="font-medium mb-1">2. Create a client secret</div>
+                            <p className="text-secondary-text">Under <span className="font-medium text-dark-text">Certificates &amp; secrets</span>, add a new client secret and copy the value.</p>
+                          </div>
+                          <div>
+                            <div className="font-medium mb-1">3. Add these env vars to the backend</div>
+                            <div className="bg-white rounded border border-gray-200 p-2 font-mono text-[11px] space-y-0.5">
+                              <div><span className="text-secondary-text">MICROSOFT_CLIENT_ID=</span>&#123;Application (client) ID&#125;</div>
+                              <div><span className="text-secondary-text">MICROSOFT_CLIENT_SECRET=</span>&#123;Client secret value&#125;</div>
+                              <div><span className="text-secondary-text">MICROSOFT_REDIRECT_URI=</span>https://&#123;backend-url&#125;/api/oauth/microsoft/callback</div>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="font-medium mb-1">4. Required scopes (configured automatically)</div>
+                            <code className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-mono text-[11px]">
+                              openid profile email offline_access User.Read Mail.Send
+                            </code>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
