@@ -600,7 +600,12 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
   if (hasMultiLocation) {
     // ── Multi-location: Per-location pie charts (left) + explanation card (right) ──
     addCard(slide, { x: MARGIN, y: 1.15, w: COL2_W, h: 3.7 });
-    const pieH = locations.length <= 2 ? 1.55 : 1.1;
+    // Reserve space for shared legend at bottom — both pies get equal height
+    const legendH = 0.3;
+    const availH = 3.7 - 0.2 - legendH; // card padding top + legend at bottom
+    const pieH = locations.length <= 2
+      ? (availH - locations.length * 0.25 - (locations.length - 1) * 0.1) / locations.length
+      : 1.0;
     locations.forEach((loc, li) => {
       const yOff = 1.25 + li * (pieH + 0.35);
       slide.addText(loc, {
@@ -609,14 +614,15 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
       });
       const pieValues = areas.map((a) => Number((a.values || [])[li]) || 0);
       if (pieValues.some((v) => v > 0)) {
+        const isLast = li === locations.length - 1;
         slide.addChart(pptx.charts.PIE, [{
           name: loc,
           labels: areas.map((a) => a.area),
           values: pieValues,
         }], {
-          x: MARGIN + 0.15, y: yOff + 0.2, w: COL2_W - 0.3, h: pieH,
+          x: MARGIN + 0.15, y: yOff + 0.2, w: COL2_W - 0.3, h: isLast ? pieH + legendH : pieH,
           showPercent: true,
-          showLegend: li === locations.length - 1,
+          showLegend: isLast,
           legendPos: 'b',
           legendFontSize: 6,
           dataLabelFontSize: 7,
