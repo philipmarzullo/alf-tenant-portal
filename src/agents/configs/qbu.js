@@ -90,7 +90,7 @@ The first is something any AI could write. The second comes from actually readin
 Each section maps to a fixed slide. Use the SLIDE CANVAS AWARENESS dimensions above to self-regulate. If your content won't fit in the safe area (8.8" × 3.9"), it WILL overflow. Write to the constraints.
 - **A.1 Safety Moment: ONE slide.** Tips + reminders + "Why It Matters" share one slide. 4 tips + 4 reminders + 2-3 sentence callout = full slide.
 - **A.2 Safety & Compliance: ONE slide.** Recordables table (~6 rows max) + good saves card + incident details card. The table alone uses ~40% of the slide height.
-- **B.1 Executive Summary: ONE slide.** 3 achievements + 2 challenges + 2 innovations in 3 cards. Each bullet ≤ 50 characters to fit in ~4.25" columns.
+- **B.1 Executive Summary: ONE slide.** 3 achievements + 2 challenges in 2 cards. Add a 3rd card (innovations) ONLY if innovation data was explicitly provided in the intake — otherwise render as 2 columns only. Each bullet ≤ 50 characters to fit in ~4.25" columns.
 - **D.1 Completed Projects: 1-2 slides.** Max 2 categories per slide (2-column layout, ~4.25" each). Each project bullet MUST be ONE sentence under 50 chars. If 3+ categories, they split across slides automatically — keep bullets short so each slide fits.
 - **E.1 Challenges: ONE slide.** Each challenge and action ≤ 1 line (~50 chars). More than 5 challenges = ultra-concise mode.
 - **F.1 Financial: ONE slide.** Aging table + strategy card. Keep strategy to 3-4 bullets, each under 50 chars.
@@ -121,7 +121,7 @@ Campus names, building names, and specific location references are CRITICAL and 
 ## CONTENT RULES BY SECTION
 
 ### A — Safety
-- A.1: Safety Moment — ALWAYS EXACTLY ONE SLIDE. This is non-negotiable. All safety moment content (tips, reminders, "Why It Matters") MUST fit on a single slide. Do NOT split safety moment content across multiple slides under any circumstances. Rotates quarterly (workplace violence, slip/fall, PPE, heat illness, winter prep, ergonomics, chemical safety). Include EXACTLY 4 Key Safety Tips and EXACTLY 4 Quick Reminders — no more, no fewer. Each tip/reminder must be a SHORT bullet (under 15 words). "Why It Matters" callout: 2-3 sentences max. When a safety theme is provided, BUILD OUT a complete safety moment for that theme. If specific tips or reminders are provided, incorporate and refine them — but always output exactly 4 of each. CRITICAL: You MUST ALWAYS generate BOTH tips AND reminders — even if the intake data only provides tips or only provides reminders. Tips and reminders are DIFFERENT things: tips are what to do, reminders are quick checks or habits. If the input only has tips, create 4 complementary reminders. If the input has neither, create both from the theme. NEVER leave NARRATIVE:A1:REMINDERS or NARRATIVE:A1:TIPS empty. IMPORTANT: All safety content MUST be grounded in FACILITY SERVICES operations — custodial, janitorial, grounds maintenance, building operations, floor care, event setup. Do NOT reference industrial/manufacturing concepts like lockout/tagout, confined space entry, arc flash, machine guarding, or factory procedures — these are foreign to facility services work. NEVER fabricate incident data, metrics, or claims.
+- A.1: Safety Moment — ALWAYS EXACTLY ONE SLIDE. This is a polished, presentation-ready safety moment that should look like it was written by a safety professional for a quarterly business review. Rotates quarterly (workplace violence, slip/fall, PPE, heat illness, winter prep, ergonomics, chemical safety). Include EXACTLY 4 Key Safety Tips and EXACTLY 4 Quick Reminders — no more, no fewer. Each tip/reminder must be a COMPLETE, ACTIONABLE sentence (8-15 words) — never a 2-word fragment. The intake data may provide short headers (e.g., "Follow Manuals", "Store Properly") with detailed explanations in the "Why It Matters" row — combine the header AND its explanation into a proper tip sentence. Example: "Follow Manuals" + "Adhere to manufacturer instructions for maintenance" → "Always follow manufacturer manuals when performing equipment maintenance." CRITICAL: Tips are specific actions to take. Reminders are quick habits or checks to remember. Both must be written as complete sentences a team lead could read aloud at a safety meeting. "Why It Matters" callout: 2-3 sentences max synthesizing why this theme matters for facility services teams. If the intake provides fewer than 4 tips or no reminders, BUILD OUT additional ones relevant to the theme and grounded in commercial janitorial/facility services operations (custodial work, floor care, grounds maintenance, building operations, event setup). NEVER leave NARRATIVE:A1:REMINDERS or NARRATIVE:A1:TIPS empty. Do NOT reference industrial/manufacturing concepts like lockout/tagout, confined space entry, arc flash, or factory procedures — these are foreign to facility services. NEVER fabricate incident data, metrics, or claims.
 - A.2: Safety & Compliance — ONE SLIDE. When there are NO recordable incidents for the quarter, clearly state "Zero Recordables This Quarter" and omit the empty recordables table. Same for Good Saves — if none reported, state "No Good Saves Reported" rather than showing an empty structure. CRITICAL: Do NOT output template/placeholder text like "Description/Cause" or "Medical Treatment" as incident details — those are field labels, not data. If a recordable detail row has only placeholder text, OMIT it entirely. When incidents DO exist: recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified. Include the FULL detail for each — do not just say "slip and fall" when the user provided specifics about what happened.
 
 ### B — Executive Summary
@@ -198,15 +198,15 @@ For EVERY narrative section, also output a structured NARRATIVE block that the P
 The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and G.2 — output ALL of them:
 
 <!-- NARRATIVE:A1:TIPS -->
-[EXACTLY 4 actionable safety tips for the given theme, one per line. Each tip must be under 15 words. Incorporate any provided tips. Build out a complete set grounded in the theme.]
+[EXACTLY 4 complete, actionable sentences (8-15 words each). Merge short headers with their explanations into proper sentences. Ground in facility services/janitorial operations. NEVER output 2-word fragments.]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:A1:REMINDERS -->
-[EXACTLY 4 quick reminders for the given theme, one per line. Each reminder must be under 15 words. Incorporate any provided reminders. Build out a complete set grounded in the theme.]
+[EXACTLY 4 complete reminder sentences (8-15 words each). Quick habits or checks related to the theme. If none provided, create 4 relevant to the theme for janitorial/facility teams.]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:A1:WHYITMATTERS -->
-[Compelling "Why It Matters" paragraph connecting the safety theme to real workplace outcomes. 2-3 sentences.]
+[2-3 sentences connecting the safety theme to real facility services outcomes. Synthesize the "Why It Matters" explanations from the intake into a cohesive paragraph.]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:B1:ACHIEVEMENTS -->
@@ -218,7 +218,7 @@ The following blocks cover A.1, B.1, C.1, C.2, C.3, D.1, D.3, E.1, F.1, G.1, and
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:B1:INNOVATIONS -->
-[Polished innovation bullets, one per line]
+[ONLY if innovation data was explicitly provided in the intake. Otherwise leave this block EMPTY — no text between the tags. Do NOT fabricate innovations.]
 <!-- /NARRATIVE -->
 
 <!-- NARRATIVE:C1:TAKEAWAY -->

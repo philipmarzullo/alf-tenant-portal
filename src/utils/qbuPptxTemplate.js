@@ -517,9 +517,9 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
       x: MARGIN + 0.2, y: cardY + 0.1, w: CONTENT_W - 0.4, h: 0.25,
       fontSize: 11, fontFace: FONT, color: DARK, bold: true,
     });
-    // Auto-scale font for longer text
+    // Auto-scale font to fill available card space
     const textLen = analysisText.length;
-    const fontSize = textLen > 500 ? 8 : textLen > 300 ? 8.5 : 9;
+    const fontSize = textLen > 600 ? 8 : textLen > 400 ? 9 : textLen > 250 ? 10 : 11;
     slide.addText(analysisText, {
       x: MARGIN + 0.2, y: cardY + 0.4, w: CONTENT_W - 0.4, h: cardH - 0.55,
       fontSize, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
@@ -546,7 +546,8 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
   setContentBackground(slide);
   addSectionTitle(slide, 'Top Action Areas');
 
-  const chartColors = [AA_BLUE, '0077B6', '48CAE4', NEAR_BLACK, AA_RED, MED_GREY];
+  // All mid-tone colors so dark data-label text is always readable
+  const chartColors = [AA_BLUE, '0077B6', '48CAE4', '95A5A6', 'E74C3C', 'F5A623'];
   const q = form.cover.quarter || 'Current';
 
   if (hasMultiLocation) {
