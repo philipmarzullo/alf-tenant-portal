@@ -740,26 +740,40 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
   }
 
   // Render one projects slide with given categories and font
+  // Returns any keys that didn't fit (for overflow to next slide)
   function renderProjectsSlide(keys, slideTitle, fontSize) {
     const slide = pptx.addSlide();
     setContentBackground(slide);
     addSectionTitle(slide, slideTitle);
 
-    // Max 2 columns, drop to 1 if content doesn't fit
+    // Always try 2-column layout first when 2+ categories
     let cols = Math.min(keys.length, 2);
-    while (cols > 1 && !layoutFits(keys, cols, fontSize)) cols--;
     let fs = fontSize;
-    if (!layoutFits(keys, cols, fs)) fs = Math.max(7.5, fs - 1);
-    if (!layoutFits(keys, cols, fs)) fs = Math.max(7, fs - 0.5);
-    if (!layoutFits(keys, cols, fs)) fs = Math.max(6.5, fs - 0.5);
+
+    // Shrink font to fit in 2-column layout before dropping to 1 column
+    if (cols > 1 && !layoutFits(keys, cols, fs)) fs = Math.max(8, fs - 1);
+    if (cols > 1 && !layoutFits(keys, cols, fs)) fs = Math.max(7.5, fs - 0.5);
+    if (cols > 1 && !layoutFits(keys, cols, fs)) fs = Math.max(7, fs - 0.5);
+
+    // If still doesn't fit at 2 cols, render only the first category full-width
+    // and return the rest for a new slide
+    if (cols > 1 && !layoutFits(keys, cols, fs)) {
+      cols = 1;
+      fs = fontSize;
+      if (!layoutFits([keys[0]], 1, fs)) fs = Math.max(7.5, fs - 1);
+      if (!layoutFits([keys[0]], 1, fs)) fs = Math.max(7, fs - 0.5);
+    }
+
+    const renderKeys = cols === 1 && keys.length > 1 ? [keys[0]] : keys;
+    const overflow = cols === 1 && keys.length > 1 ? keys.slice(1) : [];
 
     const colW = cols === 1 ? CONTENT_W : COL2_W;
     const scale = fs / 10;
-    const tallest = Math.max(...keys.map(k => estimateBulletH(categories[k], colW - 0.5) * scale));
+    const tallest = Math.max(...renderKeys.map(k => estimateBulletH(categories[k], colW - 0.5) * scale));
     const cardH = Math.min(tallest + headerPad, maxCardH);
     const ls = fs <= 8.5 ? 1.1 : 1.2;
 
-    keys.forEach((cat, i) => {
+    renderKeys.forEach((cat, i) => {
       const x = MARGIN + i * (colW + 0.3);
       addCard(slide, { x, y: cardY, w: colW, h: cardH, borderColor: AA_BLUE, borderSide: 'top' });
       slide.addText(cat.toUpperCase(), {
@@ -775,6 +789,7 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
     });
 
     addLogoBottomRight(slide, logoColor);
+    return overflow;
   }
 
   // Determine font size based on total content volume
@@ -783,15 +798,19 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
   if (totalItems > 10) bulletFs = 8;
   if (totalItems > 16) bulletFs = 7.5;
 
-  // Try to fit on 1 slide (max 2 columns)
+  // Try to fit on 1 slide (max 2 columns), overflow handled by renderProjectsSlide
   if (allCatKeys.length <= 2 && layoutFits(allCatKeys, allCatKeys.length, bulletFs)) {
     renderProjectsSlide(allCatKeys, 'Completed Projects Showcase', bulletFs);
   } else {
     // Split categories across slides, 2 per slide max
-    for (let i = 0; i < allCatKeys.length; i += 2) {
-      const batch = allCatKeys.slice(i, i + 2);
-      const title = i === 0 ? 'Completed Projects Showcase' : 'Completed Projects Showcase (cont.)';
-      renderProjectsSlide(batch, title, bulletFs);
+    let remaining = [...allCatKeys];
+    let slideNum = 0;
+    while (remaining.length > 0) {
+      const batch = remaining.splice(0, 2);
+      const title = slideNum === 0 ? 'Completed Projects Showcase' : 'Completed Projects Showcase (cont.)';
+      const overflow = renderProjectsSlide(batch, title, bulletFs);
+      if (overflow.length) remaining.unshift(...overflow);
+      slideNum++;
     }
   }
 }
