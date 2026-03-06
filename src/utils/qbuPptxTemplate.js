@@ -242,17 +242,30 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
   const details = (form.safety.incidentDetails || []).filter((r) =>
     r.location && r.cause && r.cause !== 'Description/Cause' && r.cause.length > 3
   );
-  const cardY = contentY + ((incidents.length + 2) * 0.35) + 0.25;
-  const x1 = MARGIN;
-  const x2 = MARGIN + COL2_W + 0.3;
-  const remainingH = SLIDE_H - cardY - 0.45;
 
   // Show Good Saves card only if count provided or detail rows exist
   const showGoodSaves = gsCount || saves.length;
   // Show Recordable Details card only if count provided or detail rows exist
   const showRecordables = recCount || details.length;
 
-  if (remainingH > 0.8 && (showGoodSaves || showRecordables)) {
+  if (showGoodSaves || showRecordables) {
+    // Calculate where cards would go below the recordables table
+    let detailCardY = contentY + ((incidents.length + 2) * 0.35) + 0.25;
+    let remainingH = SLIDE_H - detailCardY - 0.45;
+
+    // If not enough room on this slide, overflow to a new slide
+    let detailSlide = slide;
+    if (remainingH < 0.8) {
+      addLogoBottomRight(slide, logoColor);
+      detailSlide = pptx.addSlide();
+      setContentBackground(detailSlide);
+      addSectionTitle(detailSlide, 'Safety & Compliance Review (cont.)');
+      detailCardY = 1.15;
+      remainingH = SLIDE_H - detailCardY - 0.45;
+    }
+
+    const x1 = MARGIN;
+    const x2 = MARGIN + COL2_W + 0.3;
     const saveBulletH = saves.length
       ? estimateBulletH(saves.map((r) => `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`), COL2_W - 0.5)
       : 0.3;
@@ -263,24 +276,24 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     const fontSize = cardH < 1.5 ? 9 : 10;
 
     // If only one section has data, render it full-width; otherwise two columns
-    const fullWidth = showGoodSaves && !showRecordables || !showGoodSaves && showRecordables;
+    const fullWidth = (showGoodSaves && !showRecordables) || (!showGoodSaves && showRecordables);
     const cardW = fullWidth ? CONTENT_W : COL2_W;
 
     if (showGoodSaves) {
       // Good Saves card (green left border)
-      addCard(slide, { x: x1, y: cardY, w: cardW, h: cardH, borderColor: GREEN, borderSide: 'left' });
-      slide.addText('GOOD SAVES', {
-        x: x1 + 0.2, y: cardY + 0.1, w: cardW - 0.4, h: 0.3,
+      addCard(detailSlide, { x: x1, y: detailCardY, w: cardW, h: cardH, borderColor: GREEN, borderSide: 'left' });
+      detailSlide.addText('GOOD SAVES', {
+        x: x1 + 0.2, y: detailCardY + 0.1, w: cardW - 0.4, h: 0.3,
         fontSize: 11, fontFace: FONT, color: DARK, bold: true,
       });
       if (saves.length) {
         const items = saves.map((r) =>
           `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`
         );
-        addCardBullets(slide, items, { x: x1, y: cardY + 0.45, w: cardW, h: cardH - 0.6 });
+        addCardBullets(detailSlide, items, { x: x1, y: detailCardY + 0.45, w: cardW, h: cardH - 0.6 });
       } else {
-        slide.addText('No Good Saves reported this quarter.', {
-          x: x1 + 0.2, y: cardY + 0.45, w: cardW - 0.4, h: 0.3,
+        detailSlide.addText('No Good Saves reported this quarter.', {
+          x: x1 + 0.2, y: detailCardY + 0.45, w: cardW - 0.4, h: 0.3,
           fontSize: 9, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
         });
       }
@@ -289,26 +302,29 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     if (showRecordables) {
       const rx = fullWidth ? x1 : x2;
       // Recordable Details card (amber left border)
-      addCard(slide, { x: rx, y: cardY, w: cardW, h: cardH, borderColor: AMBER, borderSide: 'left' });
-      slide.addText('RECORDABLE DETAILS', {
-        x: rx + 0.2, y: cardY + 0.1, w: cardW - 0.4, h: 0.3,
+      addCard(detailSlide, { x: rx, y: detailCardY, w: cardW, h: cardH, borderColor: AMBER, borderSide: 'left' });
+      detailSlide.addText('RECORDABLE DETAILS', {
+        x: rx + 0.2, y: detailCardY + 0.1, w: cardW - 0.4, h: 0.3,
         fontSize: 11, fontFace: FONT, color: DARK, bold: true,
       });
       if (details.length) {
         const items = details.map((r) =>
           `${r.location} | ${r.date}: ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`
         );
-        slide.addText(items.join('\n\n'), {
-          x: rx + 0.2, y: cardY + 0.45, w: cardW - 0.4, h: cardH - 0.6,
+        detailSlide.addText(items.join('\n\n'), {
+          x: rx + 0.2, y: detailCardY + 0.45, w: cardW - 0.4, h: cardH - 0.6,
           fontSize: fontSize, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
         });
       } else {
-        slide.addText('Zero recordable incidents this quarter.', {
-          x: rx + 0.2, y: cardY + 0.45, w: cardW - 0.4, h: 0.3,
+        detailSlide.addText('Zero recordable incidents this quarter.', {
+          x: rx + 0.2, y: detailCardY + 0.45, w: cardW - 0.4, h: 0.3,
           fontSize: 9, fontFace: FONT, color: MED_GREY, italic: true, valign: 'top',
         });
       }
     }
+
+    addLogoBottomRight(detailSlide, logoColor);
+    if (detailSlide !== slide) return; // Logo already added to overflow slide
   }
 
   addLogoBottomRight(slide, logoColor);
