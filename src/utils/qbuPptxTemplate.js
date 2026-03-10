@@ -611,8 +611,8 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
   setContentBackground(slide);
   addSectionTitle(slide, 'Top Action Areas');
 
-  // All mid-tone colors so dark data-label text is always readable
-  const chartColors = [AA_BLUE, '2ECC71', '48CAE4', 'F5A623', 'E74C3C', '95A5A6'];
+  // Maximally distinct colors — alternate warm/cool so adjacent slices contrast
+  const chartColors = [AA_BLUE, 'E74C3C', '2ECC71', 'F5A623', '9B59B6', '48CAE4', '95A5A6', 'E67E22'];
   const q = form.cover.quarter || 'Current';
 
   if (hasMultiLocation) {
@@ -1354,8 +1354,8 @@ function addFinancialSlide(pptx, form, logoColor, narratives) {
 
 async function addInnovationPhotoSlides(pptx, form, logoColor) {
   const photos = form.roadmap?.photos || [];
-  const withData = photos.filter((p) => p.file instanceof File || p.base64);
-  if (!withData.length) return; // Skip when no innovation photos
+  const withData = photos.filter((p) => (p.file instanceof File || p.base64) && !p._usedInline);
+  if (!withData.length) return; // Skip when no innovation photos (or all used inline)
 
   const { pairs, singles } = pairBeforeAfterPhotos(withData);
 
@@ -1398,7 +1398,7 @@ async function addInnovationPhotoSlides(pptx, form, logoColor) {
   }
 }
 
-function addInnovationSlide(pptx, form, logoColor, narratives) {
+async function addInnovationSlide(pptx, form, logoColor, narratives) {
   const rawHighlights = (form.roadmap.highlights || []).filter((h) => h.innovation);
   if (!rawHighlights.length) return; // Skip slide entirely when no data
 
@@ -1511,6 +1511,32 @@ function addInnovationSlide(pptx, form, logoColor, narratives) {
           addCardBullets(slide, h.bullets, { x, y: cardY + 0.6, w: colW, h: cardH - headerPad });
         }
       });
+
+      // Embed first innovation photo in remaining column space (first slide only, ≤2 text items)
+      if (slideNum === 0 && batchSize <= 2) {
+        const innovPhotos = (form.roadmap?.photos || []).filter(p => p.file instanceof File || p.base64);
+        if (innovPhotos.length) {
+          const photo = innovPhotos[0];
+          const base64 = await resolvePhotoData(photo);
+          if (base64) {
+            const photoX = MARGIN + batchSize * (colW + colGap);
+            const photoW = batchSize === 1 ? COL2_W : COL3_W;
+            addCard(slide, { x: photoX, y: cardY, w: photoW, h: cardH });
+            slide.addImage({
+              data: base64, x: photoX + 0.1, y: cardY + 0.1, w: photoW - 0.2, h: cardH - 0.55,
+              sizing: { type: 'contain', w: photoW - 0.2, h: cardH - 0.55 },
+            });
+            const caption = [photo.caption, photo.location].filter(Boolean).join(' \u2014 ') || '';
+            if (caption) {
+              slide.addText(caption, {
+                x: photoX + 0.1, y: cardY + cardH - 0.4, w: photoW - 0.2, h: 0.35,
+                fontSize: 8, fontFace: FONT, color: MED_GREY, align: 'center', italic: true,
+              });
+            }
+            photo._usedInline = true; // Mark so photo slide can skip it
+          }
+        }
+      }
 
       if (slideNum === 0) {
         const notesG1 = getNarrativeText(narratives, 'NOTES:G1');
@@ -1675,7 +1701,7 @@ export async function generateQBUPptx(form, agentOutput, branding, { tenantId, s
   addTestimonialsSlide(pptx, form, logoColor, narratives);          // 11 — D.3
   addChallengesSlide(pptx, form, logoColor, narratives);            // 12 — E.1
   addFinancialSlide(pptx, form, logoColor, narratives);             // 13 — F.1
-  addInnovationSlide(pptx, form, logoColor, narratives);            // 14 — G.1
+  await addInnovationSlide(pptx, form, logoColor, narratives);      // 14 — G.1
   await addInnovationPhotoSlides(pptx, form, logoColor);            //      G.1a
   addRoadmapSlide(pptx, form, logoColor, narratives);               // 15 — G.2
   addThankYouSlide(pptx, form, logoWhite, websiteUrl);               // 16 — Thank You
