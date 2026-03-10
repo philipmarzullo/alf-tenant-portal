@@ -15,7 +15,7 @@ import { getPhotoAsBase64, uploadDeck, saveDeckPath } from '../data/qbuHistory';
 // ── Cover Slide (thin wrapper) ───────────────────────────
 
 function addCoverSlide(pptx, form, logoWhite, websiteUrl) {
-  const qLine = `Quarterly Business Update  |${form.cover.quarter || 'Q#'}|  ${form.cover.date || ''}`;
+  const qLine = `Quarterly Business Update  |  ${form.cover.quarter || 'Q#'}`;
   addDarkCoverSlide(pptx, {
     primaryText: form.cover.clientName || 'Client Name',
     subtitleText: qLine,
@@ -147,12 +147,15 @@ function addSafetyMomentSlide(pptx, form, logoColor, narratives) {
     });
   }
 
+  const notesA1 = getNarrativeText(narratives, 'NOTES:A1');
+  if (notesA1) slide.addNotes(notesA1);
+
   addLogoBottomRight(slide, logoColor);
 }
 
 // ── Slide 4: A.2 Safety & Compliance Review ─────────────
 
-function addSafetyComplianceSlide(pptx, form, logoColor) {
+function addSafetyComplianceSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
   addSectionTitle(slide, 'Safety & Compliance Review');
@@ -203,6 +206,31 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     contentY += 0.8;
   }
 
+  // Quarterly inspections table (v2 layout)
+  const inspByQ = (form.safety.inspectionsByQuarter || []).filter(r => r.location);
+  if (inspByQ.length) {
+    slide.addText('SAFETY INSPECTIONS BY QUARTER', {
+      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.3,
+      fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
+    });
+    contentY += 0.3;
+
+    const inspHeader = ['Location', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual'];
+    const inspRows = inspByQ.map((r) => {
+      const vals = [Number(r.q1) || 0, Number(r.q2) || 0, Number(r.q3) || 0, Number(r.q4) || 0];
+      const annual = r.annual ? String(r.annual) : String(vals.reduce((a, b) => a + b, 0));
+      return [r.location, ...vals.map(String), annual];
+    });
+    const inspTotals = [0, 0, 0, 0, 0];
+    inspRows.forEach((row) => {
+      for (let i = 1; i <= 5; i++) inspTotals[i - 1] += Number(row[i]) || 0;
+    });
+    inspRows.push(['TOTAL', ...inspTotals.map(String)]);
+
+    addBrandedTable(slide, [inspHeader, ...inspRows], { y: contentY, w: CONTENT_W });
+    contentY += (inspRows.length + 1) * 0.35 + 0.15;
+  }
+
   const incidents = (form.safety.incidents || []).filter((r) => r.location);
 
   if (incidents.length) {
@@ -217,7 +245,8 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
     const headerRow = ['Location', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual'];
     const dataRows = incidents.map((r) => {
       const vals = [Number(r.q1) || 0, Number(r.q2) || 0, Number(r.q3) || 0, Number(r.q4) || 0];
-      return [r.location, ...vals.map(String), String(vals.reduce((a, b) => a + b, 0))];
+      const annual = r.annual ? String(r.annual) : String(vals.reduce((a, b) => a + b, 0));
+      return [r.location, ...vals.map(String), annual];
     });
     // Total row
     const totals = [0, 0, 0, 0, 0];
@@ -274,6 +303,9 @@ function addSafetyComplianceSlide(pptx, form, logoColor) {
       });
     }
   }
+
+  const notesA2 = getNarrativeText(narratives, 'NOTES:A2');
+  if (notesA2) slide.addNotes(notesA2);
 
   addLogoBottomRight(slide, logoColor);
 }
@@ -369,6 +401,9 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
     }
   });
 
+  const notesB1 = getNarrativeText(narratives, 'NOTES:B1');
+  if (notesB1) slide.addNotes(notesB1);
+
   addLogoBottomRight(slide, logoColor);
 }
 
@@ -379,18 +414,51 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
   setContentBackground(slide);
   addSectionTitle(slide, 'Operational Performance \u2014 Work Tickets');
 
+  let contentY = 1.15;
+
+  // Quarterly work tickets table (v2 layout)
+  const ticketsByQ = (form.workTickets.ticketsByQuarter || []).filter(r => r.location);
+  if (ticketsByQ.length) {
+    slide.addText('WORK TICKETS BY QUARTER', {
+      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.3,
+      fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
+    });
+    contentY += 0.3;
+
+    const qHeader = ['Location', 'Q1', 'Q2', 'Q3', 'Q4', 'YTD'];
+    const qRows = ticketsByQ.map((r) => {
+      const vals = [Number(r.q1) || 0, Number(r.q2) || 0, Number(r.q3) || 0, Number(r.q4) || 0];
+      const ytd = r.ytd ? String(r.ytd) : String(vals.reduce((a, b) => a + b, 0));
+      return [r.location, ...vals.map(String), ytd];
+    });
+    const qTotals = [0, 0, 0, 0, 0];
+    qRows.forEach((row) => {
+      for (let i = 1; i <= 5; i++) qTotals[i - 1] += Number(row[i]) || 0;
+    });
+    qRows.push(['TOTAL', ...qTotals.map(String)]);
+
+    addBrandedTable(slide, [qHeader, ...qRows], { y: contentY, w: CONTENT_W });
+    contentY += (qRows.length + 1) * 0.35 + 0.15;
+  }
+
+  // YoY comparison table
   const locs = (form.workTickets.locations || []).filter((r) => r.location);
   if (locs.length) {
     const q = form.cover.quarter || '';
-    // Extract quarter and year: "Q3 2025" → prior = "Q3 2024"
     const yearMatch = q.match(/\d{4}/);
     const priorLabel = yearMatch
       ? q.replace(yearMatch[0], String(Number(yearMatch[0]) - 1))
       : q ? `${q} (Prior Year)` : 'Prior Year';
-    const currentLabel = q || 'Current Year';
 
-    // Check if any location has prior year data — if none, hide that column
     const hasPriorYear = locs.some((r) => r.priorYear && String(r.priorYear).trim() !== '');
+
+    if (ticketsByQ.length) {
+      slide.addText('YoY COMPARISON', {
+        x: MARGIN, y: contentY, w: CONTENT_W, h: 0.3,
+        fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
+      });
+      contentY += 0.3;
+    }
 
     const headerRow = hasPriorYear
       ? ['Location', `${q || 'Q#'} (Prior Year)`, q || 'Current', 'Change']
@@ -402,7 +470,6 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
       const pct = prior ? (((current - prior) / prior) * 100).toFixed(1) + '%' : '\u2014';
       return [r.location, String(prior), String(current), pct];
     });
-    // Total row
     const totalCurrent = locs.reduce((s, r) => s + (Number(r.currentYear) || 0), 0);
     if (hasPriorYear) {
       const totalPrior = locs.reduce((s, r) => s + (Number(r.priorYear) || 0), 0);
@@ -412,12 +479,13 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
       dataRows.push(['TOTAL', String(totalCurrent)]);
     }
 
-    addBrandedTable(slide, [headerRow, ...dataRows], { y: 1.15 });
+    addBrandedTable(slide, [headerRow, ...dataRows], { y: contentY });
+    contentY += (dataRows.length + 1) * 0.35 + 0.3;
   }
 
   // Key Takeaway callout — prefer agent narrative over raw form data
   const takeawayText = getNarrativeText(narratives, 'C1:TAKEAWAY') || form.workTickets.keyTakeaway;
-  const tableBottom = 1.15 + ((locs.length + 2) * 0.35) + 0.3;
+  const tableBottom = ticketsByQ.length ? contentY : 1.15 + ((locs.length + 2) * 0.35) + 0.3;
   if (takeawayText) {
     addCalloutBox(slide, {
       x: MARGIN, y: tableBottom, w: CONTENT_W, h: 0.85,
@@ -476,6 +544,9 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
     }
   }
 
+  const notesC1 = getNarrativeText(narratives, 'NOTES:C1');
+  if (notesC1) slide.addNotes(notesC1);
+
   addLogoBottomRight(slide, logoColor);
 }
 
@@ -484,7 +555,7 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
 function addAuditsSlide(pptx, form, logoColor, narratives) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
-  addSectionTitle(slide, 'Audits and Corrective Actions');
+  addSectionTitle(slide, 'Operational Audits and Corrective Actions');
 
   const a = form.audits;
   // Only include columns that have a real location name (not placeholders like "Location 3")
@@ -539,6 +610,9 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
     });
   }
 
+  const notesC2 = getNarrativeText(narratives, 'NOTES:C2');
+  if (notesC2) slide.addNotes(notesC2);
+
   addLogoBottomRight(slide, logoColor);
 }
 
@@ -560,7 +634,7 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
   addSectionTitle(slide, 'Top Action Areas');
 
   // All mid-tone colors so dark data-label text is always readable
-  const chartColors = [AA_BLUE, '0077B6', '48CAE4', '95A5A6', 'E74C3C', 'F5A623'];
+  const chartColors = [AA_BLUE, '2ECC71', '48CAE4', 'F5A623', 'E74C3C', '95A5A6'];
   const q = form.cover.quarter || 'Current';
 
   if (hasMultiLocation) {
@@ -675,6 +749,9 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
       });
     }
   }
+
+  const notesC3 = getNarrativeText(narratives, 'NOTES:C3');
+  if (notesC3) slide.addNotes(notesC3);
 
   addLogoBottomRight(slide, logoColor);
 }
@@ -805,6 +882,10 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
       }
     });
 
+    if (slideTitle === 'Completed Projects Showcase') {
+      const notesD1 = getNarrativeText(narratives, 'NOTES:D1');
+      if (notesD1) slide.addNotes(notesD1);
+    }
     addLogoBottomRight(slide, logoColor);
     return overflow;
   }
@@ -1055,6 +1136,10 @@ function addTestimonialsSlide(pptx, form, logoColor, narratives) {
       currentY += cardH + gapH;
     });
 
+    if (pageIdx === 0) {
+      const notesD3 = getNarrativeText(narratives, 'NOTES:D3');
+      if (notesD3) pageSlide.addNotes(notesD3);
+    }
     addLogoBottomRight(pageSlide, logoColor);
   });
 }
@@ -1168,6 +1253,9 @@ function addChallengesSlide(pptx, form, logoColor, narratives) {
     addCardBullets(slide, allActionTexts, { x: x2, y: cardY + 0.55, w: COL2_W, h: cardH - headerPad, fontSize: bulletFontSize, lineSpacing: bulletSpacing });
   }
 
+  const notesE1 = getNarrativeText(narratives, 'NOTES:E1');
+  if (notesE1) slide.addNotes(notesE1);
+
   addLogoBottomRight(slide, logoColor);
 }
 
@@ -1275,6 +1363,9 @@ function addFinancialSlide(pptx, form, logoColor, narratives) {
     const fittingPages = splitItemsToFit(notes, availH, bulletColW);
     addCardBullets(slide, fittingPages[0], { x: x2, y: cardY + 0.6, w: COL2_W, h: availH });
   }
+
+  const notesF1 = getNarrativeText(narratives, 'NOTES:F1');
+  if (notesF1) slide.addNotes(notesF1);
 
   addLogoBottomRight(slide, logoColor);
 }
@@ -1413,6 +1504,10 @@ function addInnovationSlide(pptx, form, logoColor, narratives) {
         if (pageItems.length) {
           addCardBullets(slide, pageItems, { x: MARGIN, y: cardY + 0.6, w: colW, h: pageCardH - headerPad });
         }
+        if (slideNum === 0 && p === 0) {
+          const notesG1 = getNarrativeText(narratives, 'NOTES:G1');
+          if (notesG1) slide.addNotes(notesG1);
+        }
         addLogoBottomRight(slide, logoColor);
         slideNum++;
       }
@@ -1439,6 +1534,10 @@ function addInnovationSlide(pptx, form, logoColor, narratives) {
         }
       });
 
+      if (slideNum === 0) {
+        const notesG1 = getNarrativeText(narratives, 'NOTES:G1');
+        if (notesG1) slide.addNotes(notesG1);
+      }
       addLogoBottomRight(slide, logoColor);
       slideNum++;
     }
@@ -1539,6 +1638,9 @@ function addRoadmapSlide(pptx, form, logoColor, narratives) {
     );
   }
 
+  const notesG2 = getNarrativeText(narratives, 'NOTES:G2');
+  if (notesG2) slide.addNotes(notesG2);
+
   addLogoBottomRight(slide, logoColor);
 }
 
@@ -1578,7 +1680,7 @@ export async function generateQBUPptx(form, agentOutput, branding, { tenantId, s
   addCoverSlide(pptx, form, logoWhite, websiteUrl);                  // 1  — Title
   addIntroductionsSlide(pptx, form, logoColor);                      // 2  — Introductions
   addSafetyMomentSlide(pptx, form, logoColor, narratives);           // 3  — A.1
-  addSafetyComplianceSlide(pptx, form, logoColor);                  // 4  — A.2
+  addSafetyComplianceSlide(pptx, form, logoColor, narratives);       // 4  — A.2
   addExecutiveSummarySlide(pptx, form, logoColor, narratives);      // 5  — B.1
   addWorkTicketsSlide(pptx, form, logoColor, narratives);           // 6  — C.1
   addAuditsSlide(pptx, form, logoColor, narratives);                // 7  — C.2

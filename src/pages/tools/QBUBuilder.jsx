@@ -1334,7 +1334,7 @@ export default function QBUBuilder() {
           </button>
           {hasCustomIntake && (
             <a
-              href="/qbu-intake-template.xlsx"
+              href="/qbu-intake-template-v2.xlsx"
               download
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-aa-blue border border-aa-blue/30 rounded-md hover:bg-aa-blue/5 transition-colors"
             >
@@ -1384,7 +1384,7 @@ export default function QBUBuilder() {
       {mode === 'upload' && (
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8 space-y-0">
           {/* Section 1: Excel Upload */}
-          <SectionHeading description="Upload your completed qbu-intake-template.xlsx. Data will be parsed into all form sections.">
+          <SectionHeading description="Upload your completed qbu-intake-template-v2.xlsx. Data will be parsed into all form sections.">
             Excel Intake Template
           </SectionHeading>
 
@@ -1406,7 +1406,7 @@ export default function QBUBuilder() {
               >
                 <FileSpreadsheet size={24} className="mx-auto text-gray-400 mb-2" />
                 <div className="text-sm font-medium text-dark-text">Drop Excel template here or click to upload</div>
-                <div className="text-xs text-secondary-text mt-1">.xlsx or .xls — qbu-intake-template</div>
+                <div className="text-xs text-secondary-text mt-1">.xlsx or .xls — qbu-intake-template-v2</div>
               </div>
             </>
           ) : (

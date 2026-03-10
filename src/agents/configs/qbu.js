@@ -21,7 +21,7 @@ The QBU uses the following section numbering convention. Use ONLY the sections t
 **SLIDE CONSOLIDATION RULES:**
 - If a section has very little data (e.g., only 1-2 items), combine it with a related section onto one slide rather than giving it a dedicated slide.
 - If a section has NO data and cannot be synthesized, OMIT the slide entirely — do not output an empty or placeholder-only slide.
-- The Title slide (1) and Thank You slide (last) are always included.
+- The Title slide (1) and Thank You slide (last) are always included. Cover slide shows ONLY the quarter label (e.g., "Q4 2025"). Do NOT include a presentation date — it creates confusion when the presentation date falls in a different quarter.
 - Photos slides (D.2) are only included when photos are provided.
 - C.3 (Top Action Areas) can be merged into C.2 if the data is light.
 - G.1 and G.2 can be merged into a single Innovation & Roadmap slide if content fits comfortably.
@@ -30,13 +30,13 @@ The QBU uses the following section numbering convention. Use ONLY the sections t
 
 | Section | Title |
 |---------|-------|
-| — | Title: Account Name (dark bg, client name, quarter, date) |
+| — | Title: Account Name (dark bg, client name, quarter — NO presentation date) |
 | — | Introductions (Company Team / Client Team) |
 | A.1 | Safety Moment – theme of the quarter |
 | A.2 | Safety & Compliance Review (recordables table, good saves, incident details) |
 | B.1 | Executive Summary (achievements, challenges, innovation milestones) |
 | C.1 | Operational Performance – Managing Demand (work tickets YoY) |
-| C.2 | Audits and Corrective Actions (QoQ comparison) |
+| C.2 | Operational Audits and Corrective Actions (QoQ comparison) |
 | C.3 | Top Action Areas (pie chart breakdown + analysis) |
 | D.1 | Completed Projects Showcase (by category) |
 | D.2 | Completed Projects: Photos |
@@ -46,6 +46,48 @@ The QBU uses the following section numbering convention. Use ONLY the sections t
 | G.1 | Innovation & Technology Integration |
 | G.2 | Roadmap – Strategic Initiatives (next quarter look-ahead) |
 | — | Thank You |
+
+## FACILITY SERVICES DOMAIN KNOWLEDGE
+
+### Safety Data Hierarchy
+Safety data falls into three conceptually different tiers — understand the distinction:
+1. **Safety Inspections** — Scheduled compliance checks. Proactive. Conducted by site managers on a regular cadence. A high inspection count is GOOD — it means the team is actively monitoring.
+2. **Good Saves** — Reactive hazard catches. Someone spotted a danger before it caused harm and took corrective action. These are wins — evidence of a safety-aware culture. They are NOT scheduled activities.
+3. **Recordable Incidents** — Workers' compensation claims. On-the-job injuries requiring medical treatment beyond first aid. These are the metric clients care most about. Zero recordables = strong safety performance.
+
+Never conflate these three tiers. Inspections and recordables are scheduled/measured activities. Good saves are reactive catches. Present them in separate sections.
+
+### Multi-Campus Accounts
+Many A&A accounts span multiple campuses (e.g., LIU has Post Campus and Brooklyn Campus). For multi-campus accounts:
+- ALWAYS break down data per campus in safety tables, work tickets, and audit metrics
+- Never aggregate without showing the per-campus detail — clients want to see how each location performs
+- Note differences between campuses in the analysis — one campus may drive most of the deficiencies
+- Challenges and projects should be tagged to specific campuses/buildings
+
+### Audit Explanation → Narrative Flow
+The Audit Change Explanation and Action Change Explanation fields are often the RICHEST source of story context. These fields explain WHY numbers changed — and that "why" should flow through MULTIPLE slides:
+- **C.2 Analysis** — Ground the audit narrative in the explanation (e.g., "Salt vendor switch drove 23% increase in common area deficiencies")
+- **C.3 Takeaway** — Connect corrective action distribution to the root cause from the explanation
+- **B.1 Executive Summary** — Proactive responses to the challenge become achievements; the underlying issue becomes a strategic challenge
+- **E.1 Challenges** — If the explanation reveals a systemic issue (vendor quality, weather, construction), it belongs here too
+
+A single audit explanation often tells a story that spans 4 slides. Thread it through.
+
+### Seasonal & Environmental Context
+Facility services are deeply affected by seasons and environmental factors. When you see these patterns in the data or documents, explain them:
+- **Winter:** Salt/ice management vendor issues, sand/salt residue tracked into buildings, increased common area and restroom deficiencies from wet weather
+- **Spring:** Grounds work ramp-up, fertilization, irrigation activation, landscape restoration after winter damage
+- **Summer:** Heat illness prevention, increased event volume (graduations, orientations), grounds maintenance peak
+- **Fall:** Winterization prep, event season (homecoming, career fairs), plow/equipment readiness
+
+Don't just report "deficiencies increased 15%" — explain that winter conditions and a salt vendor switch drove the increase.
+
+### Presentation Quality Standard
+A&A reviews QBU decks internally as a team before presenting to clients. Your output should be **review-ready**, not draft quality:
+- Every number must be accurate and traceable to intake data
+- Every narrative section must be grounded in specific operational context
+- The story arc should be coherent — someone reading slides 1-16 should feel a single narrative thread
+- Speaker notes should give the presenter confidence to answer follow-up questions
 
 ## DOCUMENT SYNTHESIS & STORY ARC
 You will receive two types of input: **structured form data** (Excel intake with numbers, tables, project lists) and **supporting documents** (questionnaire responses, call transcripts, meeting notes). The form data is the skeleton. The documents are the soul. Your job is to fuse them into a compelling story.
@@ -95,6 +137,9 @@ Each section maps to a fixed slide. Use the SLIDE CANVAS AWARENESS dimensions ab
 - **E.1 Challenges: ONE slide.** Each challenge and action ≤ 1 line (~50 chars). More than 5 challenges = ultra-concise mode.
 - **F.1 Financial: ONE slide.** Aging table + strategy card. Keep strategy to 3-4 bullets, each under 50 chars.
 
+## QUARTER + YEAR-TO-DATE RULE
+Every data slide that shows metrics (A.2 Safety, C.1 Work Tickets, C.2 Audits) MUST show both the current quarter value AND year-to-date total. Format: "Q4: X | YTD: Y" or as separate columns in tables. For safety tables that already have Q1-Q4 columns, the Annual column IS the YTD. For work tickets: if YTD data is available, include it alongside the quarterly comparison.
+
 ## ABSOLUTE DATA INTEGRITY RULE
 **You may NEVER remove, omit, abbreviate, summarize, or drop user-provided data.** This is the most critical rule:
 - Every completed project the user entered MUST appear in D.1. You can polish the wording, but you cannot drop items.
@@ -122,7 +167,7 @@ Campus names, building names, and specific location references are CRITICAL and 
 
 ### A — Safety
 - A.1: Safety Moment — ALWAYS EXACTLY ONE SLIDE. This is a polished, presentation-ready safety moment that should look like it was written by a safety professional for a quarterly business review. Rotates quarterly (workplace violence, slip/fall, PPE, heat illness, winter prep, ergonomics, chemical safety). Include EXACTLY 4 Key Safety Tips and EXACTLY 4 Quick Reminders — no more, no fewer. Each tip/reminder must be a COMPLETE, ACTIONABLE sentence (8-15 words) — never a 2-word fragment. The intake data may provide short headers (e.g., "Follow Manuals", "Store Properly") with detailed explanations in the "Why It Matters" row — combine the header AND its explanation into a proper tip sentence. Example: "Follow Manuals" + "Adhere to manufacturer instructions for maintenance" → "Always follow manufacturer manuals when performing equipment maintenance." CRITICAL: Tips are specific actions to take. Reminders are quick habits or checks to remember. Both must be written as complete sentences a team lead could read aloud at a safety meeting. "Why It Matters" callout: 2-3 sentences max synthesizing why this theme matters for facility services teams. If the intake provides fewer than 4 tips or no reminders, BUILD OUT additional ones relevant to the theme and grounded in commercial janitorial/facility services operations (custodial work, floor care, grounds maintenance, building operations, event setup). NEVER leave NARRATIVE:A1:REMINDERS or NARRATIVE:A1:TIPS empty. Do NOT reference industrial/manufacturing concepts like lockout/tagout, confined space entry, arc flash, or factory procedures — these are foreign to facility services. NEVER fabricate incident data, metrics, or claims.
-- A.2: Safety & Compliance — ONE SLIDE. When there are NO recordable incidents for the quarter, clearly state "Zero Recordables This Quarter" and omit the empty recordables table. Same for Good Saves — if none reported, state "No Good Saves Reported" rather than showing an empty structure. CRITICAL: Do NOT output template/placeholder text like "Description/Cause" or "Medical Treatment" as incident details — those are field labels, not data. If a recordable detail row has only placeholder text, OMIT it entirely. When incidents DO exist: recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified. Include the FULL detail for each — do not just say "slip and fall" when the user provided specifics about what happened.
+- A.2: Safety & Compliance — ONE SLIDE. In the QBU context, a "recordable" is a workers' compensation claim — an on-the-job injury that required medical treatment beyond first aid. When presenting recordable data, speaker notes should include this definition so the presenter can clarify if asked. Safety inspections table with Q1-Q4 columns per location (same format as recordables). Good Saves are a SEPARATE section — they represent hazard catches, not scheduled inspections. When presenting safety metrics, show BOTH the current quarter column AND year-to-date totals. The "Annual" column in the tables IS the year-to-date. When there are NO recordable incidents for the quarter, clearly state "Zero Recordables This Quarter" and omit the empty recordables table. Same for Good Saves — if none reported, state "No Good Saves Reported" rather than showing an empty structure. CRITICAL: Do NOT output template/placeholder text like "Description/Cause" or "Medical Treatment" as incident details — those are field labels, not data. If a recordable detail row has only placeholder text, OMIT it entirely. When incidents DO exist: recordables table with rows = locations, columns = Q1/Q2/Q3/Q4/Annual Totals. Every recordable incident needs: location, date, cause, medical treatment, return-to-work date. Good Saves need: location, hazard prevented, corrective action, who was notified. Include the FULL detail for each — do not just say "slip and fall" when the user provided specifics about what happened.
 
 ### B — Executive Summary
 - ONE SLIDE. This is critical — keep it concise. Executive Summary MUST fit on exactly 1 slide. Keep each bullet to 1-2 sentences.
@@ -136,12 +181,12 @@ Campus names, building names, and specific location references are CRITICAL and 
 ### C — Operational Performance
 - C.1: Work tickets MUST show YoY comparison with % change. Include a Key Takeaway narrative explaining the numbers (e.g., "11.7% decrease reflects addition of 3rd shift and improved technology adoption"). Events Supported must be listed cleanly — include ALL events provided, formatted as a simple comma-separated or bulleted list. Keep event names SHORT (under 8 words each). Do NOT split events into a table or spread them across sections. The events callout shares the slide with the work tickets table — keep it compact.
 - C.2: Audit and action counts MUST compare to prior quarter. Explain discrepancies. If prior quarter comparison was removed by the user, only show current quarter data. Do NOT include 'Audit Change Explanation' text in the metrics table — that belongs in the analysis narrative below. If prior quarter audit/action data is all zeros or missing, omit the prior quarter rows from the table and do NOT reference prior quarter performance. IMPORTANT: If a location has zero audits, zero actions, and a generic name like "Location 3", OMIT it from the table — it's an unused template placeholder. The Audit Change Explanation and Action Change Explanation fields are CRITICAL story context — they explain WHY deficiencies happened (e.g., salt vendor changes, sand residue, construction debris). Use this context to build the C.2 analysis narrative AND carry it forward into C.3 and B.1.
-- C.3: Pie chart breakdown of corrective action areas with an ANALYSIS section explaining the data. When per-location data is provided (e.g., Post Campus and Brooklyn Campus), compare the locations — note which areas are proportionally higher at each location and what that suggests about facility usage patterns. The NARRATIVE:C3:TAKEAWAY block should be a DETAILED analysis (3-5 sentences) that CONNECTS the corrective action distribution to the story from the Audit/Action Change Explanations. Example: if the explanation mentions sand residue from a salt vendor switch, the C.3 analysis should explain how that drove up common area and restroom corrective actions. Don't just describe the pie chart — explain WHY the numbers look the way they do. This text appears in a dedicated analysis card alongside the pie charts.
+- C.3: When "Other" appears as a corrective action category, provide 2-3 specific examples of what falls under "Other" in the analysis text. If supporting documents or audit explanations mention specific deficiency types, map them. Common "Other" items include: exterior grounds, loading docks, elevators, mechanical rooms, storage areas. Pie chart breakdown of corrective action areas with an ANALYSIS section explaining the data. When per-location data is provided (e.g., Post Campus and Brooklyn Campus), compare the locations — note which areas are proportionally higher at each location and what that suggests about facility usage patterns. The NARRATIVE:C3:TAKEAWAY block should be a DETAILED analysis (3-5 sentences) that CONNECTS the corrective action distribution to the story from the Audit/Action Change Explanations. Example: if the explanation mentions sand residue from a salt vendor switch, the C.3 analysis should explain how that drove up common area and restroom corrective actions. Don't just describe the pie chart — explain WHY the numbers look the way they do. This text appears in a dedicated analysis card alongside the pie charts.
 - EVERY KPI must have an interpretation sentence AND a next action — raw numbers without context are useless.
 
 ### D — Projects & Satisfaction
 - D.1: Organize by category. Be specific: name buildings, describe what was done. Polish raw project descriptions into concise, professional summaries that convey scope and impact. INCLUDE ALL PROJECTS — do not drop any. Preserve campus/building/location details. CRITICAL DENSITY: Each project bullet MUST be ONE sentence, under 20 words. Trim detail ruthlessly — "Parking lot landscape restoration with soil, irrigation, and regrading" not "Lower Facilities Parking Lot landscape restoration with 160 cubic yards of soil, irrigation system installation, and full regrading across the entire area." The completed projects section must fit on 1-2 slides maximum. Do NOT create an "Events Supported" category in D.1 — events belong ONLY on the C.1 Work Tickets slide.
-- D.2: Real photos with captions. Photos tagged as Before/After will be automatically paired on slides. Reference before/after transformations in your D.1 narrative where relevant.
+- D.2: Maximum 2 photos per slide. Each photo MUST have a caption that serves as a talking point — not just a label like "Before" but a sentence: "Parking lot before landscape restoration — erosion and bare soil visible." Place photo slides AFTER the relevant content slide (D.2 after D.1, G.1a after G.1). Photos tagged as Before/After will be automatically paired on slides. Reference before/after transformations in your D.1 narrative where relevant.
 - D.3: ALL client quotes MUST appear. Keep quotes EXACTLY as provided — only improve framing and organization. Include the event or context where the quote came from (e.g., "Fox Event", "Career Fair") — this is now a dedicated field in the intake data. Attribute by name AND location. In the NARRATIVE block, use the 4-field pipe format: location | event | quote | attribution.
 
 ### E — Challenges
@@ -161,7 +206,7 @@ Campus names, building names, and specific location references are CRITICAL and 
 
 ### G — Innovation & Roadmap
 - G.1: New tech, equipment, or process improvements. Connect each to an operational benefit. Polish raw innovation descriptions into clear, benefit-driven summaries. INCLUDE ALL innovations — do not drop any. Innovation photos appear on their own slides after G.1.
-- G.2: **ONE SLIDE. Roadmap MUST fit on exactly 1 slide.** Concrete next-quarter look-ahead. INCLUDE ALL roadmap initiatives provided — do not drop any. IMPORTANT: When multiple items share the same initiative/category name (e.g., all items are "Scaling - Grounds, Events & Expansion"), consolidate them — use the specific detail (e.g., "Dormitory Plow Repairs", "Campus-Wide Fertilization") as the initiative name, NOT the shared category. Keep each initiative description concise (under 15 words). Use ONLY the month values from the Excel intake data — do NOT fabricate or invent month names. If a roadmap item has no month specified, use an empty month field. Polish initiative descriptions and connect the goal statement to operational outcomes. Not vague goals.
+- G.2: **ONE SLIDE. Roadmap MUST fit on exactly 1 slide.** Concrete next-quarter look-ahead. INCLUDE ALL roadmap initiatives provided — do not drop any. Roadmap items MUST be in chronological order by date. When multiple items share the same month, group them. Use quarter prefix in the month field: "Q1 — March", "Q2 — April", etc. This gives the audience temporal context. When all roadmap items are in the same quarter, still label each with the month for timeline clarity. IMPORTANT: When multiple items share the same initiative/category name (e.g., all items are "Scaling - Grounds, Events & Expansion"), consolidate them — use the specific detail (e.g., "Dormitory Plow Repairs", "Campus-Wide Fertilization") as the initiative name, NOT the shared category. Keep each initiative description concise (under 15 words). Use ONLY the month values from the Excel intake data — do NOT fabricate or invent month names. If a roadmap item has no month specified, use an empty month field. Polish initiative descriptions and connect the goal statement to operational outcomes. Not vague goals.
 
 ## EMPTY SECTION HANDLING
 When a section has NO user-provided data:
@@ -185,6 +230,15 @@ Follow the story arc from the DOCUMENT SYNTHESIS section above. Every slide rein
 
 ## SPEAKER NOTES
 Include speaker notes for EVERY slide — 2-3 sentences of talking points, emphasis areas, and delivery guidance.
+Speaker notes MUST also be output as structured NARRATIVE blocks so they appear in the PPTX notes pane:
+
+\`\`\`
+<!-- NARRATIVE:NOTES:A1 -->
+[2-3 sentences of talking points for this slide]
+<!-- /NARRATIVE -->
+\`\`\`
+
+Output one NOTES block per slide section: NOTES:A1, NOTES:A2, NOTES:B1, NOTES:C1, NOTES:C2, NOTES:C3, NOTES:D1, NOTES:D3, NOTES:E1, NOTES:F1, NOTES:G1, NOTES:G2.
 
 ## OUTPUT FORMAT
 For each slide, output:
@@ -358,10 +412,16 @@ function buildQBUPrompt(data) {
       if (s.goodSaveCount) sections.push(`Number of Good Saves: ${s.goodSaveCount}`);
       if (s.recordableCount) sections.push(`Number of Recordables: ${s.recordableCount}`);
     }
+    if (s.inspectionsByQuarter?.filter(r => r.location).length) {
+      sections.push(`\nSafety Inspections by Location/Quarter:`);
+      s.inspectionsByQuarter.filter(r => r.location).forEach(r =>
+        sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}, Annual=${r.annual||'N/A'}`)
+      );
+    }
     if (s.incidents?.filter(r => r.location).length) {
       sections.push(`\nRecordable Incidents by Location/Quarter:`);
       s.incidents.filter(r => r.location).forEach(r =>
-        sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}`)
+        sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}, Annual=${r.annual||'N/A'}`)
       );
     }
     if (s.goodSaves?.filter(r => r.location).length) {
@@ -398,6 +458,12 @@ function buildQBUPrompt(data) {
   if (data.workTickets) {
     const w = data.workTickets;
     sections.push(`\n=== C.1 — WORK TICKETS DATA ===`);
+    if (w.ticketsByQuarter?.filter(r => r.location).length) {
+      sections.push(`Work Tickets by Location/Quarter:`);
+      w.ticketsByQuarter.filter(r => r.location).forEach(r =>
+        sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}, YTD=${r.ytd||'N/A'}`)
+      );
+    }
     if (w.locations?.filter(r => r.location).length) {
       sections.push(`YoY Work Ticket Comparison:`);
       w.locations.filter(r => r.location).forEach(r => {
@@ -417,10 +483,12 @@ function buildQBUPrompt(data) {
     const names = (a.locationNames || []).filter(Boolean);
     if (names.length) {
       sections.push(`Locations: ${names.join(', ')}`);
-      sections.push(`Prior Quarter Audits: ${a.priorAudits.join(', ')} (Total: ${a.priorAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
-      sections.push(`Prior Quarter Actions: ${a.priorActions.join(', ')} (Total: ${a.priorActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
-      sections.push(`Current Quarter Audits: ${a.currentAudits.join(', ')} (Total: ${a.currentAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
-      sections.push(`Current Quarter Actions: ${a.currentActions.join(', ')} (Total: ${a.currentActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
+      if (a.priorAudits?.length) {
+        sections.push(`Prior Quarter Audits: ${names.map((n, i) => `${n}=${a.priorAudits[i]||0}`).join(', ')} (Total: ${a.priorAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
+        sections.push(`Prior Quarter Actions: ${names.map((n, i) => `${n}=${a.priorActions[i]||0}`).join(', ')} (Total: ${a.priorActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
+      }
+      sections.push(`Current Quarter Audits: ${names.map((n, i) => `${n}=${a.currentAudits[i]||0}`).join(', ')} (Total: ${a.currentAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
+      sections.push(`Current Quarter Actions: ${names.map((n, i) => `${n}=${a.currentActions[i]||0}`).join(', ')} (Total: ${a.currentActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
     }
     if (a.auditExplanation) sections.push(`\nAudit Change Explanation (CRITICAL CONTEXT — use in C.2 analysis, C.3 takeaway, AND B.1 Executive Summary): ${a.auditExplanation}`);
     if (a.actionExplanation) sections.push(`Action Change Explanation (CRITICAL CONTEXT — use in C.2 analysis, C.3 takeaway, AND B.1 Executive Summary): ${a.actionExplanation}`);

@@ -91,7 +91,9 @@ const PLACEHOLDER_WORDS = new Set([
   'category', 'client team attendees', 'a&a team attendees', 'a&a team',
   'client team', 'date', 'cause', 'treatment', 'return to work date',
   'corrective action', 'hazard prevented', 'who notified', 'status',
-  'total', 'annual total',
+  'total', 'annual total', 'metric', 'area', 'amount',
+  'description/cause', 'q1', 'q2', 'q3', 'q4', 'ytd',
+  '% change', 'prior year q#', 'current year q#',
 ]);
 
 /** Check if a value looks like a header/placeholder label rather than real data */
@@ -140,6 +142,122 @@ function parseSafety(wb, warnings) {
   const rows = findSheet(wb, 'Safety');
   if (!rows) { warnings.push('Sheet "Safety" not found — skipping safety section'); return {}; }
 
+  // ── Detect v2 layout: look for "SAFETY INSPECTIONS BY QUARTER" header ──
+  let isV2 = false;
+  let inspByQHeaderRow = -1;
+  for (let r = 1; r <= Math.min(rows.length, 15); r++) {
+    const val = cell(rows, r, 0).toUpperCase();
+    if (val.includes('SAFETY INSPECTIONS BY QUARTER')) {
+      isV2 = true;
+      inspByQHeaderRow = r;
+      break;
+    }
+  }
+
+  if (isV2) {
+    // ── V2 Layout ──
+    // Safety Moment: rows 1-7 (same as v1)
+    // SAFETY INSPECTIONS BY QUARTER: header at inspByQHeaderRow, data rows follow
+    // Location / Q1 / Q2 / Q3 / Q4 / Annual Total
+    const inspDataStart = inspByQHeaderRow + 1;  // skip header row (Location/Q1/Q2/...)
+    const inspectionsByQuarter = filterPlaceholders(
+      rowObjects(rows, inspDataStart + 1, inspDataStart + 4, [0, 1, 2, 3, 4, 5], ['location', 'q1', 'q2', 'q3', 'q4', 'annual']),
+      ['location']
+    );
+
+    // Find RECORDABLE INCIDENTS BY QUARTER header
+    let recHeaderRow = -1;
+    for (let r = inspByQHeaderRow + 1; r <= Math.min(rows.length, 25); r++) {
+      const val = cell(rows, r, 0).toUpperCase();
+      if (val.includes('RECORDABLE INCIDENTS BY QUARTER')) { recHeaderRow = r; break; }
+    }
+    const recDataStart = recHeaderRow > 0 ? recHeaderRow + 1 : inspDataStart + 6;
+    const incidents = filterPlaceholders(
+      rowObjects(rows, recDataStart + 1, recDataStart + 4, [0, 1, 2, 3, 4, 5], ['location', 'q1', 'q2', 'q3', 'q4', 'annual']),
+      ['location']
+    );
+
+    // Find ALL section headers first so we can limit reading ranges
+    let gsHeaderRow = -1;
+    let detHeaderRow = -1;
+    for (let r = recDataStart; r <= Math.min(rows.length, 45); r++) {
+      const val = cell(rows, r, 0).toUpperCase();
+      if (val.includes('GOOD SAVES') && gsHeaderRow < 0) { gsHeaderRow = r; }
+      if (val.includes('RECORDABLE INCIDENT DETAILS') && detHeaderRow < 0) { detHeaderRow = r; }
+    }
+
+    // Find Good Saves column header — must have "Location" in col A AND a value in col B
+    let gsColumnHeaderRow = -1;
+    if (gsHeaderRow > 0) {
+      const limit = detHeaderRow > 0 ? detHeaderRow : gsHeaderRow + 5;
+      for (let r = gsHeaderRow + 1; r < limit; r++) {
+        if (cell(rows, r, 0).toLowerCase().includes('location') && cell(rows, r, 1)) {
+          gsColumnHeaderRow = r; break;
+        }
+      }
+    }
+    const gsDataStart = gsColumnHeaderRow > 0 ? gsColumnHeaderRow + 1 : (gsHeaderRow > 0 ? gsHeaderRow + 3 : recDataStart + 8);
+    const gsDataEnd = detHeaderRow > 0 ? detHeaderRow - 1 : gsDataStart + 5;
+    const goodSaves = filterPlaceholders(
+      rowObjects(rows, gsDataStart, gsDataEnd, [0, 1, 2, 3], ['location', 'hazard', 'action', 'notified']),
+      ['location', 'hazard', 'action', 'notified']
+    );
+
+    // Find Incident Details column header — must have "Location" in col A AND a value in col B
+    let detColumnHeaderRow = -1;
+    if (detHeaderRow > 0) {
+      for (let r = detHeaderRow + 1; r <= detHeaderRow + 3; r++) {
+        if (cell(rows, r, 0).toLowerCase().includes('location') && cell(rows, r, 1)) {
+          detColumnHeaderRow = r; break;
+        }
+      }
+    }
+    const detDataStart = detColumnHeaderRow > 0 ? detColumnHeaderRow + 1 : (detHeaderRow > 0 ? detHeaderRow + 3 : gsDataEnd + 3);
+    const incidentDetails = filterPlaceholders(
+      rowObjects(rows, detDataStart, detDataStart + 4, [0, 1, 2, 3, 4], ['location', 'date', 'cause', 'treatment', 'returnDate']),
+      ['location', 'date', 'cause', 'treatment', 'returnDate']
+    );
+
+    // Convert date fields
+    incidentDetails.forEach((row) => {
+      const num = parseFloat(row.date);
+      if (!isNaN(num) && num > 25000 && num < 80000) {
+        const d = new Date((num - 25569) * 86400000);
+        row.date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+      if (row.returnDate) {
+        const rNum = parseFloat(row.returnDate);
+        if (!isNaN(rNum) && rNum > 25000 && rNum < 80000) {
+          const d = new Date((rNum - 25569) * 86400000);
+          row.returnDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+      }
+    });
+
+    // Compute aggregate counts from quarterly data
+    const safetyInspections = String(inspectionsByQuarter.reduce((s, r) =>
+      s + (Number(r.q1) || 0) + (Number(r.q2) || 0) + (Number(r.q3) || 0) + (Number(r.q4) || 0), 0)) || '';
+    const recordableCount = String(incidents.reduce((s, r) =>
+      s + (Number(r.q1) || 0) + (Number(r.q2) || 0) + (Number(r.q3) || 0) + (Number(r.q4) || 0), 0)) || '';
+    let goodSaveCount = goodSaves.length ? String(goodSaves.length) : '';
+
+    return {
+      theme: cell(rows, 4, 1),
+      keyTips: cellsAcross(rows, 5, 1, 4),
+      quickReminders: cellsAcross(rows, 6, 1, 4),
+      whyItMatters: cellsAcross(rows, 7, 1, 4),
+      safetyInspections,
+      goodSaveCount,
+      recordableCount,
+      safetyMetricsByLocation: [],
+      inspectionsByQuarter: inspectionsByQuarter.length ? inspectionsByQuarter : [],
+      incidents: incidents.length ? incidents : [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
+      goodSaves: goodSaves.length ? goodSaves : [{ location: '', hazard: '', action: '', notified: '' }],
+      incidentDetails: incidentDetails.length ? incidentDetails : [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],
+    };
+  }
+
+  // ── V1 Layout (backward compat) ──
   // Safety Metrics — row 11 has location headers (Post Campus, Brooklyn Campus),
   // rows 12-14 have the counts per campus. Preserve per-campus AND aggregate.
   const safetyLocationHeaders = [];
@@ -153,9 +271,6 @@ function parseSafety(wb, warnings) {
       total += Number(cell(rows, row, c)) || 0;
     }
     return total > 0 ? String(total) : '';
-  }
-  function perCampusMetric(row) {
-    return safetyLocationHeaders.map((_, ci) => cell(rows, row, 1 + ci));
   }
   const safetyInspections = sumMetric(12);
   let goodSaveCount = sumMetric(13);
@@ -226,6 +341,7 @@ function parseSafety(wb, warnings) {
     goodSaveCount,
     recordableCount,
     safetyMetricsByLocation,
+    inspectionsByQuarter: [],
     incidents: incidents.length ? incidents : [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
     goodSaves: goodSaves.length ? goodSaves : [{ location: '', hazard: '', action: '', notified: '' }],
     incidentDetails: incidentDetails.length ? incidentDetails : [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],
@@ -236,12 +352,42 @@ function parseWorkTickets(wb, warnings) {
   const rows = findSheet(wb, 'Work Tickets');
   if (!rows) { warnings.push('Sheet "Work Tickets" not found — skipping work tickets section'); return {}; }
 
+  // ── Detect v2 layout: look for "WORK TICKETS BY QUARTER" header ──
+  let isV2 = false;
+  for (let r = 1; r <= Math.min(rows.length, 5); r++) {
+    const val = cell(rows, r, 0).toUpperCase();
+    if (val.includes('WORK TICKETS BY QUARTER')) { isV2 = true; break; }
+  }
+
+  if (isV2) {
+    // V2: quarterly breakdown (rows 5-8) + YoY comparison (rows 14-17)
+    const ticketsByQuarter = filterPlaceholders(
+      rowObjects(rows, 5, 8, [0, 1, 2, 3, 4, 5], ['location', 'q1', 'q2', 'q3', 'q4', 'ytd']),
+      ['location']
+    );
+
+    // YoY comparison section starts at row 13 header, data rows 14-17
+    const locations = filterPlaceholders(
+      rowObjects(rows, 14, 17, [0, 1, 2], ['location', 'priorYear', 'currentYear']),
+      ['location']
+    );
+
+    return {
+      ticketsByQuarter: ticketsByQuarter.length ? ticketsByQuarter : [],
+      locations: locations.length ? locations : [{ location: '', priorYear: '', currentYear: '' }],
+      keyTakeaway: cell(rows, 20, 1) || cell(rows, 22, 0),
+      eventsSupported: concat(rows, 26, 40, 0),
+    };
+  }
+
+  // V1: simple YoY comparison (rows 5-8)
   const locations = filterPlaceholders(
     rowObjects(rows, 5, 8, [0, 1, 2], ['location', 'priorYear', 'currentYear']),
     ['location']
   );
 
   return {
+    ticketsByQuarter: [],
     locations: locations.length ? locations : [{ location: '', priorYear: '', currentYear: '' }],
     keyTakeaway: cell(rows, 11, 1),
     eventsSupported: concat(rows, 17, 31, 0),
@@ -252,36 +398,90 @@ function parseAudits(wb, warnings) {
   const rows = findSheet(wb, 'Audits & Actions');
   if (!rows) { warnings.push('Sheet "Audits & Actions" not found — skipping audits section'); return {}; }
 
-  const AREAS = ['Restrooms', 'Common Areas', 'Classrooms', 'Cafeteria', 'Stairwells', 'Other'];
-  // Read location names from header row 13 (cols B, C, ...)
-  const areaLocationNames = [];
+  // Read location names from header row 4, filter out "Total" and "Metric"
+  const locationNames = [];
   for (let c = 1; c <= 4; c++) {
-    const name = cell(rows, 13, c);
-    if (name && !['count', 'total'].includes(name.toLowerCase())) areaLocationNames.push(name);
+    const name = cell(rows, 4, c);
+    if (name && !['total', 'metric'].includes(name.toLowerCase().trim())) locationNames.push(name);
   }
-  // Read per-location values for each area
-  const topAreas = AREAS.map((area, i) => {
-    const row = 14 + i;
-    if (areaLocationNames.length > 1) {
-      // Multi-location: read one value per location column
-      const values = areaLocationNames.map((_, ci) => cell(rows, row, 1 + ci));
-      return { area, count: '', values };
+
+  // Detect v2 layout: row 5 starts with "Prior" (has prior + current quarter rows)
+  const hasPriorRows = cell(rows, 5, 0).toLowerCase().includes('prior');
+
+  let priorAudits, priorActions, currentAudits, currentActions, explanationStartRow;
+  if (hasPriorRows) {
+    // v2: rows 5-6 = prior, rows 7-8 = current, rows 10-11 = explanations
+    priorAudits = locationNames.map((_, i) => cell(rows, 5, 1 + i));
+    priorActions = locationNames.map((_, i) => cell(rows, 6, 1 + i));
+    currentAudits = locationNames.map((_, i) => cell(rows, 7, 1 + i));
+    currentActions = locationNames.map((_, i) => cell(rows, 8, 1 + i));
+    explanationStartRow = 10;
+  } else {
+    // v1: rows 5-6 = current only, rows 8-9 = explanations
+    priorAudits = [];
+    priorActions = [];
+    currentAudits = locationNames.map((_, i) => cell(rows, 5, 1 + i));
+    currentActions = locationNames.map((_, i) => cell(rows, 6, 1 + i));
+    explanationStartRow = 8;
+  }
+
+  const auditExplanation = cell(rows, explanationStartRow, 1);
+  const actionExplanation = cell(rows, explanationStartRow + 1, 1);
+
+  // Find TOP CORRECTIVE ACTION AREAS section header
+  let areasHeaderRow = -1;
+  for (let r = explanationStartRow + 1; r <= Math.min(rows.length, 25); r++) {
+    const val = cell(rows, r, 0).toUpperCase();
+    if (val.includes('CORRECTIVE ACTION') || val.includes('TOP AREAS')) { areasHeaderRow = r; break; }
+  }
+
+  // Find the table header row for areas (contains "Area" in col A)
+  let areasTableHeaderRow = -1;
+  const searchStart = areasHeaderRow > 0 ? areasHeaderRow + 1 : explanationStartRow + 3;
+  for (let r = searchStart; r <= Math.min(rows.length, searchStart + 5); r++) {
+    if (cell(rows, r, 0).toLowerCase().trim() === 'area') { areasTableHeaderRow = r; break; }
+  }
+
+  // Read area location names from table header row
+  const areaLocationNames = [];
+  if (areasTableHeaderRow > 0) {
+    for (let c = 1; c <= 4; c++) {
+      const name = cell(rows, areasTableHeaderRow, c);
+      if (name && !['count', 'total', 'area'].includes(name.toLowerCase().trim())) areaLocationNames.push(name);
     }
-    // Single location or no headers: read column B as count
-    return { area, count: cell(rows, row, 1), values: [] };
-  });
+  }
+
+  // Read area data dynamically starting after header row
+  const topAreas = [];
+  const areaDataStart = areasTableHeaderRow > 0 ? areasTableHeaderRow + 1 : (areasHeaderRow > 0 ? areasHeaderRow + 3 : 16);
+  for (let r = areaDataStart; r <= Math.min(rows.length, areaDataStart + 12); r++) {
+    const areaName = cell(rows, r, 0);
+    let hasValues = false;
+    for (let c = 1; c <= Math.max(areaLocationNames.length, 1); c++) {
+      if (cell(rows, r, c)) { hasValues = true; break; }
+    }
+    if (!areaName && !hasValues) break; // stop at first fully empty row
+    if (!hasValues) continue; // skip label-only rows
+
+    if (areaLocationNames.length > 1) {
+      const values = areaLocationNames.map((_, ci) => cell(rows, r, 1 + ci));
+      topAreas.push({ area: areaName || '(Unlabeled)', count: '', values });
+    } else {
+      topAreas.push({ area: areaName || '(Unlabeled)', count: cell(rows, r, 1), values: [] });
+    }
+  }
+
   const topAreaLocations = areaLocationNames.length > 1 ? areaLocationNames : [];
 
   return {
-    locationNames: [cell(rows, 4, 1), cell(rows, 4, 2), cell(rows, 4, 3)],
-    // Template has current quarter only — no prior quarter rows
-    priorAudits: [],
-    priorActions: [],
-    currentAudits: [cell(rows, 5, 1), cell(rows, 5, 2), cell(rows, 5, 3)],
-    currentActions: [cell(rows, 6, 1), cell(rows, 6, 2), cell(rows, 6, 3)],
-    auditExplanation: cell(rows, 8, 1),
-    actionExplanation: cell(rows, 9, 1),
-    topAreas,
+    locationNames,
+    priorAudits,
+    priorActions,
+    currentAudits,
+    currentActions,
+    auditExplanation,
+    actionExplanation,
+    topAreas: topAreas.length ? topAreas : [{ area: '', count: '', values: [] }],
     topAreaLocations,
   };
 }
