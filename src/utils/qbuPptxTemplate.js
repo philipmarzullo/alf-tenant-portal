@@ -167,6 +167,12 @@ function addSafetyComplianceSlide(pptx, form, logoColor, narratives) {
   const incidents = (form.safety.incidents || []).filter((r) => r.location);
 
   if (inspByQ.length && incidents.length) {
+    // Section label so audience knows what the table shows
+    slide.addText('SAFETY INSPECTIONS & RECORDABLES', {
+      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.25,
+      fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
+    });
+    contentY += 0.25;
     // Combined table: Location | Type | Q1 | Q2 | Q3 | Q4 | Annual
     const header = ['Location', 'Metric', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual'];
     const dataRows = [];
@@ -425,7 +431,7 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
     const hasPriorYear = locs.some((r) => r.priorYear && String(r.priorYear).trim() !== '');
 
     if (ticketsByQ.length) {
-      slide.addText('YoY COMPARISON', {
+      slide.addText('YEAR OVER YEAR COMPARISON', {
         x: MARGIN, y: contentY, w: CONTENT_W, h: 0.3,
         fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
       });
@@ -549,11 +555,11 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
     const rows = [
       headerRow,
       ...(hasPriorData ? [
-        ['Prior Qtr Audits', ...realIndices.map((i) => String(a.priorAudits[i] || '')), sumActive(a.priorAudits)],
-        ['Prior Qtr Actions', ...realIndices.map((i) => String(a.priorActions[i] || '')), sumActive(a.priorActions)],
+        ['Prior Year Audits', ...realIndices.map((i) => String(a.priorAudits[i] || '')), sumActive(a.priorAudits)],
+        ['Prior Year Actions', ...realIndices.map((i) => String(a.priorActions[i] || '')), sumActive(a.priorActions)],
       ] : []),
-      ['Current Qtr Audits', ...realIndices.map((i) => String(a.currentAudits[i] || '')), sumActive(a.currentAudits)],
-      ['Current Qtr Actions', ...realIndices.map((i) => String(a.currentActions[i] || '')), sumActive(a.currentActions)],
+      ['Current Year Audits', ...realIndices.map((i) => String(a.currentAudits[i] || '')), sumActive(a.currentAudits)],
+      ['Current Year Actions', ...realIndices.map((i) => String(a.currentActions[i] || '')), sumActive(a.currentActions)],
     ];
     tableRowCount = rows.length;
     addBrandedTable(slide, rows, { y: 1.15 });

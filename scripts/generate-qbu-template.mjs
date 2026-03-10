@@ -269,10 +269,10 @@ async function generateTemplate() {
     addSubHeader(ws, 2, 'Enter audit and corrective action counts by location. Use actual location names.', cols);
     addBlankRow(ws, 3, cols);
     addTableHeaders(ws, 4, ['Metric', 'Location 1', 'Location 2', 'Location 3', 'Total']);
-    addPrefilledRow(ws, 5, ['Prior Qtr Audits', '', '', '', '']);
-    addPrefilledRow(ws, 6, ['Prior Qtr Actions', '', '', '', '']);
-    addPrefilledRow(ws, 7, ['Current Qtr Audits', '', '', '', '']);
-    addPrefilledRow(ws, 8, ['Current Qtr Actions', '', '', '', '']);
+    addPrefilledRow(ws, 5, ['Prior Year Audits', '', '', '', '']);
+    addPrefilledRow(ws, 6, ['Prior Year Actions', '', '', '', '']);
+    addPrefilledRow(ws, 7, ['Current Year Audits', '', '', '', '']);
+    addPrefilledRow(ws, 8, ['Current Year Actions', '', '', '', '']);
     addBlankRow(ws, 9, cols);
     addLabelRow(ws, 10, 'Audit Change Explanation', cols);
     addInputRow(ws, 10, cols); ws.getRow(10).getCell(1).font = labelFont;
@@ -281,8 +281,8 @@ async function generateTemplate() {
     addBlankRow(ws, 12, cols);
 
     addSectionHeader(ws, 13, 'TOP CORRECTIVE ACTION AREAS', cols);
-    addSubHeader(ws, 14, 'List the top areas where corrective actions were needed.', cols);
-    addTableHeaders(ws, 15, ['Area', 'Count', '', '', '']);
+    addSubHeader(ws, 14, 'Use the same location names as above. Enter count of corrective actions per area per location.', cols);
+    addTableHeaders(ws, 15, ['Area', 'Location 1', 'Location 2', 'Location 3', '']);
     const areas = ['Restrooms', 'Common Areas', 'Classrooms', 'Cafeteria', 'Stairwells', 'Other'];
     areas.forEach((area, i) => {
       addPrefilledRow(ws, 16 + i, [area, '', '', '', '']);
