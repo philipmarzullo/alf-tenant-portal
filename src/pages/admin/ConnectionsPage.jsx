@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Cable, Plus, Trash2, Play, Power, PowerOff, Loader, CheckCircle, XCircle,
   X, History, ExternalLink, Unplug, Zap, Mail, Database, FolderOpen,
-  Users, MessageSquare, ChevronDown, ChevronRight,
+  Users, MessageSquare, ChevronDown, ChevronRight, Cloud,
 } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useUser } from '../../contexts/UserContext';
@@ -41,8 +41,7 @@ const INTEGRATION_CATEGORIES = [
       'Automated reports and analytics',
     ],
     status: 'available',
-    authType: 'api_key',
-    serviceType: 'snowflake',
+    authType: 'platform_managed',
   },
   {
     key: 'file_storage',
@@ -91,9 +90,7 @@ const TIER_DESCRIPTIONS = {
 };
 
 // Generic paste-key services (microsoft handled separately via OAuth)
-const SERVICE_TYPES = {
-  snowflake: { label: 'Snowflake', color: 'blue', description: 'Data warehouse — Wavelytics, custom queries' },
-};
+const SERVICE_TYPES = {};
 
 async function authHeaders() {
   const token = await getFreshToken();
@@ -126,10 +123,9 @@ export default function ConnectionsPage() {
   // Setup guide state
   const [setupGuideOpen, setSetupGuideOpen] = useState(false);
 
-  // Add Snowflake form state
-  const [showAddSnowflake, setShowAddSnowflake] = useState(false);
-  const [formLabel, setFormLabel] = useState('');
-  const [formKey, setFormKey] = useState('');
+  // Sync health state (for platform-managed Snowflake)
+  const [syncHealth, setSyncHealth] = useState(null);
+  const [syncHealthLoading, setSyncHealthLoading] = useState(true);
 
   // Handle OAuth redirect query params
   useEffect(() => {
@@ -210,6 +206,7 @@ export default function ConnectionsPage() {
   useEffect(() => {
     loadCredentials();
     loadAuditLog();
+    loadSyncHealth();
     if (isSuperAdmin) loadMsStatus();
     else setMsLoading(false);
   }, [isSuperAdmin]);
@@ -250,30 +247,21 @@ export default function ConnectionsPage() {
     }
   }
 
-  async function handleAddSnowflake(e) {
-    e.preventDefault();
-    if (!formKey.trim()) return;
-    setSaving(true);
+  async function loadSyncHealth() {
+    setSyncHealthLoading(true);
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BACKEND_URL}/api/credentials/${tenantId}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ service_type: 'snowflake', key: formKey, label: formLabel || null }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Failed to save');
+      const res = await fetch(`${BACKEND_URL}/api/sync/${tenantId}/health`, { headers });
+      if (res.ok) {
+        setSyncHealth(await res.json());
+      } else {
+        setSyncHealth(null);
       }
-      setShowAddSnowflake(false);
-      setFormLabel('');
-      setFormKey('');
-      await Promise.all([loadCredentials(), loadAuditLog()]);
     } catch (err) {
-      console.error('[connections] Add error:', err.message);
-      alert(err.message);
+      console.error('[connections] Sync health error:', err.message);
+      setSyncHealth(null);
     } finally {
-      setSaving(false);
+      setSyncHealthLoading(false);
     }
   }
 
@@ -327,9 +315,8 @@ export default function ConnectionsPage() {
     }
   }
 
-  // Find Snowflake credentials for the data warehouse card
-  const snowflakeCredentials = credentials.filter(c => c.service_type === 'snowflake');
-  const hasSnowflake = snowflakeCredentials.some(c => c.is_active);
+  // Snowflake is platform-managed — use sync health status
+  const hasSnowflake = syncHealth && ['healthy', 'stale'].includes(syncHealth.status);
 
   // All service types for audit log display
   const allServiceTypes = {
@@ -389,8 +376,6 @@ export default function ConnectionsPage() {
             } : null;
           } else if (cat.key === 'erp') {
             isConnected = hasSnowflake;
-            const activeCred = snowflakeCredentials.find(c => c.is_active);
-            connectionDetail = activeCred ? { keyHint: activeCred.key_hint } : null;
           }
 
           return (
@@ -554,136 +539,35 @@ export default function ConnectionsPage() {
                     <p className="text-xs text-secondary-text">Contact your administrator to connect Microsoft 365.</p>
                   )}
 
-                  {/* ── Data Warehouse (API key) ── */}
+                  {/* ── Data Warehouse (Platform-managed) ── */}
                   {cat.key === 'erp' && (
-                    <>
-                      {/* Connected Snowflake credentials */}
-                      {snowflakeCredentials.map(cred => {
-                        const result = testResults.get(cred.id);
-                        const isDeleting = deleting === cred.id;
-                        return (
-                          <div key={cred.id} className="mb-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className={`w-1.5 h-1.5 rounded-full ${cred.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
-                                <span className="font-medium text-dark-text">{cred.credential_label || 'Snowflake'}</span>
-                                <span className="font-mono text-secondary-text">{'••••'} {cred.key_hint || '????'}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleTest(cred.id)}
-                                  disabled={testing === cred.id}
-                                  title="Test connection"
-                                  className="p-1 text-secondary-text hover:text-aa-blue transition-colors disabled:opacity-50"
-                                >
-                                  {testing === cred.id ? <Loader size={12} className="animate-spin" /> : <Play size={12} />}
-                                </button>
-                                <button
-                                  onClick={() => handleToggle(cred)}
-                                  disabled={toggling === cred.id}
-                                  title={cred.is_active ? 'Deactivate' : 'Activate'}
-                                  className="p-1 text-secondary-text hover:text-dark-text transition-colors disabled:opacity-50"
-                                >
-                                  {toggling === cred.id
-                                    ? <Loader size={12} className="animate-spin" />
-                                    : cred.is_active ? <Power size={12} /> : <PowerOff size={12} />}
-                                </button>
-                                <button
-                                  onClick={() => setDeleting(cred.id)}
-                                  title="Delete"
-                                  className="p-1 text-secondary-text hover:text-red-500 transition-colors"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            </div>
-                            {result && (
-                              <div className={`mt-1 flex items-center gap-2 text-xs ${result.success ? 'text-green-700' : 'text-red-600'}`}>
-                                {result.success ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                                {result.message || (result.success ? 'Connection successful' : 'Connection failed')}
-                              </div>
-                            )}
-                            {isDeleting && (
-                              <div className="mt-2 p-2 bg-red-50 rounded-lg border border-red-200">
-                                <p className="text-xs text-red-700 mb-2">Delete this connection? This cannot be undone.</p>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleDelete(cred.id)}
-                                    className="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition-colors"
-                                  >
-                                    Delete
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleting(null)}
-                                    className="px-3 py-1 text-xs text-secondary-text hover:text-dark-text transition-colors"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
+                    <div className="text-xs">
+                      {syncHealthLoading ? (
+                        <div className="flex items-center gap-2 text-secondary-text">
+                          <Loader size={14} className="animate-spin" />
+                          Checking status...
+                        </div>
+                      ) : syncHealth && ['healthy', 'stale'].includes(syncHealth.status) ? (
+                        <div className="flex items-center gap-2">
+                          <Cloud size={14} className={syncHealth.status === 'healthy' ? 'text-green-500' : 'text-amber-500'} />
+                          <div>
+                            <span className="font-medium text-dark-text">Platform data warehouse connected</span>
+                            {syncHealth.last_sync_at && (
+                              <span className="text-secondary-text ml-2">
+                                Last sync {new Date(syncHealth.last_sync_at).toLocaleString(undefined, {
+                                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                                })}
+                              </span>
                             )}
                           </div>
-                        );
-                      })}
-
-                      {/* Add Snowflake form */}
-                      {showAddSnowflake ? (
-                        <form onSubmit={handleAddSnowflake} className="space-y-3 mt-2 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-dark-text">Add Snowflake Connection</span>
-                            <button type="button" onClick={() => setShowAddSnowflake(false)} className="text-secondary-text hover:text-dark-text">
-                              <X size={14} />
-                            </button>
-                          </div>
-                          <div>
-                            <label className="block text-xs text-secondary-text mb-1">Label <span className="text-secondary-text">(optional)</span></label>
-                            <input
-                              type="text"
-                              value={formLabel}
-                              onChange={e => setFormLabel(e.target.value)}
-                              placeholder="e.g. Production"
-                              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-aa-blue/30 focus:border-aa-blue"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-secondary-text mb-1">Credential / API Key</label>
-                            <textarea
-                              value={formKey}
-                              onChange={e => setFormKey(e.target.value)}
-                              rows={2}
-                              placeholder="Paste your Snowflake credential"
-                              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-1.5 font-mono focus:outline-none focus:ring-2 focus:ring-aa-blue/30 focus:border-aa-blue"
-                              style={{ WebkitTextSecurity: 'disc' }}
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="submit"
-                              disabled={!formKey.trim() || saving}
-                              className="px-3 py-1.5 bg-aa-blue text-white text-xs font-medium rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                            >
-                              {saving && <Loader size={12} className="animate-spin" />}
-                              Save
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowAddSnowflake(false)}
-                              className="px-3 py-1.5 text-xs text-secondary-text hover:text-dark-text transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </form>
+                        </div>
                       ) : (
-                        <button
-                          onClick={() => setShowAddSnowflake(true)}
-                          className="flex items-center gap-1.5 text-xs font-medium text-aa-blue hover:text-aa-blue/80 transition-colors mt-1"
-                        >
-                          <Plus size={14} />
-                          Add Connection
-                        </button>
+                        <div className="flex items-center gap-2 text-secondary-text">
+                          <Cloud size={14} className="text-gray-300" />
+                          <span>Data warehouse not yet provisioned</span>
+                        </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
               )}
