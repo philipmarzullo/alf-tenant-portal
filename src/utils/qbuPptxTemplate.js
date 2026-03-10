@@ -221,9 +221,29 @@ function addSafetyComplianceSlide(pptx, form, logoColor, narratives) {
     contentY += (dataRows.length + 1) * 0.35 + 0.2;
   }
 
-  // Good Saves — callout with hazard topic details
+  // Good Saves by Quarter — small table showing quarterly counts
+  const gsByQ = (form.safety.goodSavesByQuarter || []).filter(r => r.location);
+  if (gsByQ.length && contentY + 0.6 <= LOGO_SAFE_Y) {
+    slide.addText('GOOD SAVES BY QUARTER', {
+      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.25,
+      fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
+    });
+    contentY += 0.25;
+    const gsHeader = ['Location', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual'];
+    const gsRows = gsByQ.map(r => {
+      const vals = [Number(r.q1) || 0, Number(r.q2) || 0, Number(r.q3) || 0, Number(r.q4) || 0];
+      const annual = r.annual ? String(r.annual) : String(vals.reduce((a, b) => a + b, 0));
+      return [r.location, ...vals.map(String), annual];
+    });
+    addBrandedTable(slide, [gsHeader, ...gsRows], { y: contentY, w: CONTENT_W });
+    contentY += (gsRows.length + 1) * 0.35 + 0.15;
+  }
+
+  // Good Save Details — callout showing only current quarter's saves
   const saves = (form.safety.goodSaves || []).filter((r) => r.location || r.hazard);
   if (saves.length && contentY + 0.5 <= LOGO_SAFE_Y) {
+    // Extract quarter label from cover (e.g., "Q4 2025" → "Q4")
+    const qLabel = (form.cover?.quarter || '').match(/Q\d/)?.[0] || '';
     const saveLines = saves.map((r) => {
       const parts = [r.location, r.hazard].filter(Boolean).join(': ');
       const action = [r.action, r.notified ? `Notified: ${r.notified}` : ''].filter(Boolean).join('. ');
@@ -232,7 +252,7 @@ function addSafetyComplianceSlide(pptx, form, logoColor, narratives) {
     const calloutH = Math.min(0.8, LOGO_SAFE_Y - contentY);
     addCalloutBox(slide, {
       x: MARGIN, y: contentY, w: CONTENT_W, h: calloutH,
-      label: `Good Save${saves.length > 1 ? 's' : ''} (${saves.length}):`,
+      label: `${qLabel ? qLabel + ' ' : ''}Good Save${saves.length > 1 ? 's' : ''} (${saves.length}):`,
       text: saveLines.join('\n'),
       fontSize: 8,
     });
@@ -1503,7 +1523,14 @@ function addInnovationSlide(pptx, form, logoColor, narratives) {
 function addRoadmapSlide(pptx, form, logoColor, narratives) {
   const r = form.roadmap;
   const q = form.cover.quarter || '';
-  const nextQ = q ? q.replace(/Q(\d)/, (_, n) => `Q${(Number(n) % 4) + 1}`) : '';
+  const nextQ = q ? q.replace(/Q(\d)(\s*(\d{4}))?/, (_, n, __, y) => {
+    const nextNum = (Number(n) % 4) + 1;
+    if (y) {
+      const nextYear = nextNum === 1 ? Number(y) + 1 : Number(y);
+      return `Q${nextNum} ${nextYear}`;
+    }
+    return `Q${nextNum}`;
+  }) : '';
   const titleBase = `${nextQ ? nextQ + ' ' : ''}Roadmap \u2014 Strategic Initiatives`;
 
   // Prefer agent narrative for roadmap items — parse "month | initiative | details" lines

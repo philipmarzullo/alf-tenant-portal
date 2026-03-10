@@ -204,18 +204,24 @@ async function generateTemplate() {
     addTotalRow(ws, 20, cols);
     addBlankRow(ws, 21, cols);
 
-    // Row 22-27: GOOD SAVES
-    addColoredHeader(ws, 22, 'GOOD SAVES', cols, GREEN);
-    addSubHeader(ws, 23, 'Hazards identified and prevented — these are reactive catches, not scheduled inspections.', cols);
-    addTableHeaders(ws, 24, ['Location', 'Hazard Prevented', 'Corrective Action', 'Who Notified', '', '']);
-    for (let r = 25; r <= 28; r++) addInputRow(ws, r, cols);
-    addBlankRow(ws, 29, cols);
+    // Row 22-27: GOOD SAVES BY QUARTER
+    addColoredHeader(ws, 22, 'GOOD SAVES BY QUARTER', cols, GREEN);
+    addTableHeaders(ws, 23, ['Location', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual Total']);
+    for (let r = 24; r <= 26; r++) addInputRow(ws, r, cols);
+    addBlankRow(ws, 27, cols);
 
-    // Row 30-34: RECORDABLE INCIDENT DETAILS
-    addColoredHeader(ws, 30, 'RECORDABLE INCIDENT DETAILS', cols, AMBER);
-    addSubHeader(ws, 31, 'For each recordable: location, date, cause, treatment, return-to-work date.', cols);
-    addTableHeaders(ws, 32, ['Location', 'Date', 'Description/Cause', 'Treatment', 'Return to Work Date', '']);
-    for (let r = 33; r <= 35; r++) addInputRow(ws, r, cols);
+    // Row 28-33: GOOD SAVE DETAILS — CURRENT QUARTER
+    addColoredHeader(ws, 28, 'GOOD SAVE DETAILS — CURRENT QUARTER', cols, GREEN);
+    addSubHeader(ws, 29, 'Hazards identified and prevented THIS QUARTER — reactive catches, not scheduled inspections.', cols);
+    addTableHeaders(ws, 30, ['Location', 'Hazard Prevented', 'Corrective Action', 'Who Notified', '', '']);
+    for (let r = 31; r <= 34; r++) addInputRow(ws, r, cols);
+    addBlankRow(ws, 35, cols);
+
+    // Row 36-40: RECORDABLE INCIDENT DETAILS
+    addColoredHeader(ws, 36, 'RECORDABLE INCIDENT DETAILS', cols, AMBER);
+    addSubHeader(ws, 37, 'For each recordable: location, date, cause, treatment, return-to-work date.', cols);
+    addTableHeaders(ws, 38, ['Location', 'Date', 'Description/Cause', 'Treatment', 'Return to Work Date', '']);
+    for (let r = 39; r <= 41; r++) addInputRow(ws, r, cols);
   }
 
   // ── Work Tickets ──

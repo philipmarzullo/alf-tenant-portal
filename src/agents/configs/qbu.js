@@ -424,8 +424,14 @@ function buildQBUPrompt(data) {
         sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}, Annual=${r.annual||'N/A'}`)
       );
     }
+    if (s.goodSavesByQuarter?.filter(r => r.location).length) {
+      sections.push(`\nGood Saves by Location/Quarter:`);
+      s.goodSavesByQuarter.filter(r => r.location).forEach(r =>
+        sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}, Annual=${r.annual||'N/A'}`)
+      );
+    }
     if (s.goodSaves?.filter(r => r.location).length) {
-      sections.push(`\nGood Saves:`);
+      sections.push(`\nGood Save Details (current quarter):`);
       s.goodSaves.filter(r => r.location).forEach(r =>
         sections.push(`  ${r.location}: Hazard="${r.hazard}" → Action="${r.action}" → Notified="${r.notified}"`)
       );

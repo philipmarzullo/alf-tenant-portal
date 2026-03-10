@@ -177,26 +177,48 @@ function parseSafety(wb, warnings) {
       ['location']
     );
 
-    // Find ALL section headers first so we can limit reading ranges
-    let gsHeaderRow = -1;
-    let detHeaderRow = -1;
-    for (let r = recDataStart; r <= Math.min(rows.length, 45); r++) {
+    // Find ALL section headers so we can limit reading ranges
+    let gsHeaderRow = -1;       // "GOOD SAVES BY QUARTER" or "GOOD SAVES"
+    let gsDetailHeaderRow = -1; // "GOOD SAVE DETAILS" (v2.1 layout)
+    let detHeaderRow = -1;      // "RECORDABLE INCIDENT DETAILS"
+    let hasGsByQuarter = false;
+    for (let r = recDataStart; r <= Math.min(rows.length, 50); r++) {
       const val = cell(rows, r, 0).toUpperCase();
-      if (val.includes('GOOD SAVES') && gsHeaderRow < 0) { gsHeaderRow = r; }
+      if (val.includes('GOOD SAVES BY QUARTER') && gsHeaderRow < 0) { gsHeaderRow = r; hasGsByQuarter = true; }
+      else if (val.includes('GOOD SAVE DETAILS') && gsDetailHeaderRow < 0) { gsDetailHeaderRow = r; }
+      else if (val.includes('GOOD SAVES') && gsHeaderRow < 0) { gsHeaderRow = r; }
       if (val.includes('RECORDABLE INCIDENT DETAILS') && detHeaderRow < 0) { detHeaderRow = r; }
     }
 
-    // Find Good Saves column header — must have "Location" in col A AND a value in col B
+    // Parse Good Saves by Quarter (counts per location/quarter)
+    let goodSavesByQuarter = [];
+    if (hasGsByQuarter && gsHeaderRow > 0) {
+      // Header row right after section header has Location/Q1/Q2/Q3/Q4/Annual
+      let gsQColumnHeader = -1;
+      for (let r = gsHeaderRow + 1; r <= gsHeaderRow + 2; r++) {
+        if (cell(rows, r, 0).toLowerCase().includes('location') && cell(rows, r, 1)) { gsQColumnHeader = r; break; }
+      }
+      if (gsQColumnHeader < 0) gsQColumnHeader = gsHeaderRow + 1; // fallback: assume header immediately follows
+      const gsQDataStart = gsQColumnHeader + 1;
+      const gsQDataEnd = gsDetailHeaderRow > 0 ? gsDetailHeaderRow - 1 : gsQDataStart + 4;
+      goodSavesByQuarter = filterPlaceholders(
+        rowObjects(rows, gsQDataStart, gsQDataEnd, [0, 1, 2, 3, 4, 5], ['location', 'q1', 'q2', 'q3', 'q4', 'annual']),
+        ['location']
+      );
+    }
+
+    // Parse Good Save details (current quarter)
+    const gsDetailSearchStart = gsDetailHeaderRow > 0 ? gsDetailHeaderRow : gsHeaderRow;
     let gsColumnHeaderRow = -1;
-    if (gsHeaderRow > 0) {
-      const limit = detHeaderRow > 0 ? detHeaderRow : gsHeaderRow + 5;
-      for (let r = gsHeaderRow + 1; r < limit; r++) {
+    if (gsDetailSearchStart > 0) {
+      const limit = detHeaderRow > 0 ? detHeaderRow : gsDetailSearchStart + 6;
+      for (let r = gsDetailSearchStart + 1; r < limit; r++) {
         if (cell(rows, r, 0).toLowerCase().includes('location') && cell(rows, r, 1)) {
           gsColumnHeaderRow = r; break;
         }
       }
     }
-    const gsDataStart = gsColumnHeaderRow > 0 ? gsColumnHeaderRow + 1 : (gsHeaderRow > 0 ? gsHeaderRow + 3 : recDataStart + 8);
+    const gsDataStart = gsColumnHeaderRow > 0 ? gsColumnHeaderRow + 1 : (gsDetailSearchStart > 0 ? gsDetailSearchStart + 3 : recDataStart + 8);
     const gsDataEnd = detHeaderRow > 0 ? detHeaderRow - 1 : gsDataStart + 5;
     const goodSaves = filterPlaceholders(
       rowObjects(rows, gsDataStart, gsDataEnd, [0, 1, 2, 3], ['location', 'hazard', 'action', 'notified']),
@@ -239,7 +261,9 @@ function parseSafety(wb, warnings) {
       s + (Number(r.q1) || 0) + (Number(r.q2) || 0) + (Number(r.q3) || 0) + (Number(r.q4) || 0), 0)) || '';
     const recordableCount = String(incidents.reduce((s, r) =>
       s + (Number(r.q1) || 0) + (Number(r.q2) || 0) + (Number(r.q3) || 0) + (Number(r.q4) || 0), 0)) || '';
-    let goodSaveCount = goodSaves.length ? String(goodSaves.length) : '';
+    let goodSaveCount = goodSavesByQuarter.length
+      ? String(goodSavesByQuarter.reduce((s, r) => s + (Number(r.q1)||0) + (Number(r.q2)||0) + (Number(r.q3)||0) + (Number(r.q4)||0), 0))
+      : (goodSaves.length ? String(goodSaves.length) : '');
 
     return {
       theme: cell(rows, 4, 1),
@@ -252,6 +276,7 @@ function parseSafety(wb, warnings) {
       safetyMetricsByLocation: [],
       inspectionsByQuarter: inspectionsByQuarter.length ? inspectionsByQuarter : [],
       incidents: incidents.length ? incidents : [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
+      goodSavesByQuarter: goodSavesByQuarter.length ? goodSavesByQuarter : [],
       goodSaves: goodSaves.length ? goodSaves : [{ location: '', hazard: '', action: '', notified: '' }],
       incidentDetails: incidentDetails.length ? incidentDetails : [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],
     };
@@ -342,6 +367,7 @@ function parseSafety(wb, warnings) {
     recordableCount,
     safetyMetricsByLocation,
     inspectionsByQuarter: [],
+    goodSavesByQuarter: [],
     incidents: incidents.length ? incidents : [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
     goodSaves: goodSaves.length ? goodSaves : [{ location: '', hazard: '', action: '', notified: '' }],
     incidentDetails: incidentDetails.length ? incidentDetails : [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],
