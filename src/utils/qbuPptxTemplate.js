@@ -162,146 +162,98 @@ function addSafetyComplianceSlide(pptx, form, logoColor, narratives) {
 
   let contentY = 1.15;
 
-  // Safety Metrics — per-campus table when multi-location, or summary cards when single
-  const inspCount = form.safety.safetyInspections;
-  const gsCount = form.safety.goodSaveCount;
-  const recCount = form.safety.recordableCount;
-  const perCampus = form.safety.safetyMetricsByLocation || [];
-  const hasMetrics = inspCount || gsCount || recCount;
-
-  if (perCampus.length > 1) {
-    // Per-campus table for inspections, good saves, recordables
-    const metricHeader = ['Location', 'Safety Inspections', 'Good Saves', 'Recordables'];
-    const metricRows = perCampus
-      .filter(loc => loc.inspections || loc.goodSaves || loc.recordables)
-      .map(loc => [loc.location, loc.inspections || '0', loc.goodSaves || '0', loc.recordables || '0']);
-    // Total row
-    const totInsp = perCampus.reduce((s, l) => s + (Number(l.inspections) || 0), 0);
-    const totGS = perCampus.reduce((s, l) => s + (Number(l.goodSaves) || 0), 0);
-    const totRec = perCampus.reduce((s, l) => s + (Number(l.recordables) || 0), 0);
-    metricRows.push(['TOTAL', String(totInsp), String(totGS), String(totRec)]);
-
-    addBrandedTable(slide, [metricHeader, ...metricRows], { y: contentY, w: CONTENT_W });
-    contentY += (metricRows.length + 1) * 0.35 + 0.1;
-  } else if (hasMetrics) {
-    // Single location — show summary cards
-    const metrics = [];
-    if (inspCount) metrics.push({ label: 'Safety Inspections', value: inspCount, color: AA_BLUE });
-    if (gsCount) metrics.push({ label: 'Good Saves', value: gsCount, color: GREEN });
-    if (recCount) metrics.push({ label: 'Recordables', value: recCount, color: AMBER });
-
-    const metricW = (CONTENT_W - (metrics.length - 1) * 0.2) / metrics.length;
-    metrics.forEach((m, i) => {
-      const mx = MARGIN + i * (metricW + 0.2);
-      addCard(slide, { x: mx, y: contentY, w: metricW, h: 0.6, borderColor: m.color });
-      slide.addText(m.value, {
-        x: mx + 0.15, y: contentY + 0.05, w: metricW - 0.3, h: 0.3,
-        fontSize: 18, fontFace: FONT, color: m.color, bold: true, align: 'center',
-      });
-      slide.addText(m.label, {
-        x: mx + 0.15, y: contentY + 0.32, w: metricW - 0.3, h: 0.2,
-        fontSize: 8, fontFace: FONT, color: MED_GREY, align: 'center',
-      });
-    });
-    contentY += 0.8;
-  }
-
-  // Quarterly inspections table (v2 layout)
+  // Combined Inspections + Recordables table — correlates the two metrics
   const inspByQ = (form.safety.inspectionsByQuarter || []).filter(r => r.location);
-  if (inspByQ.length) {
+  const incidents = (form.safety.incidents || []).filter((r) => r.location);
+
+  if (inspByQ.length && incidents.length) {
+    // Combined table: Location | Type | Q1 | Q2 | Q3 | Q4 | Annual
+    const header = ['Location', 'Metric', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual'];
+    const dataRows = [];
+    // Interleave inspections + recordables per location
+    const locations = inspByQ.map(r => r.location);
+    locations.forEach((loc) => {
+      const insp = inspByQ.find(r => r.location === loc);
+      const rec = incidents.find(r => r.location === loc);
+      if (insp) {
+        const vals = [Number(insp.q1) || 0, Number(insp.q2) || 0, Number(insp.q3) || 0, Number(insp.q4) || 0];
+        const annual = insp.annual ? String(insp.annual) : String(vals.reduce((a, b) => a + b, 0));
+        dataRows.push([loc, 'Inspections', ...vals.map(String), annual]);
+      }
+      if (rec) {
+        const vals = [Number(rec.q1) || 0, Number(rec.q2) || 0, Number(rec.q3) || 0, Number(rec.q4) || 0];
+        const annual = rec.annual ? String(rec.annual) : String(vals.reduce((a, b) => a + b, 0));
+        dataRows.push(['', 'Recordables', ...vals.map(String), annual]);
+      }
+    });
+
+    addBrandedTable(slide, [header, ...dataRows], { y: contentY, w: CONTENT_W });
+    contentY += (dataRows.length + 1) * 0.35 + 0.2;
+  } else if (inspByQ.length) {
+    // Inspections only
     slide.addText('SAFETY INSPECTIONS BY QUARTER', {
-      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.3,
+      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.25,
       fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
     });
-    contentY += 0.3;
-
+    contentY += 0.25;
     const inspHeader = ['Location', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual'];
     const inspRows = inspByQ.map((r) => {
       const vals = [Number(r.q1) || 0, Number(r.q2) || 0, Number(r.q3) || 0, Number(r.q4) || 0];
       const annual = r.annual ? String(r.annual) : String(vals.reduce((a, b) => a + b, 0));
       return [r.location, ...vals.map(String), annual];
     });
-    const inspTotals = [0, 0, 0, 0, 0];
-    inspRows.forEach((row) => {
-      for (let i = 1; i <= 5; i++) inspTotals[i - 1] += Number(row[i]) || 0;
-    });
-    inspRows.push(['TOTAL', ...inspTotals.map(String)]);
-
     addBrandedTable(slide, [inspHeader, ...inspRows], { y: contentY, w: CONTENT_W });
-    contentY += (inspRows.length + 1) * 0.35 + 0.15;
-  }
-
-  const incidents = (form.safety.incidents || []).filter((r) => r.location);
-
-  if (incidents.length) {
-    // Section label so the table is clearly identified
+    contentY += (inspRows.length + 1) * 0.35 + 0.2;
+  } else if (incidents.length) {
+    // Recordables only
     slide.addText('RECORDABLE INCIDENTS BY QUARTER', {
-      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.3,
+      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.25,
       fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
     });
-    contentY += 0.3;
-
-    // Build rows with Annual totals column and TOTAL row
+    contentY += 0.25;
     const headerRow = ['Location', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual'];
     const dataRows = incidents.map((r) => {
       const vals = [Number(r.q1) || 0, Number(r.q2) || 0, Number(r.q3) || 0, Number(r.q4) || 0];
       const annual = r.annual ? String(r.annual) : String(vals.reduce((a, b) => a + b, 0));
       return [r.location, ...vals.map(String), annual];
     });
-    // Total row
-    const totals = [0, 0, 0, 0, 0];
-    dataRows.forEach((row) => {
-      for (let i = 1; i <= 5; i++) totals[i - 1] += Number(row[i]) || 0;
-    });
-    dataRows.push(['TOTAL', ...totals.map(String)]);
-
     addBrandedTable(slide, [headerRow, ...dataRows], { y: contentY, w: CONTENT_W });
+    contentY += (dataRows.length + 1) * 0.35 + 0.2;
   }
 
-  // Good Saves and Recordable Details — compact callouts below tables
+  // Good Saves — callout with hazard topic details
   const saves = (form.safety.goodSaves || []).filter((r) => r.location || r.hazard);
+  if (saves.length && contentY + 0.5 <= LOGO_SAFE_Y) {
+    const saveLines = saves.map((r) => {
+      const parts = [r.location, r.hazard].filter(Boolean).join(': ');
+      const action = [r.action, r.notified ? `Notified: ${r.notified}` : ''].filter(Boolean).join('. ');
+      return action ? `${parts} \u2014 ${action}` : parts;
+    });
+    const calloutH = Math.min(0.8, LOGO_SAFE_Y - contentY);
+    addCalloutBox(slide, {
+      x: MARGIN, y: contentY, w: CONTENT_W, h: calloutH,
+      label: `Good Save${saves.length > 1 ? 's' : ''} (${saves.length}):`,
+      text: saveLines.join('\n'),
+      fontSize: 8,
+    });
+    contentY += calloutH + 0.1;
+  }
+
+  // Recordable Details — only if room
   const details = (form.safety.incidentDetails || []).filter((r) =>
     r.location && r.cause && r.cause !== 'Description/Cause' && r.cause.length > 3
   );
-
-  const showGoodSaves = gsCount || saves.length;
-  const showRecordables = recCount || details.length;
-
-  // Track Y position after the recordables table
-  let bottomY = contentY + ((incidents.length + 2) * 0.35) + 0.15;
-  const bottomLimit = SLIDE_H - 0.35;
-
-  // Good Saves — compact green callout on same slide
-  if (showGoodSaves && saves.length) {
-    const saveText = saves.map((r) =>
-      `${r.location}: ${r.hazard}. ${r.action}. Notified: ${r.notified}.`
-    ).join(' | ');
-    const calloutH = Math.min(0.7, bottomLimit - bottomY);
-    if (calloutH >= 0.4) {
-      addCalloutBox(slide, {
-        x: MARGIN, y: bottomY, w: CONTENT_W, h: calloutH,
-        label: `Good Save${saves.length > 1 ? 's' : ''} (${saves.length}):`,
-        text: saveText,
-        fontSize: 8,
-      });
-      bottomY += calloutH + 0.1;
-    }
-  }
-
-  // Recordable Details — compact amber callout on same slide if room
-  if (showRecordables && details.length) {
+  if (details.length && contentY + 0.5 <= LOGO_SAFE_Y) {
     const detailText = details.map((r) =>
       `${r.location} (${r.date}): ${r.cause}. Treatment: ${r.treatment}. RTW: ${r.returnDate}.`
-    ).join(' | ');
-    const calloutH = Math.min(0.7, bottomLimit - bottomY);
-    if (calloutH >= 0.4) {
-      addCalloutBox(slide, {
-        x: MARGIN, y: bottomY, w: CONTENT_W, h: calloutH,
-        label: 'Recordable Details:',
-        text: detailText,
-        fontSize: 8,
-      });
-    }
+    ).join('\n');
+    const calloutH = Math.min(0.7, LOGO_SAFE_Y - contentY);
+    addCalloutBox(slide, {
+      x: MARGIN, y: contentY, w: CONTENT_W, h: calloutH,
+      label: 'Recordable Details:',
+      text: detailText,
+      fontSize: 8,
+    });
   }
 
   const notesA2 = getNarrativeText(narratives, 'NOTES:A2');
@@ -483,10 +435,10 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
     contentY += (dataRows.length + 1) * 0.35 + 0.3;
   }
 
-  // Key Takeaway callout — prefer agent narrative over raw form data
+  // Key Takeaway callout — only if there's room above the logo
   const takeawayText = getNarrativeText(narratives, 'C1:TAKEAWAY') || form.workTickets.keyTakeaway;
   const tableBottom = ticketsByQ.length ? contentY : 1.15 + ((locs.length + 2) * 0.35) + 0.3;
-  if (takeawayText) {
+  if (takeawayText && tableBottom + 0.85 <= LOGO_SAFE_Y) {
     addCalloutBox(slide, {
       x: MARGIN, y: tableBottom, w: CONTENT_W, h: 0.85,
       label: 'Key Takeaway:', text: takeawayText,
