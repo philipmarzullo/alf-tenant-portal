@@ -36,6 +36,7 @@ export function TenantPortalProvider({ children }) {
   const [moduleRegistry, setModuleRegistry] = useState([]);
   const [agents, setAgents] = useState([]);
   const [connections, setConnections] = useState([]);
+  const [hasSyncedData, setHasSyncedData] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,7 +56,7 @@ export function TenantPortalProvider({ children }) {
     let cancelled = false;
 
     async function fetchAll() {
-      const [wsRes, toolsRes, domainsRes, profileRes, navRes, moduleRes, agentsRes, connRes] = await Promise.all([
+      const [wsRes, toolsRes, domainsRes, profileRes, navRes, moduleRes, agentsRes, connRes, syncRes] = await Promise.all([
         supabase
           .from('tenant_workspaces')
           .select('*')
@@ -101,6 +102,11 @@ export function TenantPortalProvider({ children }) {
           .from('tenant_connections')
           .select('*')
           .eq('tenant_id', tenantId),
+        supabase
+          .from('sync_configs')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .limit(1),
       ]);
 
       if (cancelled) return;
@@ -113,6 +119,7 @@ export function TenantPortalProvider({ children }) {
       setModuleRegistry(moduleRes.data || []);
       setAgents(agentsRes.data || []);
       setConnections(connRes.data || []);
+      setHasSyncedData((syncRes.data || []).length > 0);
       setLoading(false);
     }
 
@@ -211,10 +218,12 @@ export function TenantPortalProvider({ children }) {
   const connectionTier = useMemo(() => {
     const active = connections.filter(c => c.status === 'connected');
     const hasEmail = active.some(c => c.connection_type === 'email');
-    if (!hasEmail) return 0;
-    const hasData = active.some(c => ['erp', 'inspection', 'crm'].includes(c.connection_type));
-    return hasData ? 2 : 1;
-  }, [connections]);
+    const hasData = hasSyncedData || active.some(c =>
+      ['erp', 'data_warehouse', 'inspection', 'crm'].includes(c.connection_type));
+    if (hasEmail && hasData) return 2;
+    if (hasEmail || hasData) return 1;
+    return 0;
+  }, [connections, hasSyncedData]);
 
   const hasCapability = useCallback(
     (flag) => connections.some(c => c.status === 'connected' && c.capabilities?.includes(flag)),

@@ -83,8 +83,8 @@ const INTEGRATION_CATEGORIES = [
 
 // ── Tier descriptions ───────────────────────────────────────────────
 const TIER_DESCRIPTIONS = {
-  0: 'No integrations connected. Connect email to unlock agent capabilities.',
-  1: 'Email connected — agents can draft and send emails directly.',
+  0: 'No integrations connected. Connect email or a data warehouse to get started.',
+  1: 'One integration connected — agents can access data or send communications.',
   2: 'Email + data connected — agents can act on live data and send results.',
   3: 'Full integration — agents operate autonomously across all systems.',
 };
