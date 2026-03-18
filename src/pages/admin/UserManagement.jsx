@@ -656,7 +656,14 @@ export default function UserManagement() {
                 <input
                   type="checkbox"
                   checked={Array.isArray(form.allowedDashboards) && form.allowedDashboards.length === 0}
-                  onChange={() => setForm((prev) => ({ ...prev, allowedDashboards: [] }))}
+                  onChange={() => setForm((prev) => {
+                    const isAll = Array.isArray(prev.allowedDashboards) && prev.allowedDashboards.length === 0;
+                    if (isAll) {
+                      // Uncheck "All" → pre-fill all domains individually so user can deselect
+                      return { ...prev, allowedDashboards: dashboardDomains.map(d => d.domain_key) };
+                    }
+                    return { ...prev, allowedDashboards: [] };
+                  })}
                   className="w-4 h-4 rounded border-gray-300 text-aa-blue focus:ring-aa-blue"
                 />
                 <span className="text-sm text-dark-text group-hover:text-aa-blue transition-colors font-medium">
