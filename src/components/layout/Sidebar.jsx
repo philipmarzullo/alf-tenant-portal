@@ -8,6 +8,7 @@ import {
   Wrench, ClipboardList, ClipboardCheck, FileText, Package, Star, MessageSquare, MessageSquareText, Cable, SlidersHorizontal,
   Shield, Clock, Truck, Map, Warehouse, FileCheck, Building2, Activity,
   Lock, TrendingUp, Layers, Bot, FileSearch,
+  AlertTriangle, TrendingDown, Ticket,
 } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,6 +16,7 @@ import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useBranding } from '../../contexts/BrandingContext';
 import { useCustomTools } from '../../contexts/CustomToolsContext';
 import { useTenantPortal } from '../../contexts/TenantPortalContext';
+import { useRBAC } from '../../contexts/RBACContext';
 import useTierAccess from '../../hooks/useTierAccess';
 import UpgradeModal from '../shared/UpgradeModal';
 
@@ -61,6 +63,10 @@ const ICON_MAP = {
   'shield-check': ShieldCheck,
   'trending-up': TrendingUp,
   'file-search': FileSearch,
+  'alert-triangle': AlertTriangle,
+  'trending-down': TrendingDown,
+  'ticket': Ticket,
+  AlertTriangle, TrendingDown, Ticket,
 };
 
 // Role hierarchy for min_role nav filtering
@@ -80,7 +86,8 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   const { tenantHasModule } = useTenantConfig();
   const brand = useBranding();
   const { customTools } = useCustomTools();
-  const { workspaces, tools, navSections, moduleRegistry, getWorkspacePath, getToolPath } = useTenantPortal();
+  const { workspaces, tools, navSections, moduleRegistry, dashboardDomains, getWorkspacePath, getToolPath, getDomainPath } = useTenantPortal();
+  const { allowedDomains } = useRBAC();
   const { hasFeature, requiredTierLabel } = useTierAccess();
   const [upgradeModal, setUpgradeModal] = useState(null);
 
@@ -89,9 +96,19 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
   const [workspacesOpen, setWorkspacesOpen] = useState(workspaceActive);
   const toolActive = tools.some(t => location.pathname.startsWith(getToolPath(t.tool_key)));
   const [toolsOpen, setToolsOpen] = useState(toolActive);
+  const dashboardActive = location.pathname.startsWith('/portal/dashboards');
+  const [dashboardsOpen, setDashboardsOpen] = useState(dashboardActive);
+
+  // Dashboards visible in sidebar — admins see all, others filtered by RBAC allowedDomains
+  const visibleDashboardDomains = useMemo(() => {
+    if (isAdmin) return dashboardDomains;
+    return dashboardDomains.filter(d => allowedDomains.includes(d.domain_key));
+  }, [dashboardDomains, allowedDomains, isAdmin]);
 
   const isActive = (path) => {
     if (path === '/portal') return location.pathname === '/portal';
+    // Exact match for /portal/dashboards so only the first domain highlights it
+    if (path === '/portal/dashboards') return location.pathname === '/portal/dashboards';
     return location.pathname.startsWith(path);
   };
 
@@ -382,6 +399,37 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
               {group.items.map(item => renderNavItem(item, true))}
             </div>
           )}
+        </div>
+      );
+    }
+
+    // --- ANALYTICS: collapsible Dashboards + flat siblings ---
+    if (group.sectionKey === 'analytics') {
+      const dashboardItem = group.items.find(item => item.path === '/portal/dashboards');
+      const otherItems = group.items.filter(item => item.path !== '/portal/dashboards');
+      const anyDashboardActive = visibleDashboardDomains.some(d => isActive(getDomainPath(d.domain_key)));
+      return (
+        <div key={group.sectionKey} className="mb-4">
+          {!showCollapsed && (
+            <div className="px-4 mb-2 text-[11px] font-semibold tracking-wider text-white/30 uppercase">
+              {group.group}
+            </div>
+          )}
+          {dashboardItem && visibleDashboardDomains.length > 0 && (
+            <>
+              {renderCollapsibleHeader('Dashboards', 'BarChart3', dashboardsOpen, () => setDashboardsOpen(!dashboardsOpen), anyDashboardActive)}
+              {dashboardsOpen && (
+                <div className="mt-0.5">
+                  {visibleDashboardDomains.map(d => renderNavItem({
+                    label: typeof d.name === 'string' ? d.name : String(d.name || d.domain_key),
+                    path: getDomainPath(d.domain_key),
+                    icon: d.icon || 'BarChart3',
+                  }, true))}
+                </div>
+              )}
+            </>
+          )}
+          {otherItems.map(item => renderNavItem(item))}
         </div>
       );
     }

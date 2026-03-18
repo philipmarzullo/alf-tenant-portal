@@ -1,6 +1,6 @@
 import { useMemo, useCallback, createContext, useContext, useState } from 'react';
-import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Settings2, Share2, Bot } from 'lucide-react';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Share2, Bot } from 'lucide-react';
 import { useTenantConfig } from '../../contexts/TenantConfigContext';
 import { useDashboardConfigContext } from '../../contexts/DashboardConfigContext';
 import { useUser } from '../../contexts/UserContext';
@@ -149,26 +149,6 @@ export default function DashboardsLayout() {
               </button>
             )}
           </div>
-        </div>
-
-        {/* Tab nav */}
-        <div className="flex items-center gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
-          {tabs.map((tab) => (
-            <NavLink
-              key={tab.path}
-              to={tab.path}
-              end={tab.path === '/portal/dashboards'}
-              className={({ isActive }) =>
-                `px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  isActive
-                    ? 'text-aa-blue border-aa-blue'
-                    : 'text-secondary-text border-transparent hover:text-dark-text hover:border-gray-300'
-                }`
-              }
-            >
-              {tab.label}
-            </NavLink>
-          ))}
         </div>
 
         <SyncHealthBanner />
