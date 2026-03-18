@@ -100,7 +100,7 @@ export async function chatWithAgent(agentKey, messages, tenantContext, options =
   const tenantId = getTenantId();
 
   // Build request body — if local agent found, include system prompt; otherwise backend resolves from DB
-  const body = { messages, agent_key: agentKey, tenant_id: tenantId, max_tokens: 2048 };
+  const body = { messages, agent_key: agentKey, tenant_id: tenantId, max_tokens: agent?.maxTokens || 4096 };
 
   if (agent) {
     const systemPrompt = options.systemPromptSuffix
