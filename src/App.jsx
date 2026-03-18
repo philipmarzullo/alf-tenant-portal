@@ -110,6 +110,7 @@ import ActionItemsDashboard from './pages/dashboards/ActionItemsDashboard';
 import InspectionsDashboard from './pages/dashboards/InspectionsDashboard';
 import TurnoverDashboard from './pages/dashboards/TurnoverDashboard';
 import WorkTicketsQBUDashboard from './pages/dashboards/WorkTicketsQBUDashboard';
+import OpsKPIDashboard from './pages/dashboards/OpsKPIDashboard';
 import DynamicDashboard from './pages/dashboards/DynamicDashboard';
 import AnalyticsChatPage from './pages/analytics/AnalyticsChatPage';
 
@@ -420,6 +421,7 @@ export default function App() {
                       <Route path="inspections" element={<InspectionsDashboard />} />
                       <Route path="turnover" element={<TurnoverDashboard />} />
                       <Route path="work-tickets-qbu" element={<WorkTicketsQBUDashboard />} />
+                      <Route path="ops-kpi" element={<OpsKPIDashboard />} />
                       {/* Dynamic domain catch-all for tenant-configured domains beyond the defaults */}
                       <Route path=":domain" element={<DynamicDomainRoute />} />
                     </Route>
