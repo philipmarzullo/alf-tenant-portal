@@ -64,7 +64,11 @@ export default function InspectionsDashboard() {
   if (error) return <div className="text-center py-20"><div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto"><p className="text-sm text-red-700">{String(error)}</p></div></div>;
   if (!data?.kpis) return <DashboardEmptyState domain="inspections" />;
 
-  const kpis = data.kpis;
+  const kpis = {
+    inspections: data.kpis.inspections ?? data.kpis.inspection_count ?? 0,
+    items: data.kpis.items ?? data.kpis.touchpoint_count ?? 0,
+    items_deficient_pct: data.kpis.items_deficient_pct ?? data.kpis.deficiency_pct ?? 0,
+  };
 
   return (
     <div className="space-y-6">
