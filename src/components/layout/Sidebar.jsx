@@ -282,7 +282,11 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
 
       return { ...group, items };
     })
-    .filter((group) => group.items.length > 0);
+    .filter((group) => {
+      // Keep analytics section if there are visible dashboard domains, even if no nav items survived filtering
+      if (group.sectionKey === 'analytics' && visibleDashboardDomains.length > 0) return true;
+      return group.items.length > 0;
+    });
 
   const initials = currentUser?.name
     ? currentUser.name.split(' ').map((n) => n[0]).join('').toUpperCase()
@@ -415,7 +419,7 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
               {group.group}
             </div>
           )}
-          {dashboardItem && visibleDashboardDomains.length > 0 && (
+          {visibleDashboardDomains.length > 0 && (
             <>
               {renderCollapsibleHeader('Dashboards', 'BarChart3', dashboardsOpen, () => setDashboardsOpen(!dashboardsOpen), anyDashboardActive)}
               {dashboardsOpen && (
