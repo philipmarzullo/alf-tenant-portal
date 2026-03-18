@@ -16,7 +16,7 @@ const RBACContext = createContext(null);
  */
 export function RBACProvider({ children }) {
   const { session } = useAuth();
-  const { realUser, isAdmin } = useUser();
+  const { realUser, currentUser, viewingAs } = useUser();
   const { tenantId } = useTenantId();
   const [metricTier, setMetricTier] = useState('financial');
   const [allowedDomains, setAllowedDomains] = useState(['operations', 'labor', 'quality', 'timekeeping', 'safety']);
@@ -37,7 +37,13 @@ export function RBACProvider({ children }) {
         return;
       }
 
-      const res = await fetch(`${BACKEND_URL}/api/dashboards/${tenantId}/metric-catalog`, {
+      // When impersonating (View-as), ask backend to resolve for the target user
+      let url = `${BACKEND_URL}/api/dashboards/${tenantId}/metric-catalog`;
+      if (viewingAs?.id) {
+        url += `?effectiveUserId=${viewingAs.id}`;
+      }
+
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -57,11 +63,11 @@ export function RBACProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [session, tenantId]);
+  }, [session, tenantId, viewingAs]);
 
   useEffect(() => {
     if (realUser) fetchCatalog();
-  }, [realUser, fetchCatalog]);
+  }, [realUser, viewingAs, fetchCatalog]);
 
   const canSeeTier = useCallback(
     (sensitivity) => canSeeTierFn(metricTier, sensitivity),
