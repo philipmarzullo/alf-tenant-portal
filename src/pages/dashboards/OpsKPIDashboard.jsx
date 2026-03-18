@@ -13,7 +13,7 @@ const COL_HEADERS = [
   { key: 'sites_with_incidents', label: '# of Sites with Incidents' },
   { key: 'sites_with_good_saves', label: '# of Sites with Good Saves' },
   { key: 'sites_with_compliments', label: '# of Sites with Compliments' },
-  { key: 'avg_deficiency_closed_days', label: 'Avg. Avg Deficiency Closed Days', decimal: true },
+  { key: 'avg_deficiency_closed_days', label: 'Avg. Deficiency Closed Days', decimal: true },
 ];
 
 function formatCell(col, value) {
@@ -25,19 +25,23 @@ function formatCell(col, value) {
 
 function isHighlighted(row, threshold) {
   return (
-    (row.pct_revenue_inspected_safety != null && row.pct_revenue_inspected_safety < threshold) ||
-    (row.pct_revenue_inspected_commercial != null && row.pct_revenue_inspected_commercial < threshold)
+    row.pct_revenue_inspected_safety != null && row.pct_revenue_inspected_safety < threshold &&
+    row.pct_revenue_inspected_commercial != null && row.pct_revenue_inspected_commercial < threshold
   );
 }
 
 export default function OpsKPIDashboard() {
   const today = new Date();
-  const threeMonthsAgo = new Date(today);
-  threeMonthsAgo.setMonth(today.getMonth() - 3);
+  const q = Math.floor(today.getMonth() / 3);
+  const year = today.getFullYear();
+  const prevQ = q === 0 ? 3 : q - 1;
+  const prevYear = q === 0 ? year - 1 : year;
+  const prevQStart = new Date(prevYear, prevQ * 3, 1);
+  const prevQEnd = new Date(prevYear, prevQ * 3 + 3, 0);
 
   const [filters, setFilters] = useState({
-    dateFrom: threeMonthsAgo.toISOString().slice(0, 10),
-    dateTo: today.toISOString().slice(0, 10),
+    dateFrom: prevQStart.toISOString().slice(0, 10),
+    dateTo: prevQEnd.toISOString().slice(0, 10),
     vp: null,
     manager: null,
   });
