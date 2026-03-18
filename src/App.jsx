@@ -106,6 +106,10 @@ import QualityDashboard from './pages/dashboards/QualityDashboard';
 import TimekeepingDashboard from './pages/dashboards/TimekeepingDashboard';
 import SafetyDashboard from './pages/dashboards/SafetyDashboard';
 import ActionPlansPage from './pages/dashboards/ActionPlansPage';
+import ActionItemsDashboard from './pages/dashboards/ActionItemsDashboard';
+import InspectionsDashboard from './pages/dashboards/InspectionsDashboard';
+import TurnoverDashboard from './pages/dashboards/TurnoverDashboard';
+import WorkTicketsQBUDashboard from './pages/dashboards/WorkTicketsQBUDashboard';
 import DynamicDashboard from './pages/dashboards/DynamicDashboard';
 import AnalyticsChatPage from './pages/analytics/AnalyticsChatPage';
 
@@ -411,7 +415,12 @@ export default function App() {
                       <Route path="timekeeping" element={<TimekeepingDashboard />} />
                       <Route path="safety" element={<SafetyDashboard />} />
                       <Route path="action-plans" element={<ProtectedRoute moduleKey="actionPlans"><ActionPlansPage /></ProtectedRoute>} />
-                      {/* Dynamic domain catch-all for tenant-configured domains beyond the 5 defaults */}
+                      {/* QBU dashboard domains */}
+                      <Route path="action-items" element={<ActionItemsDashboard />} />
+                      <Route path="inspections" element={<InspectionsDashboard />} />
+                      <Route path="turnover" element={<TurnoverDashboard />} />
+                      <Route path="work-tickets-qbu" element={<WorkTicketsQBUDashboard />} />
+                      {/* Dynamic domain catch-all for tenant-configured domains beyond the defaults */}
                       <Route path=":domain" element={<DynamicDomainRoute />} />
                     </Route>
 

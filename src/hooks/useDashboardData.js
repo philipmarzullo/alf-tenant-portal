@@ -31,6 +31,10 @@ export default function useDashboardData(domain, filters = {}) {
       if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
       if (filters.dateTo) params.set('dateTo', filters.dateTo);
       if (filters.jobIds?.length) params.set('jobIds', filters.jobIds.join(','));
+      // Forward extra filter keys (itemType, inspectionType, ticketType, etc.)
+      for (const [k, v] of Object.entries(filters)) {
+        if (!['dateFrom', 'dateTo', 'jobIds'].includes(k) && v) params.set(k, v);
+      }
 
       const qs = params.toString();
       const url = `${BACKEND_URL}/api/dashboards/${tenantId}/${domain}${qs ? `?${qs}` : ''}`;
@@ -49,7 +53,8 @@ export default function useDashboardData(domain, filters = {}) {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, domain, filters.dateFrom, filters.dateTo, filters.jobIds?.join(',')]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId, domain, JSON.stringify(filters)]);
 
   useEffect(() => {
     fetchData();
