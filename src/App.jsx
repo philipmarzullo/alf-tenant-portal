@@ -421,7 +421,7 @@ export default function App() {
                       <Route path="inspections" element={<InspectionsDashboard />} />
                       <Route path="turnover" element={<TurnoverDashboard />} />
                       <Route path="work-tickets-qbu" element={<WorkTicketsQBUDashboard />} />
-                      <Route path="ops-kpi" element={<OpsKPIDashboard />} />
+                      <Route path="ops-kpi-qms" element={<OpsKPIDashboard />} />
                       {/* Dynamic domain catch-all for tenant-configured domains beyond the defaults */}
                       <Route path=":domain" element={<DynamicDomainRoute />} />
                     </Route>

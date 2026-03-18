@@ -44,7 +44,7 @@ export default function OpsKPIDashboard() {
   const [highlightThreshold, setHighlightThreshold] = useState(50);
   const [selectedVP, setSelectedVP] = useState(null);
 
-  const { data, loading, error } = useDashboardData('ops-kpi', filters);
+  const { data, loading, error } = useDashboardData('ops-kpi-qms', filters);
 
   const filteredManagers = useMemo(() => {
     if (!data?.managerSummary) return [];
