@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import useDashboardData from '../../hooks/useDashboardData';
+import { useDashboardDataContext } from '../../contexts/DashboardDataContext';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 
 const COL_HEADERS = [
@@ -49,6 +50,37 @@ export default function OpsKPIDashboard() {
   const [selectedVP, setSelectedVP] = useState(null);
 
   const { data, loading, error } = useDashboardData('ops-kpi-qms', filters);
+  const { setDashboardData } = useDashboardDataContext();
+
+  useEffect(() => {
+    if (!data?.vpSummary) return;
+    const highlights = [];
+    if (data.vpSummary.length) {
+      highlights.push(`${data.vpSummary.length} VPs reporting`);
+      const totalJobs = data.vpSummary.reduce((s, r) => s + (r.job_count || 0), 0);
+      highlights.push(`Total jobs: ${totalJobs}`);
+    }
+    if (data.managerSummary?.length) {
+      const lowInspect = data.managerSummary.filter(m =>
+        m.pct_revenue_inspected_safety != null && m.pct_revenue_inspected_safety < 50 &&
+        m.pct_revenue_inspected_commercial != null && m.pct_revenue_inspected_commercial < 50
+      );
+      if (lowInspect.length) {
+        highlights.push(`${lowInspect.length} managers below 50% inspection coverage`);
+      }
+    }
+    const sections = {};
+    if (data.vpSummary.length) {
+      sections['VP Summary'] = data.vpSummary.map(r =>
+        `${r.vp}: ${r.job_count} jobs, Safety ${r.pct_revenue_inspected_safety?.toFixed(1) ?? '—'}%, Commercial ${r.pct_revenue_inspected_commercial?.toFixed(1) ?? '—'}%`
+      );
+    }
+    setDashboardData({
+      domain: 'ops-kpi-qms',
+      data: { kpis: { vps: data.vpSummary.length }, highlights, sections },
+      filters,
+    });
+  }, [data, filters, setDashboardData]);
 
   const filteredManagers = useMemo(() => {
     if (!data?.managerSummary) return [];

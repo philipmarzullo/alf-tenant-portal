@@ -1,11 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import useDashboardData from '../../hooks/useDashboardData';
+import { useDashboardDataContext } from '../../contexts/DashboardDataContext';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 
 export default function WorkTicketsQBUDashboard() {
   const [filters, setFilters] = useState({ dateFrom: '2025-01-01', dateTo: '2025-12-31', jobIds: null, ticketType: null });
   const { data, loading, error } = useDashboardData('work-tickets-qbu', filters);
+  const { setDashboardData } = useDashboardDataContext();
+
+  useEffect(() => {
+    if (!data?.completed && !data?.upcoming) return;
+    const completed = data.completed || [];
+    const upcoming = data.upcoming || [];
+    const highlights = [
+      `Completed tickets: ${completed.length}`,
+      `Upcoming tickets: ${upcoming.length}`,
+    ];
+    if (upcoming.length) {
+      const nextDate = upcoming[0].schedule_date;
+      highlights.push(`Next scheduled: ${nextDate}`);
+    }
+    setDashboardData({
+      domain: 'work-tickets',
+      data: {
+        kpis: { completed: completed.length, upcoming: upcoming.length },
+        highlights,
+      },
+      filters,
+    });
+  }, [data, filters, setDashboardData]);
 
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="text-aa-blue animate-spin" /></div>;
   if (error) return <div className="text-center py-20"><div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto"><p className="text-sm text-red-700">{String(error)}</p></div></div>;

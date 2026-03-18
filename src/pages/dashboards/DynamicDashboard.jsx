@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie,
@@ -6,6 +6,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import useDynamicMetrics from '../../hooks/useDynamicMetrics';
+import { useDashboardDataContext } from '../../contexts/DashboardDataContext';
 import DashboardFilters from '../../components/dashboards/DashboardFilters';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 import KPICard from '../../components/dashboards/KPICard';
@@ -33,6 +34,18 @@ export default function DynamicDashboard({ domain }) {
   });
 
   const { data, isDynamic, loading, error } = useDynamicMetrics(domain, filters);
+  const { setDashboardData } = useDashboardDataContext();
+
+  useEffect(() => {
+    if (!data?.metrics?.length) return;
+    const kpis = {};
+    const highlights = [];
+    data.metrics.filter(m => m.display_as === 'kpi').forEach(m => {
+      kpis[m.key] = m.value;
+      highlights.push(`${m.label}: ${formatMetricValue(m.value, m.format, m.unit)}`);
+    });
+    setDashboardData({ domain, data: { kpis, highlights }, filters });
+  }, [data, domain, filters, setDashboardData]);
 
   const { kpiMetrics, chartMetrics } = useMemo(() => {
     if (!data?.metrics) return { kpiMetrics: [], chartMetrics: [] };

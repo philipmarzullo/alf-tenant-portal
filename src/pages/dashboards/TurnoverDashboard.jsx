@@ -1,13 +1,36 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Loader2, TrendingDown, UserMinus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import useDashboardData from '../../hooks/useDashboardData';
+import { useDashboardDataContext } from '../../contexts/DashboardDataContext';
 import KPICard from '../../components/dashboards/KPICard';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 
 export default function TurnoverDashboard() {
   const [filters, setFilters] = useState({ dateFrom: '2025-01-01', dateTo: '2025-12-31', jobIds: null });
   const { data, loading, error } = useDashboardData('turnover', filters);
+  const { setDashboardData } = useDashboardDataContext();
+
+  useEffect(() => {
+    if (!data?.kpis) return;
+    const highlights = [
+      `Monthly turnover: ${data.kpis.monthly_turnover_pct}%`,
+      `Termed employees: ${data.kpis.termed_employees}`,
+    ];
+    if (data.monthly?.length) {
+      const peak = data.monthly.reduce((a, b) => (b.turnover_pct > a.turnover_pct ? b : a), data.monthly[0]);
+      highlights.push(`Peak month: ${peak.month} at ${peak.turnover_pct}%`);
+    }
+    const sections = {};
+    if (data.monthly?.length) {
+      sections['Monthly Breakdown'] = data.monthly.map(m => `${m.month}: ${m.turnover_pct}% turnover, ${m.termed} termed, ${m.active_employees} active`);
+    }
+    setDashboardData({
+      domain: 'turnover',
+      data: { kpis: data.kpis, highlights, sections },
+      filters,
+    });
+  }, [data, filters, setDashboardData]);
 
   const chartData = useMemo(() => {
     if (!data?.monthly?.length) return [];

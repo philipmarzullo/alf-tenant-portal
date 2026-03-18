@@ -1,13 +1,33 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import useDashboardData from '../../hooks/useDashboardData';
+import { useDashboardDataContext } from '../../contexts/DashboardDataContext';
 import KPICard from '../../components/dashboards/KPICard';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 
 export default function ActionItemsDashboard() {
   const [filters, setFilters] = useState({ dateFrom: '2025-01-01', dateTo: '2025-12-31', jobIds: null, itemType: null });
   const { data, loading, error } = useDashboardData('action-items', filters);
+  const { setDashboardData } = useDashboardDataContext();
+
+  useEffect(() => {
+    if (!data?.items?.length) return;
+    const openCount = data.items.filter(i => i.status === 'Open').length;
+    const closedCount = data.items.filter(i => i.status !== 'Open').length;
+    const highlights = [
+      `Total action items: ${data.items.length}`,
+      `Open: ${openCount}, Closed: ${closedCount}`,
+    ];
+    setDashboardData({
+      domain: 'action-items',
+      data: {
+        kpis: { total: data.items.length, open: openCount, closed: closedCount },
+        highlights,
+      },
+      filters,
+    });
+  }, [data, filters, setDashboardData]);
 
   const metrics = useMemo(() => {
     if (!data?.items?.length) return null;

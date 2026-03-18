@@ -6,10 +6,10 @@ import { useDashboardConfigContext } from '../../contexts/DashboardConfigContext
 import { useUser } from '../../contexts/UserContext';
 import { useRBAC } from '../../contexts/RBACContext';
 import { useTenantPortal } from '../../contexts/TenantPortalContext';
+import { DashboardDataProvider, useDashboardDataContext } from '../../contexts/DashboardDataContext';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
 import ShareDashboardModal from '../../components/dashboards/ShareDashboardModal';
 import SyncHealthBanner from '../../components/dashboards/SyncHealthBanner';
-import useHomeSummary from '../../hooks/useHomeSummary';
 
 // Context to pass customize state down to domain dashboards
 const DashboardCustomizeContext = createContext({ isLayoutCustomizing: false, setIsLayoutCustomizing: () => {} });
@@ -22,7 +22,6 @@ export default function DashboardsLayout() {
   const { shares } = useDashboardConfigContext();
   const { isAdmin } = useUser();
   const { metricTier, allowedDomains } = useRBAC();
-  const { data: summary } = useHomeSummary();
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareModalKey, setShareModalKey] = useState('operations');
   const [shareModalLabel, setShareModalLabel] = useState('Operations');
@@ -52,43 +51,53 @@ export default function DashboardsLayout() {
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/portal/dashboards';
   const currentDomain = domainByPath[currentPath] || dashboardDomains[0]?.domain_key || 'operations';
 
-  // Build data context for analytics agent
-  const analyticsContext = useCallback(() => {
-    if (!summary) return '';
+  // Build data context for analytics agent from active dashboard data
+  const buildAnalyticsContext = useCallback((dashboardState) => {
+    const { activeDomain, data, filters } = dashboardState || {};
+    const domain = activeDomain || currentDomain;
 
-    const parts = [`Current dashboard tab: ${currentDomain}`, '', 'Dashboard Data Summary:'];
+    const parts = [`Current dashboard: ${domain}`];
 
-    const hero = summary.hero;
-    if (hero && typeof hero === 'object') {
-      parts.push('\nOverall Metrics:');
-      Object.entries(hero).forEach(([key, val]) => {
-        if (val != null) parts.push(`  ${key}: ${typeof val === 'object' ? JSON.stringify(val) : val}`);
-      });
+    if (filters && typeof filters === 'object') {
+      const activeFilters = Object.entries(filters)
+        .filter(([, v]) => v != null)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ');
+      if (activeFilters) parts.push(`Active filters: ${activeFilters}`);
     }
 
-    const domains = summary.domains || {};
-    Object.entries(domains).forEach(([domain, data]) => {
-      if (allowedDomains.length && !allowedDomains.includes(domain)) return;
-      parts.push(`\n${domain.charAt(0).toUpperCase() + domain.slice(1)} Domain:`);
-      if (data && typeof data === 'object') {
-        Object.entries(data).forEach(([k, v]) => {
+    if (data && typeof data === 'object') {
+      // KPIs
+      if (data.kpis && typeof data.kpis === 'object') {
+        parts.push('\nKPIs currently displayed:');
+        Object.entries(data.kpis).forEach(([k, v]) => {
           if (v != null) parts.push(`  ${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`);
         });
       }
-    });
 
-    if (summary.attentionItems?.length) {
-      parts.push('\nAttention Items:');
-      summary.attentionItems.forEach((item) => {
-        parts.push(`  - [${item.severity || 'info'}] ${item.title}: ${item.detail || ''}`);
-      });
+      // Highlights (pre-summarized by each dashboard)
+      if (Array.isArray(data.highlights)) {
+        parts.push('\nKey highlights:');
+        data.highlights.forEach(h => parts.push(`  - ${h}`));
+      }
+
+      // Sections (tables/charts summarized by each dashboard)
+      if (data.sections && typeof data.sections === 'object') {
+        Object.entries(data.sections).forEach(([name, rows]) => {
+          if (!Array.isArray(rows) || rows.length === 0) return;
+          parts.push(`\n${name} (top ${Math.min(rows.length, 10)}):`);
+          rows.slice(0, 10).forEach(r => {
+            parts.push(`  ${typeof r === 'string' ? r : JSON.stringify(r)}`);
+          });
+        });
+      }
     }
 
-    parts.push(`\nUser's metric access tier: ${metricTier}`);
+    parts.push(`\nUser metric tier: ${metricTier}`);
     parts.push(`Accessible domains: ${allowedDomains.length ? allowedDomains.join(', ') : 'all'}`);
 
     return parts.join('\n');
-  }, [summary, currentDomain, metricTier, allowedDomains]);
+  }, [currentDomain, metricTier, allowedDomains]);
 
   const tabs = useMemo(() => {
     // Admins see all tabs; non-admins filtered by allowedDomains from RBAC
@@ -152,7 +161,19 @@ export default function DashboardsLayout() {
         </div>
 
         <SyncHealthBanner />
-        <Outlet />
+        <DashboardDataProvider>
+          <Outlet />
+
+          {/* Analytics Agent Chat Panel — inside provider so it reads dashboard data */}
+          {tenantHasModule('analytics') && (
+            <AnalyticsChatBridge
+              open={analyticsChatOpen}
+              onClose={() => setAnalyticsChatOpen(false)}
+              currentDomain={currentDomain}
+              buildContext={buildAnalyticsContext}
+            />
+          )}
+        </DashboardDataProvider>
 
         {/* Share Modal */}
         <ShareDashboardModal
@@ -161,19 +182,24 @@ export default function DashboardsLayout() {
           dashboardKey={shareModalKey}
           dashboardLabel={shareModalLabel}
         />
-
-        {/* Analytics Agent Chat Panel */}
-        {tenantHasModule('analytics') && (
-          <AgentChatPanel
-            open={analyticsChatOpen}
-            onClose={() => setAnalyticsChatOpen(false)}
-            agentKey="analytics"
-            agentName="Analytics Agent"
-            context={`Operational data analysis — viewing ${currentDomain} dashboard`}
-            systemPromptSuffix={analyticsContext()}
-          />
-        )}
       </div>
     </DashboardCustomizeContext.Provider>
+  );
+}
+
+/** Reads DashboardDataContext and passes built context string to AgentChatPanel */
+function AnalyticsChatBridge({ open, onClose, currentDomain, buildContext }) {
+  const dashboardState = useDashboardDataContext();
+  const suffix = buildContext(dashboardState);
+
+  return (
+    <AgentChatPanel
+      open={open}
+      onClose={onClose}
+      agentKey="analytics"
+      agentName="Analytics Agent"
+      context={`Operational data analysis — viewing ${dashboardState.activeDomain || currentDomain} dashboard`}
+      systemPromptSuffix={suffix}
+    />
   );
 }

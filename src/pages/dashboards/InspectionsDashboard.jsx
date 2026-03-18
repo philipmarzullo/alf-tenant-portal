@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import useDashboardData from '../../hooks/useDashboardData';
+import { useDashboardDataContext } from '../../contexts/DashboardDataContext';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 
 export default function InspectionsDashboard() {
@@ -37,6 +38,40 @@ export default function InspectionsDashboard() {
   }, [jobNumberInput]);
 
   const { data, loading, error } = useDashboardData('inspections', filters);
+  const { setDashboardData } = useDashboardDataContext();
+
+  // Push data summary to layout for analytics agent context
+  useEffect(() => {
+    if (!data?.kpis) return;
+    const kpis = {
+      inspections: data.kpis.inspections ?? data.kpis.inspection_count ?? 0,
+      items: data.kpis.items ?? data.kpis.touchpoint_count ?? 0,
+      items_deficient_pct: data.kpis.items_deficient_pct ?? data.kpis.deficiency_pct ?? 0,
+    };
+    const highlights = [];
+    if (data.deficiencyByArea?.length) {
+      const top = data.deficiencyByArea.slice(0, 3);
+      highlights.push(`Top deficient areas: ${top.map(a => `${a.area} (${a.pct.toFixed(1)}%)`).join(', ')}`);
+    }
+    if (data.jobDetail?.length) {
+      const worst = data.jobDetail.slice(0, 3);
+      highlights.push(`Jobs with most deficiencies: ${worst.map(j => `${j.job_name} (${j.pct_deficient}%)`).join(', ')}`);
+    }
+    if (data.daysSince?.length) {
+      const stale = data.daysSince.filter(r => r.days > 90);
+      if (stale.length) highlights.push(`${stale.length} jobs not inspected in 90+ days`);
+    }
+    const sections = {};
+    if (data.jobDetail?.length) {
+      sections['Job Detail'] = data.jobDetail.slice(0, 10).map(j =>
+        `${j.job_number} ${j.job_name}: ${j.total_items} items, ${j.pct_deficient}% deficient`
+      );
+    }
+    if (data.deficiencyByArea?.length) {
+      sections['Deficiency by Area'] = data.deficiencyByArea.map(a => `${a.area}: ${a.pct.toFixed(2)}%`);
+    }
+    setDashboardData({ domain: 'inspections', data: { kpis, highlights, sections }, filters });
+  }, [data, filters, setDashboardData]);
 
   const trendData = useMemo(() => {
     if (!data) return [];
