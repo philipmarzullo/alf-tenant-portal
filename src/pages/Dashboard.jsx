@@ -341,7 +341,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-2">
           {hasFeature('agentChat') ? (
             <>
-              {tenantHasModule('analytics') && (
+              {isAdmin && tenantHasModule('analytics') && (
                 <button
                   onClick={() => setAnalyticsChatOpen(true)}
                   className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
