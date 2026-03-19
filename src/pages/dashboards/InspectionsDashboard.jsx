@@ -1,16 +1,19 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import useDashboardData from '../../hooks/useDashboardData';
 import { useDashboardDataContext } from '../../contexts/DashboardDataContext';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 
+const BAR_COLOR = '#00AEEF';
+const BAR_LATEST = '#005F8A';
+
 export default function InspectionsDashboard() {
   const today = new Date();
   const ninetyDaysAgo = new Date(today);
   ninetyDaysAgo.setDate(today.getDate() - 90);
 
-  const [filters, setFilters] = useState({
+  const defaultFilters = {
     dateFrom: ninetyDaysAgo.toISOString().slice(0, 10),
     dateTo: today.toISOString().slice(0, 10),
     vp: null,
@@ -18,24 +21,37 @@ export default function InspectionsDashboard() {
     inspectionType: null,
     jobName: null,
     jobNumber: null,
-  });
+  };
+
+  // Applied filters (sent to API) vs pending filters (UI state)
+  const [filters, setFilters] = useState(defaultFilters);
+  const [pending, setPending] = useState(defaultFilters);
+
   const [dateDisplay, setDateDisplay] = useState('weekly');
   const [selectedJob, setSelectedJob] = useState(null);
   const [selectedArea, setSelectedArea] = useState(null);
 
-  // Debounced text filters
+  // Text inputs with debounce
   const [jobNameInput, setJobNameInput] = useState('');
   const [jobNumberInput, setJobNumberInput] = useState('');
 
   useEffect(() => {
-    const t = setTimeout(() => setFilters(f => ({ ...f, jobName: jobNameInput || null })), 500);
+    const t = setTimeout(() => setPending(f => ({ ...f, jobName: jobNameInput || null })), 500);
     return () => clearTimeout(t);
   }, [jobNameInput]);
 
   useEffect(() => {
-    const t = setTimeout(() => setFilters(f => ({ ...f, jobNumber: jobNumberInput || null })), 500);
+    const t = setTimeout(() => setPending(f => ({ ...f, jobNumber: jobNumberInput || null })), 500);
     return () => clearTimeout(t);
   }, [jobNumberInput]);
+
+  const isDirty = JSON.stringify(pending) !== JSON.stringify(filters);
+
+  const applyFilters = useCallback(() => {
+    setFilters({ ...pending });
+    setSelectedJob(null);
+    setSelectedArea(null);
+  }, [pending]);
 
   const { data, loading, error } = useDashboardData('inspections', filters);
   const { setDashboardData } = useDashboardDataContext();
@@ -73,6 +89,14 @@ export default function InspectionsDashboard() {
     setDashboardData({ domain: 'inspections', data: { kpis, highlights, sections }, filters });
   }, [data, filters, setDashboardData]);
 
+  // VP → Manager cascade: filter manager dropdown by selected VP
+  const filteredManagerValues = useMemo(() => {
+    if (!data?.filters) return [];
+    if (!pending.vp) return data.filters.managerValues || [];
+    const pairs = data.filters.vpManagerPairs || [];
+    return [...new Set(pairs.filter(p => p.vp === pending.vp).map(p => p.manager))].sort();
+  }, [data?.filters, pending.vp]);
+
   const trendData = useMemo(() => {
     if (!data) return [];
     const src = dateDisplay === 'weekly' ? data.weeklyTrend : data.monthlyTrend;
@@ -90,7 +114,7 @@ export default function InspectionsDashboard() {
   const filteredDeficiencyDetail = useMemo(() => {
     if (!data?.deficiencyDetail) return [];
     let items = data.deficiencyDetail;
-    if (selectedJob) items = items.filter(d => d.job_key === selectedJob);
+    if (selectedJob) items = items.filter(d => String(d.job_key) === String(selectedJob));
     if (selectedArea) items = items.filter(d => d.area === selectedArea);
     return items;
   }, [data, selectedJob, selectedArea]);
@@ -111,29 +135,29 @@ export default function InspectionsDashboard() {
       <div className="flex flex-wrap items-end gap-4 bg-white rounded-lg border border-gray-200 px-4 py-3">
         <div>
           <label className="block text-xs font-medium text-secondary-text mb-1">Start Date</label>
-          <input type="date" value={filters.dateFrom || ''} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value || null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue" />
+          <input type="date" value={pending.dateFrom || ''} onChange={e => setPending(f => ({ ...f, dateFrom: e.target.value || null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue" />
         </div>
         <div>
           <label className="block text-xs font-medium text-secondary-text mb-1">End Date</label>
-          <input type="date" value={filters.dateTo || ''} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value || null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue" />
+          <input type="date" value={pending.dateTo || ''} onChange={e => setPending(f => ({ ...f, dateTo: e.target.value || null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue" />
         </div>
         <div>
           <label className="block text-xs font-medium text-secondary-text mb-1">VP OPS</label>
-          <select value={filters.vp || ''} onChange={e => setFilters(f => ({ ...f, vp: e.target.value || null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue min-w-[120px]">
+          <select value={pending.vp || ''} onChange={e => setPending(f => ({ ...f, vp: e.target.value || null, manager: null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue min-w-[120px]">
             <option value="">(All)</option>
             {data.filters?.vpValues?.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-xs font-medium text-secondary-text mb-1">Manager</label>
-          <select value={filters.manager || ''} onChange={e => setFilters(f => ({ ...f, manager: e.target.value || null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue min-w-[160px]">
+          <select value={pending.manager || ''} onChange={e => setPending(f => ({ ...f, manager: e.target.value || null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue min-w-[160px]">
             <option value="">(All)</option>
-            {data.filters?.managerValues?.map(v => <option key={v} value={v}>{v}</option>)}
+            {filteredManagerValues.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-xs font-medium text-secondary-text mb-1">Inspection Type</label>
-          <select value={filters.inspectionType || ''} onChange={e => setFilters(f => ({ ...f, inspectionType: e.target.value || null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue min-w-[160px]">
+          <select value={pending.inspectionType || ''} onChange={e => setPending(f => ({ ...f, inspectionType: e.target.value || null }))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue min-w-[160px]">
             <option value="">(All)</option>
             {data.filters?.inspectionTypes?.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
@@ -146,12 +170,23 @@ export default function InspectionsDashboard() {
           <label className="block text-xs font-medium text-secondary-text mb-1">Job Number</label>
           <input type="text" value={jobNumberInput} onChange={e => setJobNumberInput(e.target.value)} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue w-[120px]" />
         </div>
-        {(filters.vp || filters.manager || filters.inspectionType || filters.jobName || filters.jobNumber) && (
+        <button
+          onClick={applyFilters}
+          disabled={!isDirty}
+          className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${isDirty ? 'bg-aa-blue text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+        >
+          Apply
+        </button>
+        {(pending.vp || pending.manager || pending.inspectionType || pending.jobName || pending.jobNumber) && (
           <button
             onClick={() => {
-              setFilters(f => ({ ...f, vp: null, manager: null, inspectionType: null, jobName: null, jobNumber: null }));
+              const cleared = { ...pending, vp: null, manager: null, inspectionType: null, jobName: null, jobNumber: null };
+              setPending(cleared);
+              setFilters(cleared);
               setJobNameInput('');
               setJobNumberInput('');
+              setSelectedJob(null);
+              setSelectedArea(null);
             }}
             className="text-xs text-aa-blue hover:underline pb-1.5"
           >
@@ -216,7 +251,7 @@ export default function InspectionsDashboard() {
                 <Tooltip formatter={(v) => [`${v}%`, 'Deficiency %']} />
                 <Bar dataKey="pct" radius={[4, 4, 0, 0]}>
                   {trendData.map((_, i) => (
-                    <Cell key={i} fill={i === trendData.length - 1 ? '#DC2626' : '#3B82A0'} />
+                    <Cell key={i} fill={i === trendData.length - 1 ? BAR_LATEST : BAR_COLOR} />
                   ))}
                 </Bar>
               </BarChart>
@@ -245,10 +280,7 @@ export default function InspectionsDashboard() {
                 <div className="w-full bg-gray-100 rounded-full h-4">
                   <div
                     className="h-4 rounded-full"
-                    style={{
-                      width: `${Math.min(r.pct, 100)}%`,
-                      backgroundColor: i < 2 ? '#3B82A0' : '#0891B2',
-                    }}
+                    style={{ width: `${Math.min(r.pct, 100)}%`, backgroundColor: BAR_COLOR }}
                   />
                 </div>
               </div>
@@ -291,8 +323,8 @@ export default function InspectionsDashboard() {
                 ) : data.jobDetail?.map(r => (
                   <tr
                     key={r.job_key}
-                    className={`cursor-pointer transition-colors ${selectedJob === r.job_key ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-                    onClick={() => setSelectedJob(selectedJob === r.job_key ? null : r.job_key)}
+                    className={`cursor-pointer transition-colors ${String(selectedJob) === String(r.job_key) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                    onClick={() => setSelectedJob(String(selectedJob) === String(r.job_key) ? null : r.job_key)}
                   >
                     <td className="px-3 py-2 text-dark-text tabular-nums">{r.job_number}</td>
                     <td className="px-3 py-2 text-dark-text truncate max-w-[160px]">{r.job_name}</td>
@@ -310,7 +342,7 @@ export default function InspectionsDashboard() {
           <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-dark-text">
               Deficiency Detail
-              {selectedJob && <span className="ml-2 text-xs text-secondary-text font-normal">(Job: {data.jobDetail?.find(j => j.job_key === selectedJob)?.job_number})</span>}
+              {selectedJob && <span className="ml-2 text-xs text-secondary-text font-normal">(Job: {data.jobDetail?.find(j => String(j.job_key) === String(selectedJob))?.job_number})</span>}
               {selectedArea && <span className="ml-2 text-xs text-secondary-text font-normal">(Area: {selectedArea})</span>}
             </h3>
             {(selectedJob || selectedArea) && (
