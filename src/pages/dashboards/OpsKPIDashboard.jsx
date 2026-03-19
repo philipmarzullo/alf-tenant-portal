@@ -32,19 +32,9 @@ function isHighlighted(row, threshold) {
 }
 
 export default function OpsKPIDashboard() {
-  const today = new Date();
-  const q = Math.floor(today.getMonth() / 3);
-  const year = today.getFullYear();
-  const prevQ = q === 0 ? 3 : q - 1;
-  const prevYear = q === 0 ? year - 1 : year;
-  const prevQStart = new Date(prevYear, prevQ * 3, 1);
-  const prevQEnd = new Date(prevYear, prevQ * 3 + 3, 0);
-
-  const [filters, setFilters] = useState({
-    dateFrom: prevQStart.toISOString().slice(0, 10),
-    dateTo: prevQEnd.toISOString().slice(0, 10),
-    vp: null,
-    manager: null,
+  const [filters, setFilters] = useState(() => {
+    const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 90);
+    return { dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString().slice(0, 10), vp: null, manager: null };
   });
   const [highlightThreshold, setHighlightThreshold] = useState(50);
   const [selectedVP, setSelectedVP] = useState(null);

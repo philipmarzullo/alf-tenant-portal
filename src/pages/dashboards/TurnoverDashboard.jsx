@@ -7,7 +7,10 @@ import KPICard from '../../components/dashboards/KPICard';
 import DashboardEmptyState from '../../components/dashboards/DashboardEmptyState';
 
 export default function TurnoverDashboard() {
-  const [filters, setFilters] = useState({ dateFrom: '2025-01-01', dateTo: '2025-12-31', jobIds: null });
+  const [filters, setFilters] = useState(() => {
+    const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 90);
+    return { dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString().slice(0, 10), jobIds: null };
+  });
   const { data, loading, error } = useDashboardData('turnover', filters);
   const { setDashboardData } = useDashboardDataContext();
 
