@@ -24,6 +24,7 @@ const BREADCRUMB_MAP = {
   '/portal/sales/apc': ['Workspaces', 'Sales', 'APC Tracker'],
   '/portal/sales/tbi': ['Workspaces', 'Sales', 'TBI Tracker'],
   '/portal/ops': ['Workspaces', 'Operations'],
+  '/portal/jobs': ['Workspaces', 'Job Directory'],
   '/portal/dashboards/action-plans': ['Analytics', 'Action Plans'],
   '/portal/admin/users': ['Admin', 'User Management'],
   '/portal/admin/knowledge': ['Admin', 'Knowledge Base'],

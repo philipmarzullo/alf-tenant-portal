@@ -91,6 +91,7 @@ import RFPProjectsPage from './pages/tools/RFPProjectsPage';
 import RFPLibraryPage from './pages/tools/RFPLibraryPage';
 import RFPProjectDetail from './pages/tools/RFPProjectDetail';
 import UnionBenefitsReport from './pages/tools/UnionBenefitsReport';
+import JobDirectoryPage from './pages/jobs/JobDirectoryPage';
 import AgentKnowledgePage from './pages/admin/AgentKnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
 import RoleTemplates from './pages/admin/RoleTemplates';
@@ -385,6 +386,8 @@ export default function App() {
                         </ProtectedRoute>
                       }
                     />
+
+                    <Route path="jobs" element={<JobDirectoryPage />} />
 
                     <Route
                       path="sales"
