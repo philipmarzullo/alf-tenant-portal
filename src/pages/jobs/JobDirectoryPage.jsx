@@ -33,13 +33,17 @@ export default function JobDirectoryPage() {
         const res = await fetch(`${BACKEND_URL}/api/ingestion/${tenantId}/jobs`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.details || errBody.error || `Request failed (${res.status})`);
+        }
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
         if (!cancelled) {
           setJobs(json.jobs || []);
           setLastLoadedAt(json.last_loaded_at || null);
         }
       } catch (err) {
+        console.error('[JobDirectory] Fetch error:', err);
         if (!cancelled) setError(err.message);
       } finally {
         if (!cancelled) setLoading(false);
