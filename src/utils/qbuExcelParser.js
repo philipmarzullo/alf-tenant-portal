@@ -123,16 +123,32 @@ function parseCover(wb, warnings) {
   const rows = findSheet(wb, 'Cover & Intros');
   if (!rows) { warnings.push('Sheet "Cover & Intros" not found — skipping cover section'); return {}; }
 
-  const aaTeam = filterTeam(rowObjects(rows, 11, 25, [0, 1], ['name', 'title']));
-  const clientTeam = filterTeam(rowObjects(rows, 27, 40, [0, 1], ['name', 'title']));
+  // Detect v2.2+ layout: row 3 contains "Review Type" label in column A
+  const row3Label = cell(rows, 3, 0).toLowerCase();
+  const row3Value = cell(rows, 3, 1).toLowerCase().trim();
+  const isReviewTypeRow = row3Label.includes('review type')
+    || (row3Value && ['quarterly', 'bi-annual', 'biannual', 'annual'].includes(row3Value));
+
+  let reviewType = 'quarterly';
+  let offset = 0; // row offset for remaining fields when new row is present
+
+  if (isReviewTypeRow) {
+    offset = 1;
+    if (row3Value.includes('annual') && !row3Value.includes('bi')) reviewType = 'annual';
+    else if (row3Value.includes('bi') || row3Value.includes('semi')) reviewType = 'biannual';
+  }
+
+  const aaTeam = filterTeam(rowObjects(rows, 11 + offset, 25 + offset, [0, 1], ['name', 'title']));
+  const clientTeam = filterTeam(rowObjects(rows, 27 + offset, 40 + offset, [0, 1], ['name', 'title']));
 
   return {
-    clientName: cell(rows, 3, 1),
-    quarter: cell(rows, 4, 1),
-    date: dateCell(rows, 5, 1),
-    jobName: cell(rows, 6, 1),
-    jobNumber: cell(rows, 7, 1),
-    regionVP: cell(rows, 8, 1),
+    reviewType,
+    clientName: cell(rows, 3 + offset, 1),
+    quarter: cell(rows, 4 + offset, 1),
+    date: dateCell(rows, 5 + offset, 1),
+    jobName: cell(rows, 6 + offset, 1),
+    jobNumber: cell(rows, 7 + offset, 1),
+    regionVP: cell(rows, 8 + offset, 1),
     aaTeam: aaTeam.length ? aaTeam : [{ name: '', title: '' }],
     clientTeam: clientTeam.length ? clientTeam : [{ name: '', title: '' }],
   };

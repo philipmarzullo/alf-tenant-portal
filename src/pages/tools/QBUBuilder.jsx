@@ -295,7 +295,7 @@ function DocumentCard({ doc, index, onRemove, onLabelChange }) {
 
 const INITIAL = {
   cover: {
-    clientName: '', quarter: 'Q1 2026', date: '', jobName: '', jobNumber: '', regionVP: '',
+    clientName: '', reviewType: 'quarterly', quarter: 'Q1 2026', date: '', jobName: '', jobNumber: '', regionVP: '',
     aaTeam: [{ name: '', title: '' }],
     clientTeam: [{ name: '', title: '' }],
   },
@@ -591,10 +591,26 @@ export default function QBUBuilder() {
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Client Name</Label><Input value={form.cover.clientName} onChange={(v) => updateSection('cover', { clientName: v })} placeholder="e.g., Greenfield University" /></div>
             <div><Label>Job Name</Label><Input value={form.cover.jobName} onChange={(v) => updateSection('cover', { jobName: v })} placeholder="e.g., Main Campus" /></div>
-            <div><Label>Quarter</Label>
+            <div><Label>Review Type</Label>
+              <select value={form.cover.reviewType || 'quarterly'} onChange={(e) => {
+                const rt = e.target.value;
+                const defaults = { quarterly: 'Q1 2026', biannual: 'H1 2026', annual: 'Annual 2025' };
+                updateSection('cover', { reviewType: rt, quarter: defaults[rt] || '' });
+              }} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white">
+                <option value="quarterly">Quarterly</option>
+                <option value="biannual">Bi-Annual</option>
+                <option value="annual">Annual</option>
+              </select>
+            </div>
+            <div><Label>Reporting Period</Label>
               <select value={form.cover.quarter} onChange={(e) => updateSection('cover', { quarter: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white">
-                <option>Q1 2026</option><option>Q2 2026</option><option>Q3 2026</option><option>Q4 2026</option>
-                <option>Q4 2025</option><option>Q3 2025</option>
+                {(form.cover.reviewType === 'biannual' ? [
+                  'H1 2026', 'H2 2026', 'H2 2025', 'H1 2025',
+                ] : form.cover.reviewType === 'annual' ? [
+                  'Annual 2025', 'Annual 2026',
+                ] : [
+                  'Q1 2026', 'Q2 2026', 'Q3 2026', 'Q4 2026', 'Q4 2025', 'Q3 2025',
+                ]).map((o) => <option key={o}>{o}</option>)}
               </select>
             </div>
             <div><Label>Date</Label><Input value={form.cover.date} onChange={(v) => updateSection('cover', { date: v })} placeholder="e.g., March 2026" /></div>
@@ -631,7 +647,7 @@ export default function QBUBuilder() {
       // ── SAFETY ──
       case 'safety': return (
         <div className="space-y-6">
-          <SectionHeading description="Theme rotates quarterly: winter prep, slip/fall, PPE, heat illness, ergonomics, chemical safety.">Safety Moment</SectionHeading>
+          <SectionHeading description="Theme rotates each period: winter prep, slip/fall, PPE, heat illness, ergonomics, chemical safety.">Safety Moment</SectionHeading>
           <div className="space-y-4">
             <div><Label>Theme</Label><Input value={form.safety.theme} onChange={(v) => updateSection('safety', { theme: v })} placeholder="e.g., Slip/Fall Prevention" /></div>
             <div><Label>Key Safety Tips</Label><Area value={form.safety.keyTips} onChange={(v) => updateSection('safety', { keyTips: v })} placeholder="4 key tips..." /></div>
@@ -698,7 +714,7 @@ export default function QBUBuilder() {
       // ── WORK TICKETS ──
       case 'workTickets': return (
         <div className="space-y-6">
-          <SectionHeading description="Enter total work orders by location for current quarter and same quarter prior year.">Work Tickets — YoY Comparison</SectionHeading>
+          <SectionHeading description="Enter total work orders by location for current reporting period and same period prior year.">Work Tickets — YoY Comparison</SectionHeading>
           <div className="space-y-2">
             <div className="grid grid-cols-[1fr_120px_120px_80px_auto] gap-2 text-[11px] font-semibold text-secondary-text uppercase">
               <span>Location</span><span>Prior Year</span><span>Current Year</span><span>% Change</span><span className="w-7" />
@@ -721,14 +737,14 @@ export default function QBUBuilder() {
           </div>
 
           <div><Label hint="Explain what drove the change">Key Takeaway</Label><Area value={form.workTickets.keyTakeaway} onChange={(v) => updateSection('workTickets', { keyTakeaway: v })} placeholder="e.g., 'Task-based scheduling reduced repeat work orders by 18%'" rows={2} /></div>
-          <div><Label>Events Supported</Label><Area value={form.workTickets.eventsSupported} onChange={(v) => updateSection('workTickets', { eventsSupported: v })} placeholder="List events supported this quarter with dates" rows={3} /></div>
+          <div><Label>Events Supported</Label><Area value={form.workTickets.eventsSupported} onChange={(v) => updateSection('workTickets', { eventsSupported: v })} placeholder="List events supported this period with dates" rows={3} /></div>
         </div>
       );
 
       // ── AUDITS & ACTIONS ──
       case 'audits': return (
         <div className="space-y-6">
-          <SectionHeading description="Enter audit and corrective action counts by location for current and prior quarter.">Audits & Corrective Actions — QoQ</SectionHeading>
+          <SectionHeading description="Enter audit and corrective action counts by location for current and prior period.">Audits & Corrective Actions</SectionHeading>
           <div>
             <div className="grid grid-cols-[140px_1fr_1fr_1fr_80px] gap-2 text-[11px] font-semibold text-secondary-text uppercase mb-2">
               <span>Metric</span>
@@ -986,7 +1002,7 @@ export default function QBUBuilder() {
             <AddRowBtn onClick={() => addArrayRow('challenges', 'items', { location: '', challenge: '', action: '' })} label="Add challenge" />
           </div>
 
-          <SectionHeading description="For actions committed last quarter — report on delivery status.">Prior Quarter Action Follow-Up</SectionHeading>
+          <SectionHeading description="For actions committed in the prior period — report on delivery status.">Prior Period Action Follow-Up</SectionHeading>
           <div className="space-y-3">
             {form.challenges.priorFollowUp.map((row, i) => (
               <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
@@ -996,7 +1012,7 @@ export default function QBUBuilder() {
                 </div>
                 <div>
                   <Label>Action</Label>
-                  <Input value={row.action} onChange={(v) => updateArrayRow('challenges', 'priorFollowUp', i, { action: v })} placeholder="Action item from last quarter" />
+                  <Input value={row.action} onChange={(v) => updateArrayRow('challenges', 'priorFollowUp', i, { action: v })} placeholder="Action item from prior period" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1135,7 +1151,7 @@ export default function QBUBuilder() {
             )}
           </div>
 
-          <SectionHeading description="Concrete operational items — not vague goals. This becomes the outline for the next QBU.">Next Quarter Roadmap</SectionHeading>
+          <SectionHeading description="Concrete operational items — not vague goals. This becomes the outline for the next QBU.">Upcoming Roadmap</SectionHeading>
           <div className="space-y-2">
             {form.roadmap.schedule.map((row, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -1146,7 +1162,7 @@ export default function QBUBuilder() {
             ))}
           </div>
 
-          <div><Label hint="One sentence summarizing the quarter's targets">Quarter Goal Statement</Label><Area value={form.roadmap.goalStatement} onChange={(v) => updateSection('roadmap', { goalStatement: v })} placeholder="e.g., 'Achieve 92% task completion, zero snow SLA misses, complete restroom renovation in Building C'" rows={2} /></div>
+          <div><Label hint="One sentence summarizing the period's targets">Period Goal Statement</Label><Area value={form.roadmap.goalStatement} onChange={(v) => updateSection('roadmap', { goalStatement: v })} placeholder="e.g., 'Achieve 92% task completion, zero snow SLA misses, complete restroom renovation in Building C'" rows={2} /></div>
         </div>
       );
 
@@ -1309,7 +1325,7 @@ export default function QBUBuilder() {
   return (
     <div>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-2">
-        <h1 className="text-2xl font-light text-dark-text">Quarterly Review Builder</h1>
+        <h1 className="text-2xl font-light text-dark-text">Business Review Builder</h1>
         <div className="flex items-center gap-2">
           {excelParsed && (
             <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded">
@@ -1451,7 +1467,8 @@ export default function QBUBuilder() {
                 <div className="grid grid-cols-2 gap-3">
                   <ReviewSection title="Cover" lines={[
                     form.cover.clientName && `Client: ${form.cover.clientName}`,
-                    form.cover.quarter && `Quarter: ${form.cover.quarter}`,
+                    form.cover.reviewType && form.cover.reviewType !== 'quarterly' && `Type: ${form.cover.reviewType === 'biannual' ? 'Bi-Annual' : 'Annual'}`,
+                    form.cover.quarter && `Period: ${form.cover.quarter}`,
                     form.cover.jobName && `Job: ${form.cover.jobName}`,
                     form.cover.aaTeam.filter((t) => t.name).length > 0 && `A&A Team: ${form.cover.aaTeam.filter((t) => t.name).length} attendees`,
                   ]} />

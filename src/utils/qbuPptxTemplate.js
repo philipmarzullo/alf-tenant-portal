@@ -11,11 +11,12 @@ import {
   addDarkCoverSlide, addDarkThankYouSlide,
 } from './pptxBrandKit';
 import { getPhotoAsBase64, uploadDeck, saveDeckPath } from '../data/qbuHistory';
+import { getPeriodTitle, getPeriodShort, getPeriodNoun, getNextPeriodLabel, getPriorPeriodLabel } from './qbuPeriodHelpers';
 
 // ── Cover Slide (thin wrapper) ───────────────────────────
 
 function addCoverSlide(pptx, form, logoWhite, websiteUrl) {
-  const qLine = `Quarterly Business Update  |  ${form.cover.quarter || 'Q#'}`;
+  const qLine = `${getPeriodTitle(form)}  |  ${form.cover.quarter || 'Q#'}`;
   addDarkCoverSlide(pptx, {
     primaryText: form.cover.clientName || 'Client Name',
     subtitleText: qLine,
@@ -248,8 +249,8 @@ function addSafetyComplianceSlide(pptx, form, logoColor, narratives) {
   // Good Save Details — callout showing only current quarter's saves
   const saves = (form.safety.goodSaves || []).filter((r) => r.location || r.hazard);
   if (saves.length && contentY + 0.5 <= LOGO_SAFE_Y) {
-    // Extract quarter label from cover (e.g., "Q4 2025" → "Q4")
-    const qLabel = (form.cover?.quarter || '').match(/Q\d/)?.[0] || '';
+    // Extract period label from cover (e.g., "Q4 2025" → "Q4", "H1 2026" → "H1")
+    const qLabel = (form.cover?.quarter || '').match(/Q\d|H\d|Annual/i)?.[0] || '';
     const saveLines = saves.map((r) => {
       const parts = [r.location, r.hazard].filter(Boolean).join(': ');
       const action = [r.action, r.notified ? `Notified: ${r.notified}` : ''].filter(Boolean).join('. ');
@@ -311,13 +312,13 @@ function addExecutiveSummarySlide(pptx, form, logoColor, narratives) {
   if (!achievements.length) {
     const fb = [];
     const projCount = (form.projects?.completed || []).filter(p => p.description).length;
-    if (projCount) fb.push(`Completed ${projCount} project${projCount > 1 ? 's' : ''} across campus facilities this quarter`);
+    if (projCount) fb.push(`Completed ${projCount} project${projCount > 1 ? 's' : ''} across campus facilities ${getPeriodShort(form)}`);
     const recCount = form.safety?.recordableCount;
     if (recCount === '0' || recCount === 0) fb.push('Maintained zero recordable incidents — strong safety culture');
     const evtText = form.workTickets?.eventsSupported;
     if (evtText) {
       const evtCount = evtText.split('\n').filter(Boolean).length;
-      if (evtCount) fb.push(`Supported ${evtCount} campus event${evtCount > 1 ? 's' : ''} this quarter`);
+      if (evtCount) fb.push(`Supported ${evtCount} campus event${evtCount > 1 ? 's' : ''} ${getPeriodShort(form)}`);
     }
     if (fb.length) achievements = fb;
   }
@@ -423,10 +424,7 @@ function addWorkTicketsSlide(pptx, form, logoColor, narratives) {
   const locs = (form.workTickets.locations || []).filter((r) => r.location);
   if (locs.length) {
     const q = form.cover.quarter || '';
-    const yearMatch = q.match(/\d{4}/);
-    const priorLabel = yearMatch
-      ? q.replace(yearMatch[0], String(Number(yearMatch[0]) - 1))
-      : q ? `${q} (Prior Year)` : 'Prior Year';
+    const priorLabel = getPriorPeriodLabel(form);
 
     const hasPriorYear = locs.some((r) => r.priorYear && String(r.priorYear).trim() !== '');
 
@@ -723,7 +721,7 @@ function addTopAreasSlide(pptx, form, logoColor, narratives) {
       addCalloutBox(slide, {
         x: MARGIN, y: 5.0, w: CONTENT_W, h: 0.5,
         label: 'Key Takeaway:',
-        text: `${areas[0].area} accounts for the highest share of corrective actions this quarter.`,
+        text: `${areas[0].area} accounts for the highest share of corrective actions ${getPeriodShort(form)}.`,
       });
     }
   }
@@ -742,7 +740,7 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
     const slide = pptx.addSlide();
     setContentBackground(slide);
     addSectionTitle(slide, 'Completed Projects Showcase');
-    slide.addText('No completed projects reported this quarter.', {
+    slide.addText('No completed projects reported.', {
       x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
       fontSize: 12, fontFace: FONT, color: MED_GREY, italic: true, align: 'center',
     });
@@ -789,7 +787,7 @@ function addCompletedProjectsSlide(pptx, form, logoColor, narratives) {
     const slide = pptx.addSlide();
     setContentBackground(slide);
     addSectionTitle(slide, 'Completed Projects Showcase');
-    slide.addText('No completed projects reported this quarter.', {
+    slide.addText('No completed projects reported.', {
       x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
       fontSize: 12, fontFace: FONT, color: MED_GREY, italic: true, align: 'center',
     });
@@ -1035,7 +1033,7 @@ function addTestimonialsSlide(pptx, form, logoColor, narratives) {
   }
 
   if (!testimonials.length) {
-    slide.addText('No testimonials reported this quarter.', {
+    slide.addText('No testimonials reported.', {
       x: MARGIN, y: 2.5, w: CONTENT_W, h: 0.5,
       fontSize: 12, fontFace: FONT, color: MED_GREY, italic: true, align: 'center',
     });
@@ -1555,14 +1553,7 @@ async function addInnovationSlide(pptx, form, logoColor, narratives) {
 function addRoadmapSlide(pptx, form, logoColor, narratives) {
   const r = form.roadmap;
   const q = form.cover.quarter || '';
-  const nextQ = q ? q.replace(/Q(\d)(\s*(\d{4}))?/, (_, n, __, y) => {
-    const nextNum = (Number(n) % 4) + 1;
-    if (y) {
-      const nextYear = nextNum === 1 ? Number(y) + 1 : Number(y);
-      return `Q${nextNum} ${nextYear}`;
-    }
-    return `Q${nextNum}`;
-  }) : '';
+  const nextQ = getNextPeriodLabel(form);
   const titleBase = `${nextQ ? nextQ + ' ' : ''}Roadmap \u2014 Strategic Initiatives`;
 
   // Prefer agent narrative for roadmap items — parse "month | initiative | details" lines
@@ -1639,7 +1630,7 @@ function addRoadmapSlide(pptx, form, logoColor, narratives) {
     const goalY = tableY + (dataRows.length + 1) * rowH + 0.15;
     slide.addText(
       [
-        { text: `${nextQ || q || 'Quarter'} Goal: `, options: { bold: true, color: AA_BLUE, fontSize: 9 } },
+        { text: `${nextQ || q || 'Period'} Goal: `, options: { bold: true, color: AA_BLUE, fontSize: 9 } },
         { text: uniqueGoal, options: { bold: false, color: DARK, fontSize: 9 } },
       ],
       {
@@ -1672,8 +1663,8 @@ export async function generateQBUPptx(form, agentOutput, branding, { tenantId, s
   pptx.defineLayout({ name: 'QBU_16x9', width: SLIDE_W, height: SLIDE_H });
   pptx.layout = 'QBU_16x9';
   pptx.author = branding?.companyName || 'A&A Elevated Facility Solutions';
-  pptx.subject = `QBU — ${form.cover.clientName || 'Client'} — ${form.cover.quarter || ''}`;
-  pptx.title = `QBU ${form.cover.clientName || 'Client'} ${form.cover.quarter || ''}`;
+  pptx.subject = `${getPeriodTitle(form)} — ${form.cover.clientName || 'Client'} — ${form.cover.quarter || ''}`;
+  pptx.title = `${getPeriodTitle(form)} ${form.cover.clientName || 'Client'} ${form.cover.quarter || ''}`;
 
   // Fetch logos — use tenant branding URL if available, fall back to local assets
   const logoSrc = branding?.logoUrl;
@@ -1708,8 +1699,8 @@ export async function generateQBUPptx(form, agentOutput, branding, { tenantId, s
 
   // Generate filename
   const client = (form.cover.clientName || 'QBU').replace(/[^a-zA-Z0-9]/g, '-');
-  const quarter = (form.cover.quarter || '').replace(/\s+/g, '');
-  const filename = `QBU_${client}_${quarter}`;
+  const period = (form.cover.quarter || '').replace(/\s+/g, '');
+  const filename = `QBU_${client}_${period}`;
 
   // Generate blob for storage + trigger browser download
   const blob = await pptx.write({ outputType: 'blob' });
