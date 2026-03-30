@@ -388,7 +388,7 @@ function buildQBUPrompt(data) {
   sections.push(`Generate a complete QBU deck following the A.1/B.1/C.1 section numbering convention. Include only slides that have meaningful content — do not pad to a fixed slide count.\n`);
   sections.push(`=== COVER DATA ===`);
   sections.push(`Client: ${c.clientName || '[Client]'}`);
-  if (c.reviewType && c.reviewType !== 'quarterly') sections.push(`Review Type: ${c.reviewType}`);
+  sections.push(`Review Type: ${c.reviewType || 'quarterly'}`);
   sections.push(`Reporting Period: ${c.quarter || '[Period]'}`);
   sections.push(`Date: ${c.date || '[Date]'}`);
   if (c.jobName) sections.push(`Job: ${c.jobName} (${c.jobNumber || 'N/A'})`);
