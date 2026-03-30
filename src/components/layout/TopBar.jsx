@@ -13,7 +13,7 @@ const BREADCRUMB_MAP = {
   '/portal/hr/union-calendar': ['Workspaces', 'HR', 'Union Calendar'],
   '/portal/finance': ['Workspaces', 'Finance'],
   '/portal/purchasing': ['Workspaces', 'Purchasing'],
-  '/portal/tools/qbu': ['Tools', 'Quarterly Review Builder'],
+  '/portal/tools/qbu': ['Tools', 'Business Review Builder'],
   '/portal/tools/sales-deck': ['Tools', 'Proposal Builder'],
   '/portal/tools/transition-plan': ['Tools', 'Transition Plan Builder'],
   '/portal/tools/budget': ['Tools', 'Budget Builder'],

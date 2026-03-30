@@ -41,7 +41,7 @@ export const MODULE_REGISTRY = {
     description: 'Document generation tools — reviews, proposals, plans, reports',
     icon: 'Wrench',
     pages: [
-      { key: 'quarterly-review', label: 'Quarterly Review Builder', path: '/portal/tools/qbu' },
+      { key: 'quarterly-review', label: 'Business Review Builder', path: '/portal/tools/qbu' },
       { key: 'proposal', label: 'Proposal Builder', path: '/portal/tools/sales-deck' },
       { key: 'transition-plan', label: 'Transition Plan Builder', path: '/portal/tools/transition-plan' },
       { key: 'budget', label: 'Budget Builder', path: '/portal/tools/budget' },
@@ -49,7 +49,7 @@ export const MODULE_REGISTRY = {
       { key: 'training-plan', label: 'Training Plan', path: '/portal/tools/training-plan' },
     ],
     actions: [
-      { key: 'generateQBU', label: 'Generate Quarterly Review' },
+      { key: 'generateQBU', label: 'Generate Business Review' },
       { key: 'generateDeck', label: 'Generate Proposal' },
       { key: 'generateTransitionPlan', label: 'Generate Transition Plan' },
       { key: 'generateBudget', label: 'Generate Budget' },
@@ -191,14 +191,14 @@ export const MODULE_REGISTRY = {
   // so that old module_config JSONB that references "qbu" or "salesDeck" doesn't
   // break. New tenants should use the "tools" module instead.
   qbu: {
-    label: 'Quarterly Review Builder',
-    description: 'Quarterly business review decks (legacy key — use "tools" module)',
+    label: 'Business Review Builder',
+    description: 'Business review decks (legacy key — use "tools" module)',
     icon: 'FileBarChart',
     pages: [
-      { key: 'builder', label: 'Quarterly Review Builder', path: '/portal/tools/qbu', default: true },
+      { key: 'builder', label: 'Business Review Builder', path: '/portal/tools/qbu', default: true },
     ],
     actions: [
-      { key: 'generateQBU', label: 'Generate Quarterly Review' },
+      { key: 'generateQBU', label: 'Generate Business Review' },
     ],
   },
   salesDeck: {

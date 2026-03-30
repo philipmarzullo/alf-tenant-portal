@@ -5,7 +5,7 @@ export const MODULE_DEFINITIONS = [
   { key: 'sales', label: 'Sales', group: 'WORKSPACES', path: '/sales' },
   { key: 'ops', label: 'Operations', group: 'WORKSPACES', path: '/ops' },
   { key: 'dashboards', label: 'Dashboards', group: 'ANALYTICS', path: '/dashboards' },
-  { key: 'qbu', label: 'Quarterly Review Builder', group: 'TOOLS', path: '/tools/qbu' },
+  { key: 'qbu', label: 'Business Review Builder', group: 'TOOLS', path: '/tools/qbu' },
   { key: 'salesDeck', label: 'Proposal Builder', group: 'TOOLS', path: '/tools/sales-deck' },
   { key: 'sop-builder', label: 'SOP Builder', group: 'TOOLS', path: '/tools/sop-builder' },
   { key: 'rfp-response', label: 'RFP Response Builder', group: 'TOOLS', path: '/tools/rfp-response' },

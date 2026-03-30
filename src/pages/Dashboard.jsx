@@ -71,8 +71,8 @@ const WORKSPACE_KEYS = new Set(
 // Info for tool cards shown to tool-only users
 const TOOL_INFO = {
   qbu: {
-    label: 'Quarterly Review Builder',
-    description: 'Build data-driven quarterly business reviews',
+    label: 'Business Review Builder',
+    description: 'Build data-driven business reviews (quarterly, bi-annual, annual)',
     icon: BarChart3,
     color: '#3B82F6',
     path: '/portal/tools/qbu',

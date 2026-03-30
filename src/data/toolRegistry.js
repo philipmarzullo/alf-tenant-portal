@@ -6,15 +6,15 @@
  * IMPORTANT — Backward Compatibility Note:
  * Internal keys like "qbu" and "salesDeck" are kept for backward compatibility
  * with existing database records, route paths, and API calls. Display labels are
- * tenant-agnostic (e.g., "Quarterly Review Builder" instead of "QBU Builder").
+ * tenant-agnostic (e.g., "Business Review Builder" instead of "QBU Builder").
  * Do NOT rename these keys — only labels change.
  */
 
 export const TOOL_REGISTRY = {
   qbu: {
     key: 'qbu',
-    label: 'Quarterly Review Builder',
-    description: 'Generate structured quarterly business review presentations from intake data',
+    label: 'Business Review Builder',
+    description: 'Generate structured business review presentations from intake data',
     icon: 'FileBarChart',
     path: '/tools/qbu',
     agentKey: 'qbu',
