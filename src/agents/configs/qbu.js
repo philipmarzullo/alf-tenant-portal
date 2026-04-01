@@ -190,20 +190,22 @@ Campus names, building names, and specific location references are CRITICAL and 
 
 ### C — Operational Performance
 - C.1: Work tickets MUST show YoY comparison with % change. Include a Key Takeaway narrative explaining the numbers (e.g., "11.7% decrease reflects addition of 3rd shift and improved technology adoption"). Events Supported must be listed cleanly — include ALL events provided, formatted as a simple comma-separated or bulleted list. Keep event names SHORT (under 8 words each). Do NOT split events into a table or spread them across sections. The events callout shares the slide with the work tickets table — keep it compact.
-- C.2: Audit and action counts compare YEAR OVER YEAR (same period, prior year vs current year — e.g., Q4 2024 vs Q4 2025, or H1 2025 vs H1 2026). Use "Prior Year" and "Current Year" labels, NOT "Prior Quarter." Explain discrepancies. If prior year data is all zeros or missing, omit the prior year rows and only show current year data. Do NOT include 'Audit Change Explanation' text in the metrics table — that belongs in the analysis narrative below. IMPORTANT: If a location has zero audits, zero actions, and a generic name like "Location 3", OMIT it from the table — it's an unused template placeholder. The Audit Change Explanation and Action Change Explanation fields are CRITICAL story context — they explain WHY deficiencies happened (e.g., salt vendor changes, sand residue, construction debris). Use this context to build the C.2 analysis narrative AND carry it forward into C.3 and B.1.
+- C.2: Audit data may be provided in quarterly format (Q1-Q4 columns per location) or legacy format (single totals per location). When quarterly data is provided, present AUDIT COUNTS BY QUARTER and CORRECTIVE ACTION COUNTS BY QUARTER tables with Location/Q1/Q2/Q3/Q4/Annual columns. Include PRIOR YEAR COMPARISON if prior year data exists. When per-location explanations are provided, weave them into the C.2 analysis narrative alongside the overall explanations. Compare YEAR OVER YEAR (same period, prior year vs current year). Explain discrepancies. If prior year data is all zeros or missing, omit the prior year comparison. Do NOT include 'Audit Change Explanation' text in the metrics table — that belongs in the analysis narrative below. IMPORTANT: If a location has zero audits, zero actions, and a generic name like "Location 3", OMIT it from the table — it's an unused template placeholder. The Audit Change Explanation and Action Change Explanation fields are CRITICAL story context — they explain WHY deficiencies happened (e.g., salt vendor changes, sand residue, construction debris). Use this context to build the C.2 analysis narrative AND carry it forward into C.3 and B.1.
 - C.3: CRITICAL — when per-location corrective action data is provided, EACH LOCATION gets its OWN pie chart rendered side by side. The PPTX template handles this automatically when the data includes per-location values. Your NARRATIVE:C3:TAKEAWAY must analyze BOTH locations — compare which areas are proportionally higher at each and what that suggests about facility usage patterns. When "Other" appears as a category, provide 2-3 specific examples of what falls under "Other." Common "Other" items include: exterior grounds, loading docks, elevators, mechanical rooms, storage areas. The NARRATIVE:C3:TAKEAWAY block should be a DETAILED analysis (3-5 sentences) that CONNECTS the corrective action distribution to the story from the Audit/Action Change Explanations. Example: if the explanation mentions sand residue from a salt vendor switch, the C.3 analysis should explain how that drove up common area and restroom corrective actions. Don't just describe the chart — explain WHY the numbers look the way they do.
 - EVERY KPI must have an interpretation sentence AND a next action — raw numbers without context are useless.
 
 ### D — Projects & Satisfaction
-- D.1: Organize by category. Be specific: name buildings, describe what was done. Polish raw project descriptions into concise, professional summaries that convey scope and impact. INCLUDE ALL PROJECTS — do not drop any. Preserve campus/building/location details. CRITICAL DENSITY: Each project bullet MUST be ONE sentence, under 20 words. Trim detail ruthlessly — "Parking lot landscape restoration with soil, irrigation, and regrading" not "Lower Facilities Parking Lot landscape restoration with 160 cubic yards of soil, irrigation system installation, and full regrading across the entire area." The completed projects section must fit on 1-2 slides maximum. Do NOT create an "Events Supported" category in D.1 — events belong ONLY on the C.1 Work Tickets slide.
+- D.1: Organize by category. Be specific: name buildings, describe what was done. Each project may include a Location and Operational Benefit — use the location to tag the project to a specific campus/building, and weave the benefit into the description or speaker notes. Polish raw project descriptions into concise, professional summaries that convey scope and impact. INCLUDE ALL PROJECTS — do not drop any. Preserve campus/building/location details. CRITICAL DENSITY: Each project bullet MUST be ONE sentence, under 20 words. Trim detail ruthlessly — "Parking lot landscape restoration with soil, irrigation, and regrading" not "Lower Facilities Parking Lot landscape restoration with 160 cubic yards of soil, irrigation system installation, and full regrading across the entire area." The completed projects section must fit on 1-2 slides maximum. Do NOT create an "Events Supported" category in D.1 — events belong ONLY on the C.1 Work Tickets slide.
 - D.2: Maximum 2 photos per slide. Each photo MUST have a caption that serves as a talking point — not just a label like "Before" but a sentence: "Parking lot before landscape restoration — erosion and bare soil visible." Place photo slides AFTER the relevant content slide (D.2 after D.1, G.1a after G.1). Photos tagged as Before/After will be automatically paired on slides. Reference before/after transformations in your D.1 narrative where relevant.
 - D.3: ALL client quotes MUST appear. Keep quotes EXACTLY as provided — only improve framing and organization. Include the event or context where the quote came from (e.g., "Fox Event", "Career Fair") — this is now a dedicated field in the intake data. Attribute by name AND location. In the NARRATIVE block, use the 4-field pipe format: location | event | quote | attribution.
 
 ### E — Challenges
 - **ONE SLIDE. Challenges MUST fit on exactly 1 slide.** Keep each challenge bullet to ONE concise sentence (under 20 words). Keep each action bullet to ONE concise sentence (under 25 words). Include the location in parentheses at the end.
+- Challenges may include a Status (Open/In Progress/Resolved) and Quarter (when first reported). Use status to frame the narrative — resolved items are wins, open items need action plans.
 - Must be RECURRING issues, not one-time incidents.
 - Every challenge MUST map to an action taken or planned. If an action is missing, use [PLACEHOLDER: action plan needed] — this is valuable because it flags gaps.
 - Tag each challenge AND each action with specific location (campus, building).
+- Prior Period Follow-Up items may include a Location — use it to tag follow-ups to specific campuses/buildings.
 - If action was committed in the prior period, report whether it was delivered.
 - Preserve the user's meaning — do not reinterpret "vehicles should not drive on grounds" as "vehicle access policy." Keep the original intent clear.
 
@@ -391,7 +393,16 @@ function buildQBUPrompt(data) {
   sections.push(`Review Type: ${c.reviewType || 'quarterly'}`);
   sections.push(`Reporting Period: ${c.quarter || '[Period]'}`);
   sections.push(`Date: ${c.date || '[Date]'}`);
-  if (c.jobName) sections.push(`Job: ${c.jobName} (${c.jobNumber || 'N/A'})`);
+  // Multi-job support
+  const jobs = (c.jobs || []).filter(j => j.jobName || j.jobNumber);
+  if (jobs.length > 1) {
+    sections.push(`Jobs:`);
+    jobs.forEach((j, i) => sections.push(`  ${i + 1}. ${j.jobName} (${j.jobNumber || 'N/A'})`));
+  } else if (jobs.length === 1) {
+    sections.push(`Job: ${jobs[0].jobName} (${jobs[0].jobNumber || 'N/A'})`);
+  } else if (c.jobName) {
+    sections.push(`Job: ${c.jobName} (${c.jobNumber || 'N/A'})`);
+  }
   if (c.regionVP) sections.push(`Region VP: ${c.regionVP}`);
 
   if (c.aaTeam?.filter(t => t.name).length) {
@@ -497,18 +508,60 @@ function buildQBUPrompt(data) {
   if (data.audits) {
     const a = data.audits;
     sections.push(`\n=== C.2/C.3 — AUDITS DATA ===`);
-    const names = (a.locationNames || []).filter(Boolean);
-    if (names.length) {
-      sections.push(`Locations: ${names.join(', ')}`);
-      if (a.priorAudits?.length) {
-        sections.push(`Prior Year Audits: ${names.map((n, i) => `${n}=${a.priorAudits[i]||0}`).join(', ')} (Total: ${a.priorAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
-        sections.push(`Prior Year Actions: ${names.map((n, i) => `${n}=${a.priorActions[i]||0}`).join(', ')} (Total: ${a.priorActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
-      }
-      sections.push(`Current Year Audits: ${names.map((n, i) => `${n}=${a.currentAudits[i]||0}`).join(', ')} (Total: ${a.currentAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
-      sections.push(`Current Year Actions: ${names.map((n, i) => `${n}=${a.currentActions[i]||0}`).join(', ')} (Total: ${a.currentActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
+
+    // New quarterly format
+    const auditsByQ = (a.auditsByQuarter || []).filter(r => r.location);
+    const actionsByQ = (a.actionsByQuarter || []).filter(r => r.location);
+    const priorComp = (a.priorComparison || []).filter(r => r.location);
+
+    if (auditsByQ.length) {
+      sections.push(`\nAudit Counts by Location/Quarter:`);
+      auditsByQ.forEach(r =>
+        sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}, Annual=${r.annual||'N/A'}`)
+      );
     }
+    if (actionsByQ.length) {
+      sections.push(`\nCorrective Action Counts by Location/Quarter:`);
+      actionsByQ.forEach(r =>
+        sections.push(`  ${r.location}: Q1=${r.q1||0}, Q2=${r.q2||0}, Q3=${r.q3||0}, Q4=${r.q4||0}, Annual=${r.annual||'N/A'}`)
+      );
+    }
+    if (priorComp.filter(r => r.priorAudits || r.priorActions).length) {
+      sections.push(`\nPrior Year Comparison:`);
+      priorComp.filter(r => r.priorAudits || r.priorActions).forEach(r =>
+        sections.push(`  ${r.location}: Prior Audits=${r.priorAudits||0}, Prior Actions=${r.priorActions||0}`)
+      );
+    }
+
+    // Legacy format fallback (for old saved QBUs)
+    if (!auditsByQ.length) {
+      const names = (a.locationNames || []).filter(Boolean);
+      if (names.length) {
+        sections.push(`Locations: ${names.join(', ')}`);
+        if (a.priorAudits?.length) {
+          sections.push(`Prior Year Audits: ${names.map((n, i) => `${n}=${a.priorAudits[i]||0}`).join(', ')} (Total: ${a.priorAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
+          sections.push(`Prior Year Actions: ${names.map((n, i) => `${n}=${a.priorActions[i]||0}`).join(', ')} (Total: ${a.priorActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
+        }
+        sections.push(`Current Year Audits: ${names.map((n, i) => `${n}=${a.currentAudits[i]||0}`).join(', ')} (Total: ${a.currentAudits.reduce((s,v) => s + (Number(v)||0), 0)})`);
+        sections.push(`Current Year Actions: ${names.map((n, i) => `${n}=${a.currentActions[i]||0}`).join(', ')} (Total: ${a.currentActions.reduce((s,v) => s + (Number(v)||0), 0)})`);
+      }
+    }
+
     if (a.auditExplanation) sections.push(`\nAudit Change Explanation (CRITICAL CONTEXT — use in C.2 analysis, C.3 takeaway, AND B.1 Executive Summary): ${a.auditExplanation}`);
     if (a.actionExplanation) sections.push(`Action Change Explanation (CRITICAL CONTEXT — use in C.2 analysis, C.3 takeaway, AND B.1 Executive Summary): ${a.actionExplanation}`);
+
+    // Per-location explanations
+    const locExpl = (a.locationExplanations || []).filter(l => l.auditExplanation || l.actionExplanation);
+    if (locExpl.length) {
+      sections.push(`\nPer-Location Explanations:`);
+      locExpl.forEach(l => {
+        const parts = [];
+        if (l.auditExplanation) parts.push(`Audits: ${l.auditExplanation}`);
+        if (l.actionExplanation) parts.push(`Actions: ${l.actionExplanation}`);
+        sections.push(`  ${l.location}: ${parts.join('. ')}`);
+      });
+    }
+
     const hasMultiLocAreas = a.topAreaLocations?.length > 1;
     const areasWithData = (a.topAreas || []).filter(r => hasMultiLocAreas
       ? (r.values || []).some(v => Number(v) > 0)
@@ -537,7 +590,11 @@ function buildQBUPrompt(data) {
     sections.push(`\n=== D — PROJECTS & SATISFACTION DATA ===`);
     if (p.completed?.filter(r => r.description).length) {
       sections.push(`Completed Projects:`);
-      p.completed.filter(r => r.description).forEach(r => sections.push(`  [${r.category}] ${r.description}`));
+      p.completed.filter(r => r.description).forEach(r => {
+        const loc = r.location ? ` @ ${r.location}` : '';
+        const benefit = r.benefit ? ` → Benefit: ${r.benefit}` : '';
+        sections.push(`  [${r.category}]${loc} ${r.description}${benefit}`);
+      });
     }
     if (p.photos?.length) {
       sections.push(`\nProject Photos: ${p.photos.length} uploaded`);
@@ -559,15 +616,17 @@ function buildQBUPrompt(data) {
     sections.push(`\n=== E — CHALLENGES & ACTIONS DATA ===`);
     if (ch.items?.filter(r => r.challenge).length) {
       sections.push(`Current Challenges:`);
-      ch.items.filter(r => r.challenge).forEach(r =>
-        sections.push(`  ${r.location}: Challenge="${r.challenge}" → Action="${r.action}"`)
-      );
+      ch.items.filter(r => r.challenge).forEach(r => {
+        const meta = [r.status, r.quarter].filter(Boolean).join(', ');
+        sections.push(`  ${r.location}: Challenge="${r.challenge}" → Action="${r.action}"${meta ? ` [${meta}]` : ''}`);
+      });
     }
     if (ch.priorFollowUp?.filter(r => r.action).length) {
       sections.push(`\nPrior Period Follow-Up:`);
-      ch.priorFollowUp.filter(r => r.action).forEach(r =>
-        sections.push(`  "${r.action}" — Status: ${r.status}${r.notes ? `, Notes: ${r.notes}` : ''}`)
-      );
+      ch.priorFollowUp.filter(r => r.action).forEach(r => {
+        const loc = r.location ? `${r.location}: ` : '';
+        sections.push(`  ${loc}"${r.action}" — Status: ${r.status}${r.notes ? `, Notes: ${r.notes}` : ''}`);
+      });
     }
   }
 

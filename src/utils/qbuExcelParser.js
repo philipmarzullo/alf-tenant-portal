@@ -94,6 +94,8 @@ const PLACEHOLDER_WORDS = new Set([
   'total', 'annual total', 'metric', 'area', 'amount',
   'description/cause', 'q1', 'q2', 'q3', 'q4', 'ytd',
   '% change', 'prior year q#', 'current year q#',
+  'quarter', 'operational benefit', 'benefit', 'prior audits', 'prior actions',
+  'location / timeline', 'job name', 'job number',
 ]);
 
 /** Check if a value looks like a header/placeholder label rather than real data */
@@ -138,17 +140,34 @@ function parseCover(wb, warnings) {
     else if (row3Value.includes('bi') || row3Value.includes('semi')) reviewType = 'biannual';
   }
 
-  const aaTeam = filterTeam(rowObjects(rows, 11 + offset, 25 + offset, [0, 1], ['name', 'title']));
-  const clientTeam = filterTeam(rowObjects(rows, 27 + offset, 40 + offset, [0, 1], ['name', 'title']));
+  // Detect multi-job rows: scan for "Job 2" label after the primary job row
+  const primaryJobRow = 6 + offset; // Job Name row
+  const jobs = [{ jobName: cell(rows, primaryJobRow, 1), jobNumber: cell(rows, primaryJobRow + 1, 1) }];
+  let extraJobRows = 0;
+  for (let r = primaryJobRow + 2; r <= primaryJobRow + 6; r++) {
+    const label = cell(rows, r, 0).toLowerCase();
+    if (label.includes('job') && /\d/.test(label) && label.includes('name')) {
+      jobs.push({ jobName: cell(rows, r, 1), jobNumber: cell(rows, r + 1, 1) });
+      extraJobRows += 2;
+      r++; // skip the number row
+    } else {
+      break;
+    }
+  }
+
+  const aaTeam = filterTeam(rowObjects(rows, 11 + offset + extraJobRows, 25 + offset + extraJobRows, [0, 1], ['name', 'title']));
+  const clientTeam = filterTeam(rowObjects(rows, 27 + offset + extraJobRows, 40 + offset + extraJobRows, [0, 1], ['name', 'title']));
 
   return {
     reviewType,
     clientName: cell(rows, 3 + offset, 1),
     quarter: cell(rows, 4 + offset, 1),
     date: dateCell(rows, 5 + offset, 1),
-    jobName: cell(rows, 6 + offset, 1),
-    jobNumber: cell(rows, 7 + offset, 1),
-    regionVP: cell(rows, 8 + offset, 1),
+    jobs: jobs.filter(j => j.jobName || j.jobNumber),
+    // Backward compat scalars — first job
+    jobName: jobs[0].jobName,
+    jobNumber: jobs[0].jobNumber,
+    regionVP: cell(rows, 8 + offset + extraJobRows, 1),
     aaTeam: aaTeam.length ? aaTeam : [{ name: '', title: '' }],
     clientTeam: clientTeam.length ? clientTeam : [{ name: '', title: '' }],
   };
@@ -440,6 +459,120 @@ function parseAudits(wb, warnings) {
   const rows = findSheet(wb, 'Audits & Actions');
   if (!rows) { warnings.push('Sheet "Audits & Actions" not found — skipping audits section'); return {}; }
 
+  // ── Detect v3 layout: look for "AUDIT COUNTS BY QUARTER" header ──
+  let isV3 = false;
+  let auditByQHeaderRow = -1;
+  for (let r = 1; r <= Math.min(rows.length, 10); r++) {
+    const val = cell(rows, r, 0).toUpperCase();
+    if (val.includes('AUDIT COUNTS BY QUARTER')) { isV3 = true; auditByQHeaderRow = r; break; }
+  }
+
+  if (isV3) {
+    // ── V3: Quarterly tables ──
+    // AUDIT COUNTS BY QUARTER table: header row + data rows (Location / Q1 / Q2 / Q3 / Q4 / Annual)
+    const auditDataStart = auditByQHeaderRow + 1; // column header row
+    const auditsByQuarter = filterPlaceholders(
+      rowObjects(rows, auditDataStart + 1, auditDataStart + 6, [0, 1, 2, 3, 4, 5], ['location', 'q1', 'q2', 'q3', 'q4', 'annual']),
+      ['location']
+    );
+
+    // Find CORRECTIVE ACTION COUNTS BY QUARTER header
+    let actionByQHeaderRow = -1;
+    for (let r = auditByQHeaderRow + 1; r <= Math.min(rows.length, auditByQHeaderRow + 15); r++) {
+      const val = cell(rows, r, 0).toUpperCase();
+      if (val.includes('CORRECTIVE ACTION COUNTS BY QUARTER') || val.includes('ACTION COUNTS BY QUARTER')) { actionByQHeaderRow = r; break; }
+    }
+    const actionDataStart = actionByQHeaderRow > 0 ? actionByQHeaderRow + 1 : auditDataStart + 8;
+    const actionsByQuarter = filterPlaceholders(
+      rowObjects(rows, actionDataStart + 1, actionDataStart + 6, [0, 1, 2, 3, 4, 5], ['location', 'q1', 'q2', 'q3', 'q4', 'annual']),
+      ['location']
+    );
+
+    // Find PRIOR YEAR COMPARISON header
+    let priorHeaderRow = -1;
+    const priorSearchStart = actionByQHeaderRow > 0 ? actionByQHeaderRow + 1 : auditDataStart + 12;
+    for (let r = priorSearchStart; r <= Math.min(rows.length, priorSearchStart + 15); r++) {
+      const val = cell(rows, r, 0).toUpperCase();
+      if (val.includes('PRIOR YEAR COMPARISON') || val.includes('PRIOR YEAR')) { priorHeaderRow = r; break; }
+    }
+    const priorDataStart = priorHeaderRow > 0 ? priorHeaderRow + 1 : actionDataStart + 8;
+    const priorComparison = filterPlaceholders(
+      rowObjects(rows, priorDataStart + 1, priorDataStart + 6, [0, 1, 2], ['location', 'priorAudits', 'priorActions']),
+      ['location']
+    );
+
+    // Find explanations section (overall + per-location)
+    let explHeaderRow = -1;
+    const explSearchStart = priorHeaderRow > 0 ? priorHeaderRow + 1 : priorDataStart + 6;
+    for (let r = explSearchStart; r <= Math.min(rows.length, explSearchStart + 15); r++) {
+      const val = cell(rows, r, 0).toUpperCase();
+      if (val.includes('EXPLANATION') || val.includes('CHANGE EXPLANATION')) { explHeaderRow = r; break; }
+    }
+    let auditExplanation = '', actionExplanation = '';
+    const locationExplanations = [];
+    if (explHeaderRow > 0) {
+      auditExplanation = cell(rows, explHeaderRow + 1, 1);
+      actionExplanation = cell(rows, explHeaderRow + 2, 1);
+      // Per-location explanations start after overall
+      let locExplHeaderRow = -1;
+      for (let r = explHeaderRow + 3; r <= Math.min(rows.length, explHeaderRow + 8); r++) {
+        const val = cell(rows, r, 0).toUpperCase();
+        if (val.includes('LOCATION') && val.includes('EXPLANATION')) { locExplHeaderRow = r; break; }
+      }
+      if (locExplHeaderRow > 0) {
+        for (let r = locExplHeaderRow + 2; r <= Math.min(rows.length, locExplHeaderRow + 8); r++) {
+          const loc = cell(rows, r, 0);
+          if (!loc) break;
+          locationExplanations.push({
+            location: loc,
+            auditExplanation: cell(rows, r, 1),
+            actionExplanation: cell(rows, r, 2),
+          });
+        }
+      }
+    } else {
+      // Fallback: look for explanation rows by label
+      for (let r = priorDataStart + 6; r <= Math.min(rows.length, priorDataStart + 12); r++) {
+        const label = cell(rows, r, 0).toLowerCase();
+        if (label.includes('audit') && label.includes('explanation')) auditExplanation = cell(rows, r, 1);
+        if (label.includes('action') && label.includes('explanation')) actionExplanation = cell(rows, r, 1);
+      }
+    }
+
+    // Find TOP CORRECTIVE ACTION AREAS section
+    let areasHeaderRow = -1;
+    for (let r = explHeaderRow > 0 ? explHeaderRow + 1 : priorDataStart + 6; r <= Math.min(rows.length, rows.length); r++) {
+      const val = cell(rows, r, 0).toUpperCase();
+      if (val.includes('CORRECTIVE ACTION') || val.includes('TOP AREAS')) { areasHeaderRow = r; break; }
+    }
+
+    const { topAreas, topAreaLocations } = parseTopAreas(rows, areasHeaderRow, areasHeaderRow > 0 ? areasHeaderRow + 1 : rows.length);
+
+    return {
+      auditsByQuarter: auditsByQuarter.length ? auditsByQuarter : [{ location: '', q1: '', q2: '', q3: '', q4: '', annual: '' }],
+      actionsByQuarter: actionsByQuarter.length ? actionsByQuarter : [{ location: '', q1: '', q2: '', q3: '', q4: '', annual: '' }],
+      priorComparison: priorComparison.length ? priorComparison : [{ location: '', priorAudits: '', priorActions: '' }],
+      auditExplanation,
+      actionExplanation,
+      locationExplanations,
+      topAreas: topAreas.length ? topAreas : [{ area: '', count: '', values: [] }],
+      topAreaLocations,
+      // Legacy fields — normalize for backward compat with PPTX/agent that use old shape
+      locationNames: auditsByQuarter.map(r => r.location).filter(Boolean),
+      priorAudits: priorComparison.map(r => r.priorAudits),
+      priorActions: priorComparison.map(r => r.priorActions),
+      currentAudits: auditsByQuarter.map(r => {
+        const vals = [Number(r.q1)||0, Number(r.q2)||0, Number(r.q3)||0, Number(r.q4)||0];
+        return String(vals.reduce((a, b) => a + b, 0));
+      }),
+      currentActions: actionsByQuarter.map(r => {
+        const vals = [Number(r.q1)||0, Number(r.q2)||0, Number(r.q3)||0, Number(r.q4)||0];
+        return String(vals.reduce((a, b) => a + b, 0));
+      }),
+    };
+  }
+
+  // ── V1/V2 Layout (backward compat) — normalize into new shape ──
   // Read location names from header row 4, filter out "Total" and "Metric"
   const locationNames = [];
   for (let c = 1; c <= 4; c++) {
@@ -452,14 +585,12 @@ function parseAudits(wb, warnings) {
 
   let priorAudits, priorActions, currentAudits, currentActions, explanationStartRow;
   if (hasPriorRows) {
-    // v2: rows 5-6 = prior, rows 7-8 = current, rows 10-11 = explanations
     priorAudits = locationNames.map((_, i) => cell(rows, 5, 1 + i));
     priorActions = locationNames.map((_, i) => cell(rows, 6, 1 + i));
     currentAudits = locationNames.map((_, i) => cell(rows, 7, 1 + i));
     currentActions = locationNames.map((_, i) => cell(rows, 8, 1 + i));
     explanationStartRow = 10;
   } else {
-    // v1: rows 5-6 = current only, rows 8-9 = explanations
     priorAudits = [];
     priorActions = [];
     currentAudits = locationNames.map((_, i) => cell(rows, 5, 1 + i));
@@ -477,9 +608,41 @@ function parseAudits(wb, warnings) {
     if (val.includes('CORRECTIVE ACTION') || val.includes('TOP AREAS')) { areasHeaderRow = r; break; }
   }
 
+  const { topAreas, topAreaLocations } = parseTopAreas(rows, areasHeaderRow, areasHeaderRow > 0 ? areasHeaderRow + 1 : explanationStartRow + 3);
+
+  // Build normalized v3 shape from old data
+  const auditsByQuarter = locationNames.map((loc, i) => ({
+    location: loc, q1: '', q2: '', q3: '', q4: currentAudits[i] || '', annual: currentAudits[i] || '',
+  }));
+  const actionsByQuarter = locationNames.map((loc, i) => ({
+    location: loc, q1: '', q2: '', q3: '', q4: currentActions[i] || '', annual: currentActions[i] || '',
+  }));
+  const priorComparison = locationNames.map((loc, i) => ({
+    location: loc, priorAudits: priorAudits[i] || '', priorActions: priorActions[i] || '',
+  }));
+
+  return {
+    auditsByQuarter,
+    actionsByQuarter,
+    priorComparison,
+    auditExplanation,
+    actionExplanation,
+    locationExplanations: [],
+    topAreas: topAreas.length ? topAreas : [{ area: '', count: '', values: [] }],
+    topAreaLocations,
+    // Legacy fields preserved
+    locationNames,
+    priorAudits,
+    priorActions,
+    currentAudits,
+    currentActions,
+  };
+}
+
+/** Shared helper to parse Top Corrective Action Areas */
+function parseTopAreas(rows, areasHeaderRow, searchStart) {
   // Find the table header row for areas (contains "Area" in col A)
   let areasTableHeaderRow = -1;
-  const searchStart = areasHeaderRow > 0 ? areasHeaderRow + 1 : explanationStartRow + 3;
   for (let r = searchStart; r <= Math.min(rows.length, searchStart + 5); r++) {
     if (cell(rows, r, 0).toLowerCase().trim() === 'area') { areasTableHeaderRow = r; break; }
   }
@@ -502,8 +665,8 @@ function parseAudits(wb, warnings) {
     for (let c = 1; c <= Math.max(areaLocationNames.length, 1); c++) {
       if (cell(rows, r, c)) { hasValues = true; break; }
     }
-    if (!areaName && !hasValues) break; // stop at first fully empty row
-    if (!hasValues) continue; // skip label-only rows
+    if (!areaName && !hasValues) break;
+    if (!hasValues) continue;
 
     if (areaLocationNames.length > 1) {
       const values = areaLocationNames.map((_, ci) => cell(rows, r, 1 + ci));
@@ -514,18 +677,7 @@ function parseAudits(wb, warnings) {
   }
 
   const topAreaLocations = areaLocationNames.length > 1 ? areaLocationNames : [];
-
-  return {
-    locationNames,
-    priorAudits,
-    priorActions,
-    currentAudits,
-    currentActions,
-    auditExplanation,
-    actionExplanation,
-    topAreas: topAreas.length ? topAreas : [{ area: '', count: '', values: [] }],
-    topAreaLocations,
-  };
+  return { topAreas, topAreaLocations };
 }
 
 function parseExecutive(wb, warnings) {
@@ -547,8 +699,20 @@ function parseProjects(wb, warnings) {
   const rows = findSheet(wb, 'Projects & Satisfaction');
   if (!rows) { warnings.push('Sheet "Projects & Satisfaction" not found — skipping projects section'); return {}; }
 
-  const completed = rowObjects(rows, 5, 13, [0, 1], ['category', 'description'])
-    .filter((r) => r.description && !isPlaceholder(r.description) && !isPlaceholder(r.category));
+  // Detect new 4-col format: check if row 4 col 0 header = "Location"
+  const firstColHeader = cell(rows, 4, 0).toLowerCase().trim();
+  const hasLocationFormat = firstColHeader === 'location' || firstColHeader.includes('location');
+
+  let completed;
+  if (hasLocationFormat) {
+    completed = rowObjects(rows, 5, 13, [0, 1, 2, 3], ['location', 'category', 'description', 'benefit'])
+      .filter((r) => r.description && !isPlaceholder(r.description) && !isPlaceholder(r.category));
+  } else {
+    completed = rowObjects(rows, 5, 13, [0, 1], ['category', 'description'])
+      .filter((r) => r.description && !isPlaceholder(r.description) && !isPlaceholder(r.category));
+    // Normalize: add empty location/benefit
+    completed = completed.map(r => ({ location: '', ...r, benefit: '' }));
+  }
 
   // Rows 17-25 are photo references — warn user to upload separately
   let hasPhotoRefs = false;
@@ -563,7 +727,7 @@ function parseProjects(wb, warnings) {
   );
 
   return {
-    completed: completed.length ? completed : [{ category: 'Renovation/Deep Clean', description: '' }],
+    completed: completed.length ? completed : [{ location: '', category: 'Renovation/Deep Clean', description: '', benefit: '' }],
     photos: [],
     testimonials: testimonials.length ? testimonials : [{ location: '', event: '', quote: '', attribution: '' }],
   };
@@ -573,20 +737,49 @@ function parseChallenges(wb, warnings) {
   const rows = findSheet(wb, 'Challenges & Actions');
   if (!rows) { warnings.push('Sheet "Challenges & Actions" not found — skipping challenges section'); return {}; }
 
-  const items = filterPlaceholders(
-    rowObjects(rows, 5, 11, [0, 1, 2], ['location', 'challenge', 'action']),
-    ['location', 'challenge', 'action']
-  );
-  const priorFollowUp = filterPlaceholders(
-    rowObjects(rows, 15, 18, [0, 1, 2], ['action', 'status', 'notes']),
-    ['action', 'status', 'notes']
-  );
+  // Detect extended items format: check if col 3 (0-indexed) has a header-like value in row 4
+  const col3Header = cell(rows, 4, 3).toLowerCase();
+  const hasStatusQuarter = col3Header.includes('status') || col3Header.includes('quarter') || cell(rows, 4, 4);
+
+  let items;
+  if (hasStatusQuarter) {
+    items = filterPlaceholders(
+      rowObjects(rows, 5, 11, [0, 1, 2, 3, 4], ['location', 'challenge', 'action', 'status', 'quarter']),
+      ['location', 'challenge', 'action']
+    );
+  } else {
+    items = filterPlaceholders(
+      rowObjects(rows, 5, 11, [0, 1, 2], ['location', 'challenge', 'action']),
+      ['location', 'challenge', 'action']
+    );
+    // Normalize: add empty status/quarter
+    items = items.map(r => ({ ...r, status: '', quarter: '' }));
+  }
+
+  // Detect 4-col priorFollowUp format: check header row 14 for "Location" in col 0
+  const priorHeader = cell(rows, 14, 0).toLowerCase();
+  const hasPriorLocation = priorHeader.includes('location');
+
+  let priorFollowUp;
+  if (hasPriorLocation) {
+    priorFollowUp = filterPlaceholders(
+      rowObjects(rows, 15, 18, [0, 1, 2, 3], ['location', 'action', 'status', 'notes']),
+      ['action', 'status', 'notes']
+    );
+  } else {
+    priorFollowUp = filterPlaceholders(
+      rowObjects(rows, 15, 18, [0, 1, 2], ['action', 'status', 'notes']),
+      ['action', 'status', 'notes']
+    );
+    // Normalize: add empty location
+    priorFollowUp = priorFollowUp.map(r => ({ location: '', ...r }));
+  }
 
   return {
-    items: items.length ? items : [{ location: '', challenge: '', action: '' }],
+    items: items.length ? items : [{ location: '', challenge: '', action: '', status: '', quarter: '' }],
     priorFollowUp: priorFollowUp.length
       ? priorFollowUp.map((r) => ({ ...r, status: r.status || 'In Progress' }))
-      : [{ action: '', status: 'In Progress', notes: '' }],
+      : [{ location: '', action: '', status: 'In Progress', notes: '' }],
   };
 }
 

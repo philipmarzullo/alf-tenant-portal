@@ -295,7 +295,9 @@ function DocumentCard({ doc, index, onRemove, onLabelChange }) {
 
 const INITIAL = {
   cover: {
-    clientName: '', reviewType: 'quarterly', quarter: 'Q1 2026', date: '', jobName: '', jobNumber: '', regionVP: '',
+    clientName: '', reviewType: 'quarterly', quarter: 'Q1 2026', date: '',
+    jobs: [{ jobName: '', jobNumber: '' }],
+    jobName: '', jobNumber: '', regionVP: '',
     aaTeam: [{ name: '', title: '' }],
     clientTeam: [{ name: '', title: '' }],
   },
@@ -315,19 +317,24 @@ const INITIAL = {
     eventsSupported: '',
   },
   audits: {
-    locationNames: ['', '', ''],
-    priorAudits: ['', '', ''],
-    priorActions: ['', '', ''],
-    currentAudits: ['', '', ''],
-    currentActions: ['', '', ''],
+    auditsByQuarter: [{ location: '', q1: '', q2: '', q3: '', q4: '', annual: '' }],
+    actionsByQuarter: [{ location: '', q1: '', q2: '', q3: '', q4: '', annual: '' }],
+    priorComparison: [{ location: '', priorAudits: '', priorActions: '' }],
     auditExplanation: '',
     actionExplanation: '',
+    locationExplanations: [],
     topAreas: [
       { area: 'Restrooms', count: '', values: [] }, { area: 'Common Areas', count: '', values: [] },
       { area: 'Classrooms', count: '', values: [] }, { area: 'Cafeteria', count: '', values: [] },
       { area: 'Stairwells', count: '', values: [] }, { area: 'Other', count: '', values: [] },
     ],
     topAreaLocations: [],
+    // Legacy fields for PPTX backward compat
+    locationNames: [],
+    priorAudits: [],
+    priorActions: [],
+    currentAudits: [],
+    currentActions: [],
   },
   executive: {
     achievements: ['', '', ''],
@@ -335,13 +342,13 @@ const INITIAL = {
     innovations: ['', ''],
   },
   projects: {
-    completed: [{ category: 'Renovation/Deep Clean', description: '' }],
+    completed: [{ location: '', category: 'Renovation/Deep Clean', description: '', benefit: '' }],
     photos: [],
     testimonials: [{ location: '', event: '', quote: '', attribution: '' }],
   },
   challenges: {
-    items: [{ location: '', challenge: '', action: '' }],
-    priorFollowUp: [{ action: '', status: 'In Progress', notes: '' }],
+    items: [{ location: '', challenge: '', action: '', status: '', quarter: '' }],
+    priorFollowUp: [{ location: '', action: '', status: 'In Progress', notes: '' }],
   },
   financial: {
     asOfDate: '', totalOutstanding: '',
@@ -352,9 +359,9 @@ const INITIAL = {
     highlights: [{ innovation: '', description: '', benefit: '' }],
     photos: [],
     schedule: [
-      { month: 'Month 1', initiative: '', details: '' },
-      { month: 'Month 2', initiative: '', details: '' },
-      { month: 'Month 3', initiative: '', details: '' },
+      { month: '', initiative: '', details: '' },
+      { month: '', initiative: '', details: '' },
+      { month: '', initiative: '', details: '' },
     ],
     goalStatement: '',
   },
@@ -590,7 +597,6 @@ export default function QBUBuilder() {
           <SectionHeading>Cover Slide</SectionHeading>
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Client Name</Label><Input value={form.cover.clientName} onChange={(v) => updateSection('cover', { clientName: v })} placeholder="e.g., Greenfield University" /></div>
-            <div><Label>Job Name</Label><Input value={form.cover.jobName} onChange={(v) => updateSection('cover', { jobName: v })} placeholder="e.g., Main Campus" /></div>
             <div><Label>Review Type</Label>
               <select value={form.cover.reviewType || 'quarterly'} onChange={(e) => {
                 const rt = e.target.value;
@@ -614,8 +620,33 @@ export default function QBUBuilder() {
               </select>
             </div>
             <div><Label>Date</Label><Input value={form.cover.date} onChange={(v) => updateSection('cover', { date: v })} placeholder="e.g., March 2026" /></div>
-            <div><Label>Job Number</Label><Input value={form.cover.jobNumber} onChange={(v) => updateSection('cover', { jobNumber: v })} placeholder="e.g., J-2045" /></div>
             <div><Label>Region VP</Label><Input value={form.cover.regionVP} onChange={(v) => updateSection('cover', { regionVP: v })} placeholder="e.g., Emily Walsh" /></div>
+          </div>
+
+          <SectionHeading description="Some accounts span multiple job numbers.">Jobs</SectionHeading>
+          <div className="space-y-2">
+            {(form.cover.jobs || [{ jobName: form.cover.jobName || '', jobNumber: form.cover.jobNumber || '' }]).map((job, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input value={job.jobName} onChange={(v) => {
+                  const jobs = [...(form.cover.jobs || [{ jobName: form.cover.jobName || '', jobNumber: form.cover.jobNumber || '' }])];
+                  jobs[i] = { ...jobs[i], jobName: v };
+                  updateSection('cover', { jobs, jobName: jobs[0].jobName, jobNumber: jobs[0].jobNumber });
+                }} placeholder="Job Name" className="flex-1" />
+                <Input value={job.jobNumber} onChange={(v) => {
+                  const jobs = [...(form.cover.jobs || [{ jobName: form.cover.jobName || '', jobNumber: form.cover.jobNumber || '' }])];
+                  jobs[i] = { ...jobs[i], jobNumber: v };
+                  updateSection('cover', { jobs, jobName: jobs[0].jobName, jobNumber: jobs[0].jobNumber });
+                }} placeholder="Job Number" className="w-40" />
+                {(form.cover.jobs || []).length > 1 && <RemoveBtn onClick={() => {
+                  const jobs = (form.cover.jobs || []).filter((_, j) => j !== i);
+                  updateSection('cover', { jobs, jobName: jobs[0]?.jobName || '', jobNumber: jobs[0]?.jobNumber || '' });
+                }} />}
+              </div>
+            ))}
+            <AddRowBtn onClick={() => {
+              const jobs = [...(form.cover.jobs || [{ jobName: form.cover.jobName || '', jobNumber: form.cover.jobNumber || '' }]), { jobName: '', jobNumber: '' }];
+              updateSection('cover', { jobs });
+            }} label="Add job" />
           </div>
 
           <SectionHeading>Company Team Attendees</SectionHeading>
@@ -744,41 +775,90 @@ export default function QBUBuilder() {
       // ── AUDITS & ACTIONS ──
       case 'audits': return (
         <div className="space-y-6">
-          <SectionHeading description="Enter audit and corrective action counts by location for current and prior period.">Audits & Corrective Actions</SectionHeading>
-          <div>
-            <div className="grid grid-cols-[140px_1fr_1fr_1fr_80px] gap-2 text-[11px] font-semibold text-secondary-text uppercase mb-2">
-              <span>Metric</span>
-              {form.audits.locationNames.map((_, i) => (
-                <Input key={i} value={form.audits.locationNames[i]} onChange={(v) => {
-                  const names = [...form.audits.locationNames]; names[i] = v;
-                  updateSection('audits', { locationNames: names });
-                }} placeholder={`Location ${i + 1}`} />
-              ))}
-              <span className="self-center text-center">Total</span>
+          <SectionHeading description="Audit counts by location and quarter.">Audit Counts by Quarter</SectionHeading>
+          <div className="space-y-2">
+            <div className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 text-[11px] font-semibold text-secondary-text uppercase">
+              <span>Location</span><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span><span>Annual</span><span className="w-7" />
             </div>
-            {[
-              { label: 'Prior Qtr Audits', field: 'priorAudits' },
-              { label: 'Prior Qtr Actions', field: 'priorActions' },
-              { label: 'Current Qtr Audits', field: 'currentAudits' },
-              { label: 'Current Qtr Actions', field: 'currentActions' },
-            ].map(({ label, field }) => (
-              <div key={field} className="grid grid-cols-[140px_1fr_1fr_1fr_80px] gap-2 mb-2 items-center">
-                <span className="text-xs text-dark-text font-medium">{label}</span>
-                {form.audits[field].map((val, i) => (
-                  <Input key={i} value={val} onChange={(v) => {
-                    const arr = [...form.audits[field]]; arr[i] = v;
-                    updateSection('audits', { [field]: arr });
-                  }} placeholder="0" type="number" />
-                ))}
+            {form.audits.auditsByQuarter.map((row, i) => (
+              <div key={i} className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 items-center">
+                <Input value={row.location} onChange={(v) => updateArrayRow('audits', 'auditsByQuarter', i, { location: v })} placeholder="Location" />
+                <Input value={row.q1} onChange={(v) => updateArrayRow('audits', 'auditsByQuarter', i, { q1: v })} placeholder="0" />
+                <Input value={row.q2} onChange={(v) => updateArrayRow('audits', 'auditsByQuarter', i, { q2: v })} placeholder="0" />
+                <Input value={row.q3} onChange={(v) => updateArrayRow('audits', 'auditsByQuarter', i, { q3: v })} placeholder="0" />
+                <Input value={row.q4} onChange={(v) => updateArrayRow('audits', 'auditsByQuarter', i, { q4: v })} placeholder="0" />
                 <div className="text-sm font-medium text-center text-dark-text">
-                  {form.audits[field].reduce((s, v) => s + (Number(v) || 0), 0)}
+                  {(Number(row.q1)||0) + (Number(row.q2)||0) + (Number(row.q3)||0) + (Number(row.q4)||0) || row.annual || ''}
                 </div>
+                {form.audits.auditsByQuarter.length > 1 ? <RemoveBtn onClick={() => removeArrayRow('audits', 'auditsByQuarter', i)} /> : <div className="w-7" />}
               </div>
             ))}
+            <AddRowBtn onClick={() => addArrayRow('audits', 'auditsByQuarter', { location: '', q1: '', q2: '', q3: '', q4: '', annual: '' })} label="Add location" />
+          </div>
+
+          <SectionHeading description="Corrective action counts by location and quarter.">Corrective Action Counts by Quarter</SectionHeading>
+          <div className="space-y-2">
+            <div className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 text-[11px] font-semibold text-secondary-text uppercase">
+              <span>Location</span><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span><span>Annual</span><span className="w-7" />
+            </div>
+            {form.audits.actionsByQuarter.map((row, i) => (
+              <div key={i} className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 items-center">
+                <Input value={row.location} onChange={(v) => updateArrayRow('audits', 'actionsByQuarter', i, { location: v })} placeholder="Location" />
+                <Input value={row.q1} onChange={(v) => updateArrayRow('audits', 'actionsByQuarter', i, { q1: v })} placeholder="0" />
+                <Input value={row.q2} onChange={(v) => updateArrayRow('audits', 'actionsByQuarter', i, { q2: v })} placeholder="0" />
+                <Input value={row.q3} onChange={(v) => updateArrayRow('audits', 'actionsByQuarter', i, { q3: v })} placeholder="0" />
+                <Input value={row.q4} onChange={(v) => updateArrayRow('audits', 'actionsByQuarter', i, { q4: v })} placeholder="0" />
+                <div className="text-sm font-medium text-center text-dark-text">
+                  {(Number(row.q1)||0) + (Number(row.q2)||0) + (Number(row.q3)||0) + (Number(row.q4)||0) || row.annual || ''}
+                </div>
+                {form.audits.actionsByQuarter.length > 1 ? <RemoveBtn onClick={() => removeArrayRow('audits', 'actionsByQuarter', i)} /> : <div className="w-7" />}
+              </div>
+            ))}
+            <AddRowBtn onClick={() => addArrayRow('audits', 'actionsByQuarter', { location: '', q1: '', q2: '', q3: '', q4: '', annual: '' })} label="Add location" />
+          </div>
+
+          <SectionHeading description="Same period prior year for comparison.">Prior Year Comparison</SectionHeading>
+          <div className="space-y-2">
+            <div className="grid grid-cols-[1fr_100px_100px_auto] gap-2 text-[11px] font-semibold text-secondary-text uppercase">
+              <span>Location</span><span>Prior Audits</span><span>Prior Actions</span><span className="w-7" />
+            </div>
+            {form.audits.priorComparison.map((row, i) => (
+              <div key={i} className="grid grid-cols-[1fr_100px_100px_auto] gap-2 items-center">
+                <Input value={row.location} onChange={(v) => updateArrayRow('audits', 'priorComparison', i, { location: v })} placeholder="Location" />
+                <Input value={row.priorAudits} onChange={(v) => updateArrayRow('audits', 'priorComparison', i, { priorAudits: v })} placeholder="0" type="number" />
+                <Input value={row.priorActions} onChange={(v) => updateArrayRow('audits', 'priorComparison', i, { priorActions: v })} placeholder="0" type="number" />
+                {form.audits.priorComparison.length > 1 ? <RemoveBtn onClick={() => removeArrayRow('audits', 'priorComparison', i)} /> : <div className="w-7" />}
+              </div>
+            ))}
+            <AddRowBtn onClick={() => addArrayRow('audits', 'priorComparison', { location: '', priorAudits: '', priorActions: '' })} label="Add location" />
           </div>
 
           <div><Label>Audit Change Explanation</Label><Area value={form.audits.auditExplanation} onChange={(v) => updateSection('audits', { auditExplanation: v })} placeholder="Why did audit counts change?" rows={2} /></div>
           <div><Label>Action Change Explanation</Label><Area value={form.audits.actionExplanation} onChange={(v) => updateSection('audits', { actionExplanation: v })} placeholder="Why did corrective action counts change?" rows={2} /></div>
+
+          {/* Per-location explanations */}
+          {form.audits.locationExplanations?.length > 0 && (
+            <>
+              <SectionHeading description="Specific explanations for each location.">Per-Location Explanations</SectionHeading>
+              <div className="space-y-3">
+                {form.audits.locationExplanations.map((row, i) => (
+                  <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                    <span className="text-xs font-semibold text-secondary-text uppercase">{row.location}</span>
+                    <div><Label>Audit Explanation</Label><Area value={row.auditExplanation} onChange={(v) => {
+                      const arr = [...form.audits.locationExplanations];
+                      arr[i] = { ...arr[i], auditExplanation: v };
+                      updateSection('audits', { locationExplanations: arr });
+                    }} placeholder="Why did audits change at this location?" rows={2} /></div>
+                    <div><Label>Action Explanation</Label><Area value={row.actionExplanation} onChange={(v) => {
+                      const arr = [...form.audits.locationExplanations];
+                      arr[i] = { ...arr[i], actionExplanation: v };
+                      updateSection('audits', { locationExplanations: arr });
+                    }} placeholder="Why did actions change at this location?" rows={2} /></div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           <SectionHeading description={form.audits.topAreaLocations?.length > 1
             ? `Values per location. Use counts or percentages (e.g., 0.21 = 21%).`
@@ -871,23 +951,30 @@ export default function QBUBuilder() {
                   <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Project {i + 1}</span>
                   {form.projects.completed.length > 1 && <RemoveBtn onClick={() => removeArrayRow('projects', 'completed', i)} />}
                 </div>
-                <div>
-                  <Label>Category</Label>
-                  <select
-                    value={row.category}
-                    onChange={(e) => updateArrayRow('projects', 'completed', i, { category: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
-                  >
-                    {PROJECT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                  </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Location</Label><Input value={row.location || ''} onChange={(v) => updateArrayRow('projects', 'completed', i, { location: v })} placeholder="Building / campus" /></div>
+                  <div>
+                    <Label>Category</Label>
+                    <select
+                      value={row.category}
+                      onChange={(e) => updateArrayRow('projects', 'completed', i, { category: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white"
+                    >
+                      {PROJECT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <Label hint="Name buildings, describe scope">Description</Label>
                   <Area value={row.description} onChange={(v) => updateArrayRow('projects', 'completed', i, { description: v })} placeholder="What was done? Which building? Scope and outcome..." rows={2} />
                 </div>
+                <div>
+                  <Label>Operational Benefit</Label>
+                  <Area value={row.benefit || ''} onChange={(v) => updateArrayRow('projects', 'completed', i, { benefit: v })} placeholder="How this impacts operations, reduces cost, or improves quality..." rows={2} />
+                </div>
               </div>
             ))}
-            <AddRowBtn onClick={() => addArrayRow('projects', 'completed', { category: 'Renovation/Deep Clean', description: '' })} label="Add project" />
+            <AddRowBtn onClick={() => addArrayRow('projects', 'completed', { location: '', category: 'Renovation/Deep Clean', description: '', benefit: '' })} label="Add project" />
           </div>
 
           {/* Photo Upload */}
@@ -985,9 +1072,14 @@ export default function QBUBuilder() {
                   <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Challenge {i + 1}</span>
                   {form.challenges.items.length > 1 && <RemoveBtn onClick={() => removeArrayRow('challenges', 'items', i)} />}
                 </div>
-                <div>
-                  <Label>Location</Label>
-                  <Input value={row.location} onChange={(v) => updateArrayRow('challenges', 'items', i, { location: v })} placeholder="Building / area" />
+                <div className="grid grid-cols-3 gap-3">
+                  <div><Label>Location</Label><Input value={row.location} onChange={(v) => updateArrayRow('challenges', 'items', i, { location: v })} placeholder="Building / area" /></div>
+                  <div><Label>Status</Label>
+                    <select value={row.status || ''} onChange={(e) => updateArrayRow('challenges', 'items', i, { status: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue bg-white">
+                      <option value="">—</option><option>Open</option><option>In Progress</option><option>Resolved</option>
+                    </select>
+                  </div>
+                  <div><Label>Quarter</Label><Input value={row.quarter || ''} onChange={(v) => updateArrayRow('challenges', 'items', i, { quarter: v })} placeholder="e.g., Q1" /></div>
                 </div>
                 <div>
                   <Label>Challenge</Label>
@@ -999,7 +1091,7 @@ export default function QBUBuilder() {
                 </div>
               </div>
             ))}
-            <AddRowBtn onClick={() => addArrayRow('challenges', 'items', { location: '', challenge: '', action: '' })} label="Add challenge" />
+            <AddRowBtn onClick={() => addArrayRow('challenges', 'items', { location: '', challenge: '', action: '', status: '', quarter: '' })} label="Add challenge" />
           </div>
 
           <SectionHeading description="For actions committed in the prior period — report on delivery status.">Prior Period Action Follow-Up</SectionHeading>
@@ -1010,9 +1102,9 @@ export default function QBUBuilder() {
                   <span className="text-xs font-semibold text-secondary-text uppercase tracking-wider">Follow-up {i + 1}</span>
                   {form.challenges.priorFollowUp.length > 1 && <RemoveBtn onClick={() => removeArrayRow('challenges', 'priorFollowUp', i)} />}
                 </div>
-                <div>
-                  <Label>Action</Label>
-                  <Input value={row.action} onChange={(v) => updateArrayRow('challenges', 'priorFollowUp', i, { action: v })} placeholder="Action item from prior period" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Location</Label><Input value={row.location || ''} onChange={(v) => updateArrayRow('challenges', 'priorFollowUp', i, { location: v })} placeholder="Building / area" /></div>
+                  <div><Label>Action</Label><Input value={row.action} onChange={(v) => updateArrayRow('challenges', 'priorFollowUp', i, { action: v })} placeholder="Action item from prior period" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1032,7 +1124,7 @@ export default function QBUBuilder() {
                 </div>
               </div>
             ))}
-            <AddRowBtn onClick={() => addArrayRow('challenges', 'priorFollowUp', { action: '', status: 'In Progress', notes: '' })} label="Add follow-up" />
+            <AddRowBtn onClick={() => addArrayRow('challenges', 'priorFollowUp', { location: '', action: '', status: 'In Progress', notes: '' })} label="Add follow-up" />
           </div>
         </div>
       );
@@ -1155,11 +1247,13 @@ export default function QBUBuilder() {
           <div className="space-y-2">
             {form.roadmap.schedule.map((row, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-xs text-secondary-text w-16 shrink-0 font-medium">{row.month}</span>
+                <Input value={row.month} onChange={(v) => updateArrayRow('roadmap', 'schedule', i, { month: v })} placeholder="Location / Timeline" className="w-36 shrink-0" />
                 <Input value={row.initiative} onChange={(v) => updateArrayRow('roadmap', 'schedule', i, { initiative: v })} placeholder="Initiative" className="flex-1" />
                 <Input value={row.details} onChange={(v) => updateArrayRow('roadmap', 'schedule', i, { details: v })} placeholder="Details" className="flex-1" />
+                {form.roadmap.schedule.length > 1 ? <RemoveBtn onClick={() => removeArrayRow('roadmap', 'schedule', i)} /> : <div className="w-7" />}
               </div>
             ))}
+            <AddRowBtn onClick={() => addArrayRow('roadmap', 'schedule', { month: '', initiative: '', details: '' })} label="Add initiative" />
           </div>
 
           <div><Label hint="One sentence summarizing the period's targets">Period Goal Statement</Label><Area value={form.roadmap.goalStatement} onChange={(v) => updateSection('roadmap', { goalStatement: v })} placeholder="e.g., 'Achieve 92% task completion, zero snow SLA misses, complete restroom renovation in Building C'" rows={2} /></div>

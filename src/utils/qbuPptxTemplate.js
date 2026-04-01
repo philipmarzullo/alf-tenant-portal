@@ -534,56 +534,109 @@ function addAuditsSlide(pptx, form, logoColor, narratives) {
   addSectionTitle(slide, 'Operational Audits and Corrective Actions');
 
   const a = form.audits;
-  // Only include columns that have a real location name (not placeholders like "Location 3")
-  const activeIndices = (a.locationNames || []).map((n, i) => n ? i : -1).filter((i) => i >= 0);
-  const names = activeIndices.map((i) => a.locationNames[i]);
-  // Filter out placeholder names that have no data in any row
-  const realIndices = activeIndices.filter((i) => {
-    const hasAnyData = (Number(a.priorAudits[i]) || 0) + (Number(a.priorActions[i]) || 0)
-      + (Number(a.currentAudits[i]) || 0) + (Number(a.currentActions[i]) || 0);
-    return hasAnyData > 0 || !/^Location\s*\d+$/i.test(a.locationNames[i]);
-  });
-  const realNames = realIndices.map((i) => a.locationNames[i]);
+  let contentY = 1.15;
 
-  let tableRowCount = 1; // header
-  if (realNames.length) {
-    const sumActive = (arr) => String(realIndices.reduce((s, i) => s + (Number(arr[i]) || 0), 0));
-    const headerRow = ['', ...realNames, 'Total'];
-    const hasPriorData = realIndices.some(i => Number(a.priorAudits[i]) > 0 || Number(a.priorActions[i]) > 0);
-    const rows = [
-      headerRow,
-      ...(hasPriorData ? [
-        ['Prior Year Audits', ...realIndices.map((i) => String(a.priorAudits[i] || '')), sumActive(a.priorAudits)],
-        ['Prior Year Actions', ...realIndices.map((i) => String(a.priorActions[i] || '')), sumActive(a.priorActions)],
-      ] : []),
-      ['Current Year Audits', ...realIndices.map((i) => String(a.currentAudits[i] || '')), sumActive(a.currentAudits)],
-      ['Current Year Actions', ...realIndices.map((i) => String(a.currentActions[i] || '')), sumActive(a.currentActions)],
-    ];
-    tableRowCount = rows.length;
-    addBrandedTable(slide, rows, { y: 1.15 });
+  // ── New quarterly format (auditsByQuarter present with data) ──
+  const auditsByQ = (a.auditsByQuarter || []).filter(r => r.location);
+  const actionsByQ = (a.actionsByQuarter || []).filter(r => r.location);
+  const priorComp = (a.priorComparison || []).filter(r => r.location && (r.priorAudits || r.priorActions));
+
+  if (auditsByQ.length) {
+    // Audit counts table
+    slide.addText('AUDIT COUNTS BY QUARTER', {
+      x: MARGIN, y: contentY, w: CONTENT_W, h: 0.25,
+      fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
+    });
+    contentY += 0.25;
+    const auditHeader = ['Location', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual'];
+    const auditRows = auditsByQ.map(r => {
+      const vals = [Number(r.q1)||0, Number(r.q2)||0, Number(r.q3)||0, Number(r.q4)||0];
+      const annual = r.annual ? String(r.annual) : String(vals.reduce((a, b) => a + b, 0));
+      return [r.location, ...vals.map(String), annual];
+    });
+    addBrandedTable(slide, [auditHeader, ...auditRows], { y: contentY, w: CONTENT_W });
+    contentY += (auditRows.length + 1) * 0.35 + 0.15;
+
+    // Action counts table
+    if (actionsByQ.length && contentY + 0.6 < LOGO_SAFE_Y) {
+      slide.addText('CORRECTIVE ACTION COUNTS BY QUARTER', {
+        x: MARGIN, y: contentY, w: CONTENT_W, h: 0.25,
+        fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
+      });
+      contentY += 0.25;
+      const actionHeader = ['Location', 'Q1', 'Q2', 'Q3', 'Q4', 'Annual'];
+      const actionRows = actionsByQ.map(r => {
+        const vals = [Number(r.q1)||0, Number(r.q2)||0, Number(r.q3)||0, Number(r.q4)||0];
+        const annual = r.annual ? String(r.annual) : String(vals.reduce((a, b) => a + b, 0));
+        return [r.location, ...vals.map(String), annual];
+      });
+      addBrandedTable(slide, [actionHeader, ...actionRows], { y: contentY, w: CONTENT_W });
+      contentY += (actionRows.length + 1) * 0.35 + 0.15;
+    }
+
+    // Prior year comparison (compact)
+    if (priorComp.length && contentY + 0.6 < LOGO_SAFE_Y) {
+      slide.addText('PRIOR YEAR COMPARISON', {
+        x: MARGIN, y: contentY, w: CONTENT_W, h: 0.25,
+        fontSize: 9, fontFace: FONT, color: MED_GREY, bold: true,
+      });
+      contentY += 0.25;
+      const priorHeader = ['Location', 'Prior Audits', 'Prior Actions'];
+      const priorRows = priorComp.map(r => [r.location, String(r.priorAudits || ''), String(r.priorActions || '')]);
+      addBrandedTable(slide, [priorHeader, ...priorRows], { y: contentY, w: CONTENT_W * 0.6 });
+      contentY += (priorRows.length + 1) * 0.35 + 0.15;
+    }
+  } else {
+    // ── Legacy format (locationNames + priorAudits/currentAudits arrays) ──
+    const activeIndices = (a.locationNames || []).map((n, i) => n ? i : -1).filter((i) => i >= 0);
+    const realIndices = activeIndices.filter((i) => {
+      const hasAnyData = (Number(a.priorAudits?.[i]) || 0) + (Number(a.priorActions?.[i]) || 0)
+        + (Number(a.currentAudits?.[i]) || 0) + (Number(a.currentActions?.[i]) || 0);
+      return hasAnyData > 0 || !/^Location\s*\d+$/i.test(a.locationNames[i]);
+    });
+    const realNames = realIndices.map((i) => a.locationNames[i]);
+
+    if (realNames.length) {
+      const sumActive = (arr) => String(realIndices.reduce((s, i) => s + (Number(arr?.[i]) || 0), 0));
+      const headerRow = ['', ...realNames, 'Total'];
+      const hasPriorData = realIndices.some(i => Number(a.priorAudits?.[i]) > 0 || Number(a.priorActions?.[i]) > 0);
+      const rows = [
+        headerRow,
+        ...(hasPriorData ? [
+          ['Prior Year Audits', ...realIndices.map((i) => String(a.priorAudits[i] || '')), sumActive(a.priorAudits)],
+          ['Prior Year Actions', ...realIndices.map((i) => String(a.priorActions[i] || '')), sumActive(a.priorActions)],
+        ] : []),
+        ['Current Year Audits', ...realIndices.map((i) => String(a.currentAudits[i] || '')), sumActive(a.currentAudits)],
+        ['Current Year Actions', ...realIndices.map((i) => String(a.currentActions[i] || '')), sumActive(a.currentActions)],
+      ];
+      addBrandedTable(slide, rows, { y: contentY });
+      contentY += (rows.length + 1) * 0.35 + 0.3;
+    }
   }
 
-  // Audit & Action Analysis card below table
-  // Always prefer agent analysis — it synthesizes the raw explanation text into a narrative
+  // Audit & Action Analysis card below tables
   const agentAnalysis = getNarrativeText(narratives, 'C2:ANALYSIS');
   const formExplanation = [a.auditExplanation, a.actionExplanation].filter(Boolean).join('\n\n');
-  const analysisText = agentAnalysis || formExplanation;
-  const cardY = 1.15 + (tableRowCount + 1) * 0.35 + 0.3;
+  // Include per-location explanations if present
+  const locExpl = (a.locationExplanations || []).filter(l => l.auditExplanation || l.actionExplanation);
+  const locExplText = locExpl.map(l => `${l.location}: ${[l.auditExplanation, l.actionExplanation].filter(Boolean).join('. ')}`).join('\n');
+  const analysisText = agentAnalysis || [formExplanation, locExplText].filter(Boolean).join('\n\n');
 
-  if (analysisText) {
-    const cardH = SLIDE_H - cardY - 0.55;
-    addCard(slide, { x: MARGIN, y: cardY, w: CONTENT_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
-    slide.addText('AUDIT & ACTION ANALYSIS', {
-      x: MARGIN + 0.2, y: cardY + 0.1, w: CONTENT_W - 0.4, h: 0.25,
-      fontSize: 11, fontFace: FONT, color: DARK, bold: true,
-    });
-    // Auto-scale font to fill available card space
-    const textLen = analysisText.length;
-    const fontSize = textLen > 600 ? 8 : textLen > 400 ? 9 : textLen > 250 ? 10 : 11;
-    slide.addText(analysisText, {
-      x: MARGIN + 0.2, y: cardY + 0.4, w: CONTENT_W - 0.4, h: cardH - 0.55,
-      fontSize, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
-    });
+  if (analysisText && contentY + 0.5 < SLIDE_H) {
+    const cardH = SLIDE_H - contentY - 0.55;
+    if (cardH > 0.4) {
+      addCard(slide, { x: MARGIN, y: contentY, w: CONTENT_W, h: cardH, borderColor: AA_BLUE, borderSide: 'left' });
+      slide.addText('AUDIT & ACTION ANALYSIS', {
+        x: MARGIN + 0.2, y: contentY + 0.1, w: CONTENT_W - 0.4, h: 0.25,
+        fontSize: 11, fontFace: FONT, color: DARK, bold: true,
+      });
+      const textLen = analysisText.length;
+      const fontSize = textLen > 600 ? 8 : textLen > 400 ? 9 : textLen > 250 ? 10 : 11;
+      slide.addText(analysisText, {
+        x: MARGIN + 0.2, y: contentY + 0.4, w: CONTENT_W - 0.4, h: cardH - 0.55,
+        fontSize, fontFace: FONT, color: DARK, valign: 'top', lineSpacingMultiple: 1.3,
+      });
+    }
   }
 
   const notesC2 = getNarrativeText(narratives, 'NOTES:C2');
