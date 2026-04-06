@@ -307,7 +307,9 @@ const INITIAL = {
   safety: {
     theme: '', keyTips: '', quickReminders: '', whyItMatters: '',
     safetyInspections: '', goodSaveCount: '', recordableCount: '', safetyMetricsByLocation: [],
-    incidents: [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
+    inspectionsByQuarter: [{ location: '', q1: '', q2: '', q3: '', q4: '', annual: '' }],
+    incidents: [{ location: '', q1: '', q2: '', q3: '', q4: '', annual: '' }],
+    goodSavesByQuarter: [{ location: '', q1: '', q2: '', q3: '', q4: '', annual: '' }],
     goodSaves: [{ location: '', hazard: '', action: '', notified: '' }],
     incidentDetails: [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],
   },
@@ -325,8 +327,9 @@ const INITIAL = {
     locationExplanations: [],
     topAreas: [
       { area: 'Restrooms', count: '', values: [] }, { area: 'Common Areas', count: '', values: [] },
-      { area: 'Classrooms', count: '', values: [] }, { area: 'Cafeteria', count: '', values: [] },
-      { area: 'Stairwells', count: '', values: [] }, { area: 'Other', count: '', values: [] },
+      { area: 'Office Spaces', count: '', values: [] }, { area: 'Entrances/Lobby', count: '', values: [] },
+      { area: 'Cafeteria', count: '', values: [] }, { area: 'Hallways', count: '', values: [] },
+      { area: 'Suites', count: '', values: [] },
     ],
     topAreaLocations: [],
     // Legacy fields for PPTX backward compat
@@ -686,46 +689,49 @@ export default function QBUBuilder() {
             <div><Label>Why It Matters</Label><Area value={form.safety.whyItMatters} onChange={(v) => updateSection('safety', { whyItMatters: v })} placeholder="Why this theme matters..." rows={2} /></div>
           </div>
 
-          <SectionHeading description="Enter counts for each category. Leave blank to omit from the slide.">Safety Metrics</SectionHeading>
-          <div className="grid grid-cols-3 gap-4">
-            <div><Label>Safety Inspections</Label><Input value={form.safety.safetyInspections} onChange={(v) => updateSection('safety', { safetyInspections: v })} placeholder="Count" /></div>
-            <div><Label>Good Saves</Label><Input value={form.safety.goodSaveCount} onChange={(v) => updateSection('safety', { goodSaveCount: v })} placeholder="Count" /></div>
-            <div><Label>Recordables</Label><Input value={form.safety.recordableCount} onChange={(v) => updateSection('safety', { recordableCount: v })} placeholder="Count" /></div>
+          <SectionHeading description="Counts by location and quarter. Annual total auto-computes.">Safety Inspections by Quarter</SectionHeading>
+          <div className="space-y-2">
+            <div className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 text-[11px] font-semibold text-secondary-text uppercase">
+              <span>Location</span><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span><span>Annual</span><span className="w-7" />
+            </div>
+            {(form.safety.inspectionsByQuarter || []).map((row, i) => (
+              <div key={i} className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 items-center">
+                <Input value={row.location} onChange={(v) => updateArrayRow('safety', 'inspectionsByQuarter', i, { location: v })} placeholder="Building/area" />
+                <Input value={row.q1} onChange={(v) => updateArrayRow('safety', 'inspectionsByQuarter', i, { q1: v })} placeholder="0" />
+                <Input value={row.q2} onChange={(v) => updateArrayRow('safety', 'inspectionsByQuarter', i, { q2: v })} placeholder="0" />
+                <Input value={row.q3} onChange={(v) => updateArrayRow('safety', 'inspectionsByQuarter', i, { q3: v })} placeholder="0" />
+                <Input value={row.q4} onChange={(v) => updateArrayRow('safety', 'inspectionsByQuarter', i, { q4: v })} placeholder="0" />
+                <div className="text-sm font-medium text-center text-dark-text">
+                  {(Number(row.q1)||0) + (Number(row.q2)||0) + (Number(row.q3)||0) + (Number(row.q4)||0) || row.annual || ''}
+                </div>
+                {(form.safety.inspectionsByQuarter || []).length > 1 ? <RemoveBtn onClick={() => removeArrayRow('safety', 'inspectionsByQuarter', i)} /> : <div className="w-7" />}
+              </div>
+            ))}
+            <AddRowBtn onClick={() => addArrayRow('safety', 'inspectionsByQuarter', { location: '', q1: '', q2: '', q3: '', q4: '', annual: '' })} label="Add location" />
           </div>
 
           <SectionHeading description="Enter 0 if none. Add rows for additional locations.">Recordable Incidents by Quarter</SectionHeading>
           <div className="space-y-2">
-            <div className="grid grid-cols-[1fr_60px_60px_60px_60px_auto] gap-2 text-[11px] font-semibold text-secondary-text uppercase">
-              <span>Location</span><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span><span className="w-7" />
+            <div className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 text-[11px] font-semibold text-secondary-text uppercase">
+              <span>Location</span><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span><span>Annual</span><span className="w-7" />
             </div>
             {form.safety.incidents.map((row, i) => (
-              <div key={i} className="grid grid-cols-[1fr_60px_60px_60px_60px_auto] gap-2 items-center">
+              <div key={i} className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 items-center">
                 <Input value={row.location} onChange={(v) => updateArrayRow('safety', 'incidents', i, { location: v })} placeholder="Building/area" />
                 <Input value={row.q1} onChange={(v) => updateArrayRow('safety', 'incidents', i, { q1: v })} placeholder="0" />
                 <Input value={row.q2} onChange={(v) => updateArrayRow('safety', 'incidents', i, { q2: v })} placeholder="0" />
                 <Input value={row.q3} onChange={(v) => updateArrayRow('safety', 'incidents', i, { q3: v })} placeholder="0" />
                 <Input value={row.q4} onChange={(v) => updateArrayRow('safety', 'incidents', i, { q4: v })} placeholder="0" />
+                <div className="text-sm font-medium text-center text-dark-text">
+                  {(Number(row.q1)||0) + (Number(row.q2)||0) + (Number(row.q3)||0) + (Number(row.q4)||0) || row.annual || ''}
+                </div>
                 {form.safety.incidents.length > 1 ? <RemoveBtn onClick={() => removeArrayRow('safety', 'incidents', i)} /> : <div className="w-7" />}
               </div>
             ))}
-            <AddRowBtn onClick={() => addArrayRow('safety', 'incidents', { location: '', q1: '', q2: '', q3: '', q4: '' })} label="Add location" />
+            <AddRowBtn onClick={() => addArrayRow('safety', 'incidents', { location: '', q1: '', q2: '', q3: '', q4: '', annual: '' })} label="Add location" />
           </div>
 
-          <SectionHeading description="Hazards identified and prevented.">Good Saves</SectionHeading>
-          <div className="space-y-2">
-            {form.safety.goodSaves.map((row, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center">
-                <Input value={row.location} onChange={(v) => updateArrayRow('safety', 'goodSaves', i, { location: v })} placeholder="Location" />
-                <Input value={row.hazard} onChange={(v) => updateArrayRow('safety', 'goodSaves', i, { hazard: v })} placeholder="Hazard prevented" />
-                <Input value={row.action} onChange={(v) => updateArrayRow('safety', 'goodSaves', i, { action: v })} placeholder="Corrective action" />
-                <Input value={row.notified} onChange={(v) => updateArrayRow('safety', 'goodSaves', i, { notified: v })} placeholder="Who notified" />
-                {form.safety.goodSaves.length > 1 ? <RemoveBtn onClick={() => removeArrayRow('safety', 'goodSaves', i)} /> : <div className="w-7" />}
-              </div>
-            ))}
-            <AddRowBtn onClick={() => addArrayRow('safety', 'goodSaves', { location: '', hazard: '', action: '', notified: '' })} label="Add good save" />
-          </div>
-
-          <SectionHeading description="For each recordable: location, date, cause, treatment, return-to-work date.">Recordable Incident Details</SectionHeading>
+          <SectionHeading description="For each recordable: location, date, cause, treatment, return-to-work date.">Recordable Incident Details (Biannual)</SectionHeading>
           <div className="space-y-2">
             {form.safety.incidentDetails.map((row, i) => (
               <div key={i} className="grid grid-cols-[1fr_100px_1fr_1fr_100px_auto] gap-2 items-center">
@@ -739,6 +745,56 @@ export default function QBUBuilder() {
             ))}
             <AddRowBtn onClick={() => addArrayRow('safety', 'incidentDetails', { location: '', date: '', cause: '', treatment: '', returnDate: '' })} label="Add incident" />
           </div>
+
+          <SectionHeading description="Good save counts by location and quarter. Annual total auto-computes.">Good Saves by Quarter</SectionHeading>
+          <div className="space-y-2">
+            <div className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 text-[11px] font-semibold text-secondary-text uppercase">
+              <span>Location</span><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span><span>Annual</span><span className="w-7" />
+            </div>
+            {(form.safety.goodSavesByQuarter || []).map((row, i) => (
+              <div key={i} className="grid grid-cols-[1fr_60px_60px_60px_60px_70px_auto] gap-2 items-center">
+                <Input value={row.location} onChange={(v) => updateArrayRow('safety', 'goodSavesByQuarter', i, { location: v })} placeholder="Building/area" />
+                <Input value={row.q1} onChange={(v) => updateArrayRow('safety', 'goodSavesByQuarter', i, { q1: v })} placeholder="0" />
+                <Input value={row.q2} onChange={(v) => updateArrayRow('safety', 'goodSavesByQuarter', i, { q2: v })} placeholder="0" />
+                <Input value={row.q3} onChange={(v) => updateArrayRow('safety', 'goodSavesByQuarter', i, { q3: v })} placeholder="0" />
+                <Input value={row.q4} onChange={(v) => updateArrayRow('safety', 'goodSavesByQuarter', i, { q4: v })} placeholder="0" />
+                <div className="text-sm font-medium text-center text-dark-text">
+                  {(Number(row.q1)||0) + (Number(row.q2)||0) + (Number(row.q3)||0) + (Number(row.q4)||0) || row.annual || ''}
+                </div>
+                {(form.safety.goodSavesByQuarter || []).length > 1 ? <RemoveBtn onClick={() => removeArrayRow('safety', 'goodSavesByQuarter', i)} /> : <div className="w-7" />}
+              </div>
+            ))}
+            <AddRowBtn onClick={() => addArrayRow('safety', 'goodSavesByQuarter', { location: '', q1: '', q2: '', q3: '', q4: '', annual: '' })} label="Add location" />
+          </div>
+
+          <SectionHeading description="Hazards identified and prevented.">Good Save Details (Biannual)</SectionHeading>
+          <div className="space-y-2">
+            {form.safety.goodSaves.map((row, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center">
+                <Input value={row.location} onChange={(v) => updateArrayRow('safety', 'goodSaves', i, { location: v })} placeholder="Location" />
+                <Input value={row.hazard} onChange={(v) => updateArrayRow('safety', 'goodSaves', i, { hazard: v })} placeholder="Hazard prevented" />
+                <Input value={row.action} onChange={(v) => updateArrayRow('safety', 'goodSaves', i, { action: v })} placeholder="Corrective action" />
+                <Input value={row.notified} onChange={(v) => updateArrayRow('safety', 'goodSaves', i, { notified: v })} placeholder="Who notified" />
+                {form.safety.goodSaves.length > 1 ? <RemoveBtn onClick={() => removeArrayRow('safety', 'goodSaves', i)} /> : <div className="w-7" />}
+              </div>
+            ))}
+            <AddRowBtn onClick={() => addArrayRow('safety', 'goodSaves', { location: '', hazard: '', action: '', notified: '' })} label="Add good save" />
+          </div>
+
+          {/* Auto-computed safety summary — read-only */}
+          {(() => {
+            const inspTotal = (form.safety.inspectionsByQuarter || []).reduce((s, r) => s + (Number(r.q1)||0) + (Number(r.q2)||0) + (Number(r.q3)||0) + (Number(r.q4)||0), 0);
+            const recTotal = form.safety.incidents.reduce((s, r) => s + (Number(r.q1)||0) + (Number(r.q2)||0) + (Number(r.q3)||0) + (Number(r.q4)||0), 0);
+            const gsTotal = (form.safety.goodSavesByQuarter || []).reduce((s, r) => s + (Number(r.q1)||0) + (Number(r.q2)||0) + (Number(r.q3)||0) + (Number(r.q4)||0), 0);
+            if (!inspTotal && !recTotal && !gsTotal) return null;
+            return (
+              <div className="bg-gray-50 rounded-lg p-3 grid grid-cols-3 gap-4 text-center">
+                <div><div className="text-[11px] font-semibold text-secondary-text uppercase">Safety Inspections</div><div className="text-lg font-bold text-dark-text">{inspTotal || '—'}</div></div>
+                <div><div className="text-[11px] font-semibold text-secondary-text uppercase">Recordables</div><div className="text-lg font-bold text-dark-text">{recTotal || '—'}</div></div>
+                <div><div className="text-[11px] font-semibold text-secondary-text uppercase">Good Saves</div><div className="text-lg font-bold text-dark-text">{gsTotal || '—'}</div></div>
+              </div>
+            );
+          })()}
         </div>
       );
 
@@ -836,29 +892,38 @@ export default function QBUBuilder() {
           <div><Label>Audit Change Explanation</Label><Area value={form.audits.auditExplanation} onChange={(v) => updateSection('audits', { auditExplanation: v })} placeholder="Why did audit counts change?" rows={2} /></div>
           <div><Label>Action Change Explanation</Label><Area value={form.audits.actionExplanation} onChange={(v) => updateSection('audits', { actionExplanation: v })} placeholder="Why did corrective action counts change?" rows={2} /></div>
 
-          {/* Per-location explanations */}
-          {form.audits.locationExplanations?.length > 0 && (
-            <>
-              <SectionHeading description="Specific explanations for each location.">Per-Location Explanations</SectionHeading>
-              <div className="space-y-3">
-                {form.audits.locationExplanations.map((row, i) => (
-                  <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-2">
-                    <span className="text-xs font-semibold text-secondary-text uppercase">{row.location}</span>
-                    <div><Label>Audit Explanation</Label><Area value={row.auditExplanation} onChange={(v) => {
-                      const arr = [...form.audits.locationExplanations];
-                      arr[i] = { ...arr[i], auditExplanation: v };
+          {/* Per-location explanations — derived from auditsByQuarter locations */}
+          {(() => {
+            const locations = (form.audits.auditsByQuarter || []).map(r => r.location).filter(Boolean);
+            const explanations = form.audits.locationExplanations || [];
+            if (!locations.length) return (
+              <div className="text-xs text-secondary-text/60 italic">Enter locations in the audit table above to enable per-location explanations.</div>
+            );
+            return (
+              <>
+                <SectionHeading description="Specific explanations for each location.">Per-Location Explanations</SectionHeading>
+                <div className="space-y-3">
+                  {locations.map((loc) => {
+                    const existing = explanations.find(e => e.location === loc) || { location: loc, auditExplanation: '', actionExplanation: '' };
+                    const updateLocExplanation = (field, v) => {
+                      const arr = [...explanations];
+                      const idx = arr.findIndex(e => e.location === loc);
+                      if (idx >= 0) { arr[idx] = { ...arr[idx], [field]: v }; }
+                      else { arr.push({ location: loc, auditExplanation: '', actionExplanation: '', [field]: v }); }
                       updateSection('audits', { locationExplanations: arr });
-                    }} placeholder="Why did audits change at this location?" rows={2} /></div>
-                    <div><Label>Action Explanation</Label><Area value={row.actionExplanation} onChange={(v) => {
-                      const arr = [...form.audits.locationExplanations];
-                      arr[i] = { ...arr[i], actionExplanation: v };
-                      updateSection('audits', { locationExplanations: arr });
-                    }} placeholder="Why did actions change at this location?" rows={2} /></div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+                    };
+                    return (
+                      <div key={loc} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                        <span className="text-xs font-semibold text-secondary-text uppercase">{loc}</span>
+                        <div><Label>Audit Explanation</Label><Area value={existing.auditExplanation} onChange={(v) => updateLocExplanation('auditExplanation', v)} placeholder="Why did audits change at this location?" rows={2} /></div>
+                        <div><Label>Action Explanation</Label><Area value={existing.actionExplanation} onChange={(v) => updateLocExplanation('actionExplanation', v)} placeholder="Why did actions change at this location?" rows={2} /></div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
 
           <SectionHeading description={form.audits.topAreaLocations?.length > 1
             ? `Values per location. Use counts or percentages (e.g., 0.21 = 21%).`
@@ -1264,13 +1329,37 @@ export default function QBUBuilder() {
     }
   };
 
+  // ── Compute safety aggregates from quarterly tables ──
+
+  const withSafetyAggregates = (f) => {
+    const s = f.safety || {};
+    const rowAnnual = (r) => String((Number(r.q1)||0) + (Number(r.q2)||0) + (Number(r.q3)||0) + (Number(r.q4)||0));
+    const fillAnnual = (arr) => (arr || []).map(r => ({ ...r, annual: rowAnnual(r) }));
+    const sumQ = (arr) => (arr || []).reduce((t, r) => t + (Number(r.q1)||0) + (Number(r.q2)||0) + (Number(r.q3)||0) + (Number(r.q4)||0), 0);
+    const insp = sumQ(s.inspectionsByQuarter);
+    const rec = sumQ(s.incidents);
+    const gs = sumQ(s.goodSavesByQuarter);
+    return {
+      ...f,
+      safety: {
+        ...s,
+        inspectionsByQuarter: fillAnnual(s.inspectionsByQuarter),
+        incidents: fillAnnual(s.incidents),
+        goodSavesByQuarter: fillAnnual(s.goodSavesByQuarter),
+        safetyInspections: insp ? String(insp) : (s.safetyInspections || ''),
+        recordableCount: rec ? String(rec) : (s.recordableCount || ''),
+        goodSaveCount: gs ? String(gs) : (s.goodSaveCount || ''),
+      },
+    };
+  };
+
   // ── Generate ─────────────────────
 
   const handleGenerate = async () => {
     if (!form.cover.clientName) { toast('Please enter a client name on the Cover tab', 'error'); return; }
     setGenerating(true);
     try {
-      const output = await callAgent('qbu', 'generateQBU', form);
+      const output = await callAgent('qbu', 'generateQBU', withSafetyAggregates(form));
       setResult(output);
       setSlides(parseSlides(output));
       setShowResult(true);
@@ -1294,7 +1383,7 @@ export default function QBUBuilder() {
   const handleDownload = async () => {
     if (!result) { toast('Generate review first', 'error'); return; }
     toast('Building PowerPoint...');
-    const { deckPath } = await generateQBUPptx(form, result, brand, {
+    const { deckPath } = await generateQBUPptx(withSafetyAggregates(form), result, brand, {
       tenantId: getTenantId(),
       submissionId: currentEntryId,
     });
@@ -1340,7 +1429,7 @@ export default function QBUBuilder() {
 
     // Fallback: regenerate the PPTX (for old entries without stored deck)
     toast('Building PowerPoint...');
-    const { deckPath } = await generateQBUPptx(entry.formData, entry.agentOutput, brand, {
+    const { deckPath } = await generateQBUPptx(withSafetyAggregates(entry.formData), entry.agentOutput, brand, {
       tenantId: getTenantId(),
       submissionId: id,
     });

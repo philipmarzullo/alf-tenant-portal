@@ -155,8 +155,31 @@ function parseCover(wb, warnings) {
     }
   }
 
-  const aaTeam = filterTeam(rowObjects(rows, 11 + offset + extraJobRows, 25 + offset + extraJobRows, [0, 1], ['name', 'title']));
-  const clientTeam = filterTeam(rowObjects(rows, 27 + offset + extraJobRows, 40 + offset + extraJobRows, [0, 1], ['name', 'title']));
+  // Dynamic team header detection — search column A for "Company Team" / "A&A Team" and "Client Team"
+  const searchStart = 9 + offset + extraJobRows;
+  const searchEnd = Math.min(rows.length, searchStart + 35);
+  let aaTeamHeaderRow = -1;
+  let clientTeamHeaderRow = -1;
+  for (let r = searchStart; r <= searchEnd; r++) {
+    const label = cell(rows, r, 0).toLowerCase();
+    if (aaTeamHeaderRow < 0 && (label.includes('company team') || label.includes('a&a team'))) {
+      aaTeamHeaderRow = r;
+    }
+    if (clientTeamHeaderRow < 0 && label.includes('client team')) {
+      clientTeamHeaderRow = r;
+    }
+  }
+
+  let aaTeam, clientTeam;
+  if (aaTeamHeaderRow > 0 && clientTeamHeaderRow > 0) {
+    // Read up to 12 data rows below each header
+    aaTeam = filterTeam(rowObjects(rows, aaTeamHeaderRow + 1, aaTeamHeaderRow + 12, [0, 1], ['name', 'title']));
+    clientTeam = filterTeam(rowObjects(rows, clientTeamHeaderRow + 1, clientTeamHeaderRow + 12, [0, 1], ['name', 'title']));
+  } else {
+    // Fallback to fixed offsets for backward compat
+    aaTeam = filterTeam(rowObjects(rows, 11 + offset + extraJobRows, 25 + offset + extraJobRows, [0, 1], ['name', 'title']));
+    clientTeam = filterTeam(rowObjects(rows, 27 + offset + extraJobRows, 40 + offset + extraJobRows, [0, 1], ['name', 'title']));
+  }
 
   return {
     reviewType,
@@ -403,7 +426,7 @@ function parseSafety(wb, warnings) {
     safetyMetricsByLocation,
     inspectionsByQuarter: [],
     goodSavesByQuarter: [],
-    incidents: incidents.length ? incidents : [{ location: '', q1: '', q2: '', q3: '', q4: '' }],
+    incidents: incidents.length ? incidents : [{ location: '', q1: '', q2: '', q3: '', q4: '', annual: '' }],
     goodSaves: goodSaves.length ? goodSaves : [{ location: '', hazard: '', action: '', notified: '' }],
     incidentDetails: incidentDetails.length ? incidentDetails : [{ location: '', date: '', cause: '', treatment: '', returnDate: '' }],
   };

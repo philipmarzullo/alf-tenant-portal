@@ -27,7 +27,7 @@ function addCoverSlide(pptx, form, logoWhite, websiteUrl) {
 
 // ── Slide 2: Introductions ──────────────────────────────
 
-function addIntroductionsSlide(pptx, form, logoColor) {
+function addIntroductionsSlide(pptx, form, logoColor, branding) {
   const slide = pptx.addSlide();
   setContentBackground(slide);
   addSectionTitle(slide, 'Introductions');
@@ -54,7 +54,7 @@ function addIntroductionsSlide(pptx, form, logoColor) {
     x: x1, y: cardY + 0.2, w: COL2_W, h: 0.2,
     fill: { color: AA_BLUE },
   });
-  slide.addText('A&A TEAM', {
+  slide.addText((branding?.companyName || 'Company').toUpperCase() + ' TEAM', {
     x: x1, y: cardY, w: COL2_W, h: 0.4,
     fontSize: 11, fontFace: FONT, color: WHITE, bold: true, align: 'center', valign: 'middle',
   });
@@ -1715,7 +1715,7 @@ export async function generateQBUPptx(form, agentOutput, branding, { tenantId, s
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'QBU_16x9', width: SLIDE_W, height: SLIDE_H });
   pptx.layout = 'QBU_16x9';
-  pptx.author = branding?.companyName || 'A&A Elevated Facility Solutions';
+  pptx.author = branding?.companyName || 'Facility Services';
   pptx.subject = `${getPeriodTitle(form)} — ${form.cover.clientName || 'Client'} — ${form.cover.quarter || ''}`;
   pptx.title = `${getPeriodTitle(form)} ${form.cover.clientName || 'Client'} ${form.cover.quarter || ''}`;
 
@@ -1733,7 +1733,7 @@ export async function generateQBUPptx(form, agentOutput, branding, { tenantId, s
 
   // Build slides in section order matching the QBU skill template
   addCoverSlide(pptx, form, logoWhite, websiteUrl);                  // 1  — Title
-  addIntroductionsSlide(pptx, form, logoColor);                      // 2  — Introductions
+  addIntroductionsSlide(pptx, form, logoColor, branding);             // 2  — Introductions
   addSafetyMomentSlide(pptx, form, logoColor, narratives);           // 3  — A.1
   addSafetyComplianceSlide(pptx, form, logoColor, narratives);       // 4  — A.2
   addExecutiveSummarySlide(pptx, form, logoColor, narratives);      // 5  — B.1
