@@ -69,6 +69,7 @@ async function extractXlsxText(file) {
 // Accepts a single File or array of Files. Returns:
 // {
 //   files: [{ name, type, sheet_names?, pricing_sheets?, questionnaire_sheet? }],
+//     pricing_sheets: [{ name, staffing: [{ row, num_staff, role }] }],
 //   sections: [{ id, file_index, title, items: [...] }],
 //   items:    [{ id, section_id, text, category, input_type, source_cell?, source_file? }],
 //   warnings: [string]
@@ -449,6 +450,35 @@ const PRICING_KEYWORDS = ['staffing', 'wage rate', 'hourly rate', 'pricing', 'co
 const QUESTIONNAIRE_HEADERS = ['question', 'requirement', 'item', 'description'];
 const RESPONSE_HEADERS = ['response', 'answer', 'reply', 'comments', 'vendor response', 'bidder response'];
 
+// Extract staffing rows from a pricing sheet. A staffing row is any row where
+// col A is a positive number (# of employees) and col B has substantive text
+// (role / assignment). This matches the Morgan Stanley / CBRE layout and any
+// similar pricing template with an employee count + role table.
+function extractStaffingRows(ws /*, sheetName */) {
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  const staffing = [];
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const aCell = ws[XLSX.utils.encode_cell({ r, c: 0 })];
+    const bCell = ws[XLSX.utils.encode_cell({ r, c: 1 })];
+    if (!aCell || !bCell) continue;
+
+    const numStaff = Number(aCell.v);
+    const role = bCell.v != null ? String(bCell.v).trim() : '';
+    if (!Number.isFinite(numStaff) || numStaff <= 0 || numStaff > 500) continue;
+    if (!role || role.length < 2) continue;
+    // Skip obvious non-role rows (headers, totals)
+    const lowerRole = role.toLowerCase();
+    if (lowerRole.includes('total') || lowerRole === 'role' || lowerRole === 'employee') continue;
+
+    staffing.push({
+      row: r + 1, // 1-based for Excel reference
+      num_staff: numStaff,
+      role,
+    });
+  }
+  return staffing;
+}
+
 function detectSheetType(ws) {
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
   const headers = [];
@@ -508,7 +538,10 @@ async function parseXlsxStructured(file, fileIndex) {
     const sheetType = detectSheetType(ws);
 
     if (sheetType === 'pricing') {
-      pricingSheets.push(sheetName);
+      pricingSheets.push({
+        name: sheetName,
+        staffing: extractStaffingRows(ws, sheetName),
+      });
       // Don't extract items from pricing sheets — they go to fill_excel mode
       continue;
     }

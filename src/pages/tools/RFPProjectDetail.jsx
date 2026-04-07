@@ -418,48 +418,124 @@ export default function RFPProjectDetail() {
     }
   }
 
-  // ── Generate Response Document ──
+  // ── Generate Response Document / Excel ──
 
-  const [generating, setGenerating] = useState(false);
+  const [generating, setGenerating] = useState(null); // 'doc' | 'excel' | 'both' | null
+
+  async function downloadFromEndpoint(endpoint, extension) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      throw new Error('Session expired. Please refresh and sign in again.');
+    }
+
+    const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+    const response = await fetch(`${backendUrl}/api/rfp/${project.id}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Generation failed (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_response.${extension}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function handleGenerateDoc() {
-    setGenerating(true);
+    setGenerating('doc');
     setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setError('Session expired. Please refresh and sign in again.');
-        return;
-      }
-
-      const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
-      const response = await fetch(`${backendUrl}/api/rfp/${project.id}/generate-doc`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Generation failed (${response.status})`);
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_response.docx`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setSuccess('Response document generated successfully.');
+      await downloadFromEndpoint('generate-doc', 'docx');
+      setSuccess('Response document generated.');
     } catch (e) {
       console.error('[generate-doc] error:', e);
       setError(e.message || 'Failed to generate response document.');
     } finally {
-      setGenerating(false);
+      setGenerating(null);
+    }
+  }
+
+  async function handleGenerateExcel() {
+    setGenerating('excel');
+    setError(null);
+    try {
+      await downloadFromEndpoint('generate-excel', 'xlsx');
+      setSuccess('Completed Excel generated.');
+    } catch (e) {
+      console.error('[generate-excel] error:', e);
+      setError(e.message || 'Failed to generate Excel file.');
+    } finally {
+      setGenerating(null);
+    }
+  }
+
+  async function handleGenerateBoth() {
+    setGenerating('both');
+    setError(null);
+    try {
+      await downloadFromEndpoint('generate-excel', 'xlsx');
+      await new Promise(r => setTimeout(r, 500));
+      await downloadFromEndpoint('generate-doc', 'docx');
+      setSuccess('Both files generated.');
+    } catch (e) {
+      console.error('[generate-both] error:', e);
+      setError(e.message || 'Failed to generate both files.');
+    } finally {
+      setGenerating(null);
+    }
+  }
+
+  // ── Pricing Inputs ──
+
+  const [pricingExpanded, setPricingExpanded] = useState({});
+
+  const pricingInputs = project?.pricing_inputs || {};
+  const pricingSheetNames = Object.keys(pricingInputs);
+  const hasPricing = pricingSheetNames.length > 0;
+  const wantsExcel = project && ['fill_excel', 'both'].includes(project.output_mode);
+  const wantsDoc = project && ['response_document', 'both'].includes(project.output_mode);
+
+  function updatePricingEntry(sheetName, rowIdx, field, value) {
+    setProject(prev => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      const nextInputs = { ...(next.pricing_inputs || {}) };
+      const nextRows = [...(nextInputs[sheetName] || [])];
+      const parsed = value === '' ? 0 : Number(value);
+      nextRows[rowIdx] = { ...nextRows[rowIdx], [field]: Number.isFinite(parsed) ? parsed : 0 };
+      nextInputs[sheetName] = nextRows;
+      next.pricing_inputs = nextInputs;
+      return next;
+    });
+  }
+
+  async function savePricingInputs() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+      await fetch(`${backendUrl}/api/rfp/${project.id}/pricing`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pricing_inputs: project.pricing_inputs || {} }),
+      });
+    } catch (e) {
+      console.error('[save-pricing] error:', e);
     }
   }
 
@@ -852,6 +928,116 @@ export default function RFPProjectDetail() {
               })}
             </div>
           )}
+
+          {/* Pricing Input Panel — only for Excel RFPs with pricing sheets */}
+          {wantsExcel && hasPricing && (
+            <div className="bg-white rounded-lg border border-gray-200">
+              <div className="p-4 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-dark-text flex items-center gap-2">
+                  <BarChart3 size={16} className="text-aa-blue" />
+                  Pricing Input — {pricingSheetNames.length} building{pricingSheetNames.length !== 1 ? 's' : ''}
+                </h3>
+                <p className="text-xs text-secondary-text mt-1">
+                  Enter hours, days, and wage rates for each staffing role. Values save automatically.
+                  These feed the pricing tabs in the Completed Excel.
+                </p>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {pricingSheetNames.map(sheetName => {
+                  const rows = pricingInputs[sheetName] || [];
+                  const isOpen = pricingExpanded[sheetName] !== false; // default open
+                  const monthlyTotal = rows.reduce((sum, r) => {
+                    const hours = (r.num_staff || 0) * (r.hours_per_day || 0) * (r.days_per_week || 0) * 4.33;
+                    return sum + hours * (r.wage_rate || 0);
+                  }, 0);
+                  return (
+                    <div key={sheetName}>
+                      <button
+                        onClick={() => setPricingExpanded(prev => ({ ...prev, [sheetName]: !isOpen }))}
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          {isOpen ? <ChevronUp size={14} className="text-secondary-text" /> : <ChevronDown size={14} className="text-secondary-text" />}
+                          <span className="text-sm font-medium text-dark-text">{sheetName}</span>
+                          <span className="text-xs text-secondary-text">({rows.length} roles)</span>
+                        </div>
+                        <span className="text-xs text-secondary-text">
+                          Monthly total: <span className="font-medium text-dark-text">${monthlyTotal.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                        </span>
+                      </button>
+                      {isOpen && (
+                        <div className="px-4 pb-4">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-gray-200 text-secondary-text">
+                                  <th className="text-left py-1.5 pr-2 font-medium">Role</th>
+                                  <th className="text-right py-1.5 px-2 font-medium w-12"># Staff</th>
+                                  <th className="text-right py-1.5 px-2 font-medium w-20">Hrs/Day</th>
+                                  <th className="text-right py-1.5 px-2 font-medium w-20">Days/Wk</th>
+                                  <th className="text-right py-1.5 px-2 font-medium w-24">Wage Rate</th>
+                                  <th className="text-right py-1.5 pl-2 font-medium w-24">Monthly</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((row, idx) => {
+                                  const monthlyHours = (row.num_staff || 0) * (row.hours_per_day || 0) * (row.days_per_week || 0) * 4.33;
+                                  const monthlyCost = monthlyHours * (row.wage_rate || 0);
+                                  return (
+                                    <tr key={idx} className="border-b border-gray-50">
+                                      <td className="py-1.5 pr-2 text-dark-text">{row.role}</td>
+                                      <td className="py-1.5 px-2 text-right text-secondary-text">{row.num_staff}</td>
+                                      <td className="py-1.5 px-2 text-right">
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="0.5"
+                                          value={row.hours_per_day || ''}
+                                          onChange={(e) => updatePricingEntry(sheetName, idx, 'hours_per_day', e.target.value)}
+                                          onBlur={savePricingInputs}
+                                          className="w-16 px-1.5 py-1 text-right border border-gray-200 rounded focus:outline-none focus:border-aa-blue"
+                                        />
+                                      </td>
+                                      <td className="py-1.5 px-2 text-right">
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          max="7"
+                                          step="0.5"
+                                          value={row.days_per_week || ''}
+                                          onChange={(e) => updatePricingEntry(sheetName, idx, 'days_per_week', e.target.value)}
+                                          onBlur={savePricingInputs}
+                                          className="w-16 px-1.5 py-1 text-right border border-gray-200 rounded focus:outline-none focus:border-aa-blue"
+                                        />
+                                      </td>
+                                      <td className="py-1.5 px-2 text-right">
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          value={row.wage_rate || ''}
+                                          onChange={(e) => updatePricingEntry(sheetName, idx, 'wage_rate', e.target.value)}
+                                          onBlur={savePricingInputs}
+                                          className="w-20 px-1.5 py-1 text-right border border-gray-200 rounded focus:outline-none focus:border-aa-blue"
+                                        />
+                                      </td>
+                                      <td className="py-1.5 pl-2 text-right text-dark-text font-medium">
+                                        ${monthlyCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Context panel (2 cols) */}
@@ -928,25 +1114,83 @@ export default function RFPProjectDetail() {
             );
           })()}
 
-          {/* Generate Response Document */}
+          {/* Output buttons — shape depends on output_mode */}
           {items.some(i => i.final_response || i.draft_response) && (
-            <button
-              onClick={handleGenerateDoc}
-              disabled={generating}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-aa-blue rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {generating ? (
+            <div className="space-y-2">
+              {project.output_mode === 'both' && (
                 <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Download size={16} />
-                  Generate Response Doc
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={handleGenerateExcel}
+                      disabled={!!generating}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium text-white bg-aa-blue rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {generating === 'excel' ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                      {generating === 'excel' ? 'Building...' : 'Completed Excel'}
+                    </button>
+                    <button
+                      onClick={handleGenerateDoc}
+                      disabled={!!generating}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {generating === 'doc' ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                      {generating === 'doc' ? 'Building...' : 'Proposal Doc'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleGenerateBoth}
+                    disabled={!!generating}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-secondary-text border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {generating === 'both' ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" /> Downloading both...
+                      </>
+                    ) : (
+                      <>Download both</>
+                    )}
+                  </button>
                 </>
               )}
-            </button>
+              {project.output_mode === 'fill_excel' && (
+                <button
+                  onClick={handleGenerateExcel}
+                  disabled={!!generating}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-aa-blue rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {generating === 'excel' ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Building Excel...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={16} />
+                      Generate Completed Excel
+                    </>
+                  )}
+                </button>
+              )}
+              {project.output_mode === 'response_document' && (
+                <button
+                  onClick={handleGenerateDoc}
+                  disabled={!!generating}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-aa-blue rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {generating === 'doc' ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={16} />
+                      Generate Response Doc
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           )}
 
           {/* Quick stats */}

@@ -81,6 +81,7 @@ export default function RFPProjectsPage() {
     const { data: { user } } = await supabase.auth.getUser();
 
     let sourceDocumentId = null;
+    let sourceExcelPath = null;
     let parsedDocs = null;
 
     // Upload + parse RFP documents if provided
@@ -97,9 +98,10 @@ export default function RFPProjectsPage() {
         for (const file of newFiles) {
           const result = await extractText(file);
           const lower = file.name.toLowerCase();
+          const isExcel = lower.endsWith('.xlsx') || lower.endsWith('.xls');
           const fileType = lower.endsWith('.pdf') ? 'pdf'
             : lower.endsWith('.docx') || lower.endsWith('.doc') ? 'docx'
-            : lower.endsWith('.xlsx') || lower.endsWith('.xls') ? 'xlsx'
+            : isExcel ? 'xlsx'
             : 'txt';
 
           const storagePath = buildDocumentPath(tenantId, 'rfp_source', file.name);
@@ -108,6 +110,11 @@ export default function RFPProjectsPage() {
             .upload(storagePath, file);
 
           if (uploadErr) throw uploadErr;
+
+          // Remember the first Excel file's storage path for write-back
+          if (isExcel && !sourceExcelPath) {
+            sourceExcelPath = storagePath;
+          }
 
           const { data: doc, error: insertErr } = await supabase
             .from('tenant_documents')
@@ -156,6 +163,44 @@ export default function RFPProjectsPage() {
       else detectedType = 'unknown';
     }
 
+    // Build pricing_inputs scaffold from parsed staffing rows (only when we
+    // parsed at least one pricing sheet). Keys are sheet names, values are
+    // arrays of { row, role, num_staff, hours_per_day, days_per_week,
+    // wage_rate } — hours/days/rate start at 0 for the user to fill in.
+    const pricingInputs = {};
+    if (parsedDocs?.files?.length) {
+      for (const file of parsedDocs.files) {
+        if (!file.pricing_sheets?.length) continue;
+        for (const sheet of file.pricing_sheets) {
+          if (!sheet.staffing?.length) continue;
+          pricingInputs[sheet.name] = sheet.staffing.map(s => ({
+            row: s.row,
+            role: s.role,
+            num_staff: s.num_staff,
+            hours_per_day: 0,
+            days_per_week: 0,
+            wage_rate: 0,
+          }));
+        }
+      }
+    }
+
+    const wantsExcel = ['fill_excel', 'both'].includes(newForm.output_mode);
+
+    // Auto-select corporate_excel_response when output_mode='both' AND the
+    // source is an Excel RFP. The Excel handles the formal submission; this
+    // doc style produces the leave-behind proposal that wins the room.
+    // The user can still override by manually picking another style first.
+    let effectiveDocStyle = newForm.doc_style;
+    const isExcelSource = detectedType && detectedType.includes('excel');
+    if (
+      newForm.output_mode === 'both' &&
+      isExcelSource &&
+      newForm.doc_style === 'formal_questionnaire'
+    ) {
+      effectiveDocStyle = 'corporate_excel_response';
+    }
+
     const { data: project, error: createErr } = await supabase
       .from('tenant_rfp_projects')
       .insert({
@@ -165,12 +210,41 @@ export default function RFPProjectsPage() {
         due_date: newForm.due_date || null,
         source_document_id: sourceDocumentId,
         output_mode: newForm.output_mode,
-        doc_style: newForm.doc_style,
+        doc_style: effectiveDocStyle,
         detected_type: detectedType,
+        source_excel_path: wantsExcel ? sourceExcelPath : null,
+        pricing_inputs: pricingInputs,
         created_by: user?.id,
       })
       .select()
       .single();
+
+    // If we parsed items client-side (Excel path), insert them directly so
+    // the agent parse step is unnecessary and source_cell is preserved for
+    // write-back. For PDF/DOCX without client-parsed items, the user runs
+    // the agent parse action in the detail view.
+    if (!createErr && project && parsedDocs?.items?.length) {
+      const itemRows = parsedDocs.items.map((it, idx) => ({
+        tenant_id: tenantId,
+        rfp_project_id: project.id,
+        item_number: idx + 1,
+        question_text: it.text,
+        section: parsedDocs.sections.find(s => s.id === it.section_id)?.title || 'General',
+        category: it.category || 'other',
+        source_cell: it.source_cell || null,
+        status: 'pending',
+      }));
+      const { error: itemsErr } = await supabase.from('tenant_rfp_items').insert(itemRows);
+      if (itemsErr) {
+        console.error('Failed to insert parsed items:', itemsErr);
+      } else {
+        // Update item_count on project
+        await supabase
+          .from('tenant_rfp_projects')
+          .update({ item_count: itemRows.length, status: 'in_progress' })
+          .eq('id', project.id);
+      }
+    }
 
     if (createErr) {
       setError(createErr.message);
@@ -569,6 +643,7 @@ export default function RFPProjectsPage() {
                       <option value="formal_questionnaire">Formal Questionnaire — Q-then-A pairs (government RFPs)</option>
                       <option value="capabilities_brief">Capabilities Brief — narrative deck (sales-led RFPs)</option>
                       <option value="full_proposal">Full Proposal — cover, exec summary, sections</option>
+                      <option value="corporate_excel_response">Corporate Excel Response — leave-behind proposal for Excel RFPs (auto-selected with "Both" + Excel source)</option>
                     </select>
                   </div>
                 )}
