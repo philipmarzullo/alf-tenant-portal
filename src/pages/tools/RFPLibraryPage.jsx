@@ -3,15 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import {
   BookOpen, Plus, Search, ChevronDown, ChevronUp, Trash2,
   Loader2, XCircle, CheckCircle, Bot, Tag, BarChart3,
-  ArrowLeft, Edit3, X, Download,
+  ArrowLeft, Edit3, X, Download, Database, Save, ShieldCheck, Users, Phone,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useTenantId } from '../../contexts/TenantIdContext';
 import AgentChatPanel from '../../components/shared/AgentChatPanel';
+import { FACT_DEFINITIONS, A_AND_A_DEFAULTS } from '../../utils/rfpFactDefinitions';
 
 const CATEGORIES = [
   'company_overview', 'safety', 'compliance', 'staffing', 'technical',
-  'financial', 'references', 'experience', 'transition', 'other',
+  'financial', 'references', 'experience', 'transition', 'sustainability', 'other',
 ];
 
 const CATEGORY_BADGE = {
@@ -24,6 +25,7 @@ const CATEGORY_BADGE = {
   references: 'bg-indigo-50 text-indigo-700',
   experience: 'bg-orange-50 text-orange-700',
   transition: 'bg-teal-50 text-teal-700',
+  sustainability: 'bg-emerald-50 text-emerald-700',
   other: 'bg-gray-100 text-gray-600',
 };
 
@@ -65,9 +67,121 @@ export default function RFPLibraryPage() {
   const [projects, setProjects] = useState([]);
   const [importing, setImporting] = useState(false);
 
+  // View tab: 'library' | 'facts'
+  const [view, setView] = useState('library');
+
+  // Facts state — flat map { fact_key: { fact_value, source } }
+  const [facts, setFacts] = useState({});
+  const [factsLoading, setFactsLoading] = useState(false);
+  const [factDirty, setFactDirty] = useState({}); // { fact_key: true }
+  const [factsSaving, setFactsSaving] = useState(false);
+  const [factsExpanded, setFactsExpanded] = useState({ safety_metrics: true });
+
   useEffect(() => {
     loadEntries();
+    loadFacts();
   }, [tenantId]);
+
+  async function loadFacts() {
+    setFactsLoading(true);
+    const { data, error: err } = await supabase
+      .from('tenant_rfp_facts')
+      .select('fact_key, fact_value, category, source, notes')
+      .eq('tenant_id', tenantId);
+
+    if (err) {
+      console.error('[facts] load error:', err.message);
+    } else {
+      const map = {};
+      for (const row of data || []) {
+        map[row.fact_key] = { value: row.fact_value || '', category: row.category, source: row.source };
+      }
+      setFacts(map);
+    }
+    setFactsLoading(false);
+  }
+
+  function setFactValue(factKey, value) {
+    setFacts(prev => ({ ...prev, [factKey]: { ...(prev[factKey] || {}), value } }));
+    setFactDirty(prev => ({ ...prev, [factKey]: true }));
+  }
+
+  // Map definition category → DB category
+  const FACT_DB_CATEGORY = {
+    safety_metrics: 'safety_metrics',
+    policy_flags: 'policy_flags',
+    certifications: 'certifications',
+    references: 'references',
+    company_counts: 'company_counts',
+  };
+
+  async function saveFacts() {
+    const dirtyKeys = Object.keys(factDirty);
+    if (dirtyKeys.length === 0) {
+      setSuccess('No changes to save');
+      setTimeout(() => setSuccess(null), 2000);
+      return;
+    }
+
+    setFactsSaving(true);
+
+    // Build rows to upsert — find which DB category each key belongs to
+    const rows = [];
+    for (const key of dirtyKeys) {
+      let dbCategory = 'other';
+      for (const [defCat, def] of Object.entries(FACT_DEFINITIONS)) {
+        if (def.fields.some(f => f.key === key)) {
+          dbCategory = FACT_DB_CATEGORY[defCat] || 'other';
+          break;
+        }
+      }
+      rows.push({
+        tenant_id: tenantId,
+        fact_key: key,
+        fact_value: facts[key]?.value ?? null,
+        category: dbCategory,
+        source: 'confirmed',
+      });
+    }
+
+    const { error: upsertErr } = await supabase
+      .from('tenant_rfp_facts')
+      .upsert(rows, { onConflict: 'tenant_id,fact_key' });
+
+    if (upsertErr) {
+      setError(upsertErr.message);
+      setTimeout(() => setError(null), 4000);
+    } else {
+      setFactDirty({});
+      setSuccess(`Saved ${rows.length} fact${rows.length > 1 ? 's' : ''}`);
+      setTimeout(() => setSuccess(null), 3000);
+    }
+    setFactsSaving(false);
+  }
+
+  async function loadAaDefaults() {
+    // Pre-fill any blank fields with A&A defaults — does not overwrite existing values
+    setFacts(prev => {
+      const next = { ...prev };
+      const newDirty = { ...factDirty };
+      for (const [key, value] of Object.entries(A_AND_A_DEFAULTS)) {
+        if (!next[key]?.value) {
+          next[key] = { value, category: 'default', source: 'default' };
+          newDirty[key] = true;
+        }
+      }
+      setFactDirty(newDirty);
+      return next;
+    });
+    setSuccess('A&A defaults loaded — review and click Save');
+    setTimeout(() => setSuccess(null), 4000);
+  }
+
+  const filledFactCount = useMemo(
+    () => Object.values(facts).filter(f => f.value && String(f.value).trim()).length,
+    [facts]
+  );
+  const dirtyFactCount = Object.keys(factDirty).length;
 
   async function loadEntries() {
     setLoading(true);
@@ -308,21 +422,199 @@ export default function RFPLibraryPage() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Total Pairs</div>
-          <div className="text-2xl font-semibold text-dark-text mt-1">{totalPairs}</div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Active Pairs</div>
-          <div className="text-2xl font-semibold text-dark-text mt-1">{activePairs}</div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Categories</div>
-          <div className="text-2xl font-semibold text-dark-text mt-1">{categorySet.size}</div>
-        </div>
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-gray-200">
+        <button
+          onClick={() => setView('library')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+            view === 'library'
+              ? 'text-aa-blue border-aa-blue'
+              : 'text-secondary-text border-transparent hover:text-dark-text'
+          }`}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <BookOpen size={14} />
+            Q&A Library ({totalPairs})
+          </span>
+        </button>
+        <button
+          onClick={() => setView('facts')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+            view === 'facts'
+              ? 'text-aa-blue border-aa-blue'
+              : 'text-secondary-text border-transparent hover:text-dark-text'
+          }`}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <Database size={14} />
+            RFP Facts ({filledFactCount})
+            {dirtyFactCount > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-orange-100 text-orange-700">
+                {dirtyFactCount} unsaved
+              </span>
+            )}
+          </span>
+        </button>
       </div>
+
+      {/* Stats — only shown in library view */}
+      {view === 'library' && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Total Pairs</div>
+            <div className="text-2xl font-semibold text-dark-text mt-1">{totalPairs}</div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Active Pairs</div>
+            <div className="text-2xl font-semibold text-dark-text mt-1">{activePairs}</div>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="text-xs font-medium text-secondary-text uppercase tracking-wider">Categories</div>
+            <div className="text-2xl font-semibold text-dark-text mt-1">{categorySet.size}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Facts Panel */}
+      {view === 'facts' && (
+        <div className="space-y-4">
+          {/* Facts header / actions */}
+          <div className="flex items-start justify-between gap-3 bg-sky-50 border border-sky-200 rounded-lg p-4">
+            <div className="flex-1">
+              <div className="text-sm font-medium text-dark-text">RFP Facts</div>
+              <p className="text-xs text-secondary-text mt-1 leading-relaxed">
+                Verified company facts the agent uses on every RFP question. Keep these current —
+                outdated metrics or missing references force the agent to mark items as "needs data".
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {filledFactCount === 0 && (
+                <button
+                  onClick={loadAaDefaults}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-aa-blue bg-white border border-aa-blue/30 rounded-md hover:bg-aa-blue/5 transition-colors"
+                >
+                  <Download size={12} />
+                  Load A&A Defaults
+                </button>
+              )}
+              <button
+                onClick={saveFacts}
+                disabled={factsSaving || dirtyFactCount === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-aa-blue rounded-md hover:bg-aa-blue/90 disabled:opacity-40 transition-colors"
+              >
+                {factsSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                {factsSaving ? 'Saving...' : `Save${dirtyFactCount > 0 ? ` (${dirtyFactCount})` : ''}`}
+              </button>
+            </div>
+          </div>
+
+          {factsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={20} className="text-aa-blue animate-spin" />
+            </div>
+          ) : (
+            Object.entries(FACT_DEFINITIONS).map(([sectionKey, section]) => {
+              const isOpen = factsExpanded[sectionKey] !== false;
+              const sectionFilled = section.fields.filter(f => facts[f.key]?.value && String(facts[f.key].value).trim()).length;
+              const Icon = sectionKey === 'safety_metrics' ? ShieldCheck
+                : sectionKey === 'references' ? Phone
+                : sectionKey === 'company_counts' ? Users
+                : Database;
+
+              return (
+                <div key={sectionKey} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => setFactsExpanded(prev => ({ ...prev, [sectionKey]: !isOpen }))}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <Icon size={16} className="text-aa-blue shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-dark-text">{section.label}</div>
+                      <div className="text-xs text-secondary-text">{section.description}</div>
+                    </div>
+                    <span className="text-xs text-secondary-text shrink-0">
+                      {sectionFilled}/{section.fields.length}
+                    </span>
+                    {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-gray-100 px-4 py-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                        {section.fields.map(field => {
+                          const current = facts[field.key]?.value || '';
+                          const isDirty = factDirty[field.key];
+
+                          if (field.input === 'boolean') {
+                            const truthy = current === 'true' || current === true;
+                            return (
+                              <label
+                                key={field.key}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-colors ${
+                                  truthy ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200 hover:bg-gray-50'
+                                } ${isDirty ? 'ring-1 ring-orange-300' : ''}`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={truthy}
+                                  onChange={e => setFactValue(field.key, e.target.checked ? 'true' : 'false')}
+                                  className="rounded"
+                                />
+                                <span className="text-xs text-dark-text">{field.label}</span>
+                              </label>
+                            );
+                          }
+
+                          if (field.input === 'textarea') {
+                            return (
+                              <div key={field.key} className="sm:col-span-2">
+                                <label className="block text-xs font-medium text-secondary-text mb-1">
+                                  {field.label}
+                                  {isDirty && <span className="ml-1 text-orange-500">●</span>}
+                                </label>
+                                <textarea
+                                  value={current}
+                                  onChange={e => setFactValue(field.key, e.target.value)}
+                                  rows={2}
+                                  placeholder={field.placeholder}
+                                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue resize-none"
+                                />
+                                {field.help && <div className="text-[10px] text-secondary-text mt-0.5">{field.help}</div>}
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div key={field.key}>
+                              <label className="block text-xs font-medium text-secondary-text mb-1">
+                                {field.label}
+                                {isDirty && <span className="ml-1 text-orange-500">●</span>}
+                              </label>
+                              <input
+                                type={field.input === 'number' ? 'text' : 'text'}
+                                inputMode={field.input === 'number' ? 'decimal' : 'text'}
+                                value={current}
+                                onChange={e => setFactValue(field.key, e.target.value)}
+                                placeholder={field.placeholder}
+                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-aa-blue"
+                              />
+                              {field.help && <div className="text-[10px] text-secondary-text mt-0.5">{field.help}</div>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* ─── Library View ─────────────────────────────────────────── */}
+      {view === 'library' && (
+      <>
 
       {/* Add New + Import */}
       <div className="flex flex-wrap gap-3">
@@ -651,6 +943,9 @@ export default function RFPLibraryPage() {
             );
           })}
         </div>
+      )}
+
+      </>
       )}
 
       {/* Import Modal */}

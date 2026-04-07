@@ -21,6 +21,7 @@ const STATUS_BADGE = {
 
 const ITEM_STATUS_BADGE = {
   pending: { label: 'Pending', cls: 'bg-gray-100 text-gray-600' },
+  needs_data: { label: 'Needs Data', cls: 'bg-orange-100 text-orange-700 border border-orange-200' },
   drafted: { label: 'Drafted', cls: 'bg-blue-50 text-blue-700' },
   assigned: { label: 'Assigned', cls: 'bg-orange-50 text-orange-700' },
   reviewed: { label: 'Reviewed', cls: 'bg-purple-50 text-purple-700' },
@@ -417,30 +418,55 @@ export default function RFPProjectDetail() {
     }
   }
 
-  // ── Export ──
+  // ── Generate Response Document ──
 
-  function handleExport() {
-    const lines = items
-      .filter(i => i.final_response || i.draft_response)
-      .map(i => {
-        const response = i.final_response || i.draft_response;
-        return `${i.item_number}. ${i.question_text}\n\n${response}`;
+  const [generating, setGenerating] = useState(false);
+
+  async function handleGenerateDoc() {
+    setGenerating(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setError('Session expired. Please refresh and sign in again.');
+        return;
+      }
+
+      const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+      const response = await fetch(`${backendUrl}/api/rfp/${project.id}/generate-doc`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
 
-    const content = `${project.name}\n${'='.repeat(project.name.length)}\n\n${lines.join('\n\n---\n\n')}`;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_responses.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Generation failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_response.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setSuccess('Response document generated successfully.');
+    } catch (e) {
+      console.error('[generate-doc] error:', e);
+      setError(e.message || 'Failed to generate response document.');
+    } finally {
+      setGenerating(false);
+    }
   }
 
   // ── Stats ──
 
   const statusCounts = useMemo(() => {
-    const counts = { pending: 0, drafted: 0, assigned: 0, reviewed: 0, approved: 0 };
+    const counts = { pending: 0, needs_data: 0, drafted: 0, assigned: 0, reviewed: 0, approved: 0 };
     items.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
     return counts;
   }, [items]);
@@ -448,6 +474,10 @@ export default function RFPProjectDetail() {
   const completionPct = items.length > 0
     ? Math.round((statusCounts.approved / items.length) * 100)
     : 0;
+  const needsDataPct = items.length > 0
+    ? Math.round((statusCounts.needs_data / items.length) * 100)
+    : 0;
+  const pendingPct = Math.max(0, 100 - completionPct - needsDataPct);
 
   if (loading) {
     return (
@@ -500,13 +530,22 @@ export default function RFPProjectDetail() {
               )}
               <span>{items.length} items</span>
               <span>{completionPct}% approved</span>
+              {statusCounts.needs_data > 0 && (
+                <span className="text-orange-600 font-medium">{statusCounts.needs_data} need data</span>
+              )}
             </div>
-            {/* Progress bar */}
+            {/* Progress bar — three segments: approved / needs_data / pending */}
             {items.length > 0 && (
-              <div className="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden mt-2">
+              <div className="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden mt-2 flex">
                 <div
-                  className="h-full bg-aa-blue rounded-full transition-all"
+                  className="h-full bg-aa-blue transition-all"
                   style={{ width: `${completionPct}%` }}
+                  title={`${statusCounts.approved} approved`}
+                />
+                <div
+                  className="h-full bg-orange-400 transition-all"
+                  style={{ width: `${needsDataPct}%` }}
+                  title={`${statusCounts.needs_data} need data`}
                 />
               </div>
             )}
@@ -749,6 +788,19 @@ export default function RFPProjectDetail() {
                           />
                         </div>
 
+                        {/* Needs-data warning */}
+                        {item.status === 'needs_data' && (
+                          <div className="flex items-start gap-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded-md text-xs text-orange-800">
+                            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                            <div>
+                              <div className="font-medium">This item needs data before it can be answered.</div>
+                              <div className="mt-0.5 text-orange-700">
+                                The agent could not draft a response — required information is missing from the RFP Facts panel or Q&A library. Add the missing data, then regenerate.
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Status progression */}
                         <div className="flex items-center gap-2 pt-1">
                           {item.status === 'pending' && item.draft_response && (
@@ -774,6 +826,16 @@ export default function RFPProjectDetail() {
                             >
                               <Check size={12} />
                               Approve
+                            </button>
+                          )}
+                          {item.status === 'needs_data' && (
+                            <button
+                              disabled
+                              title="Fill in the missing data, then regenerate this item"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-400 bg-gray-50 border border-gray-200 rounded-md cursor-not-allowed"
+                            >
+                              <Check size={12} />
+                              Approve (blocked)
                             </button>
                           )}
                           {item.status === 'approved' && (
@@ -866,14 +928,24 @@ export default function RFPProjectDetail() {
             );
           })()}
 
-          {/* Export */}
+          {/* Generate Response Document */}
           {items.some(i => i.final_response || i.draft_response) && (
             <button
-              onClick={handleExport}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-aa-blue bg-aa-blue/5 border border-aa-blue/20 rounded-lg hover:bg-aa-blue/10 transition-colors"
+              onClick={handleGenerateDoc}
+              disabled={generating}
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-aa-blue rounded-lg hover:bg-aa-blue/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Download size={16} />
-              Export Responses
+              {generating ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download size={16} />
+                  Generate Response Doc
+                </>
+              )}
             </button>
           )}
 

@@ -35,8 +35,14 @@ export default function RFPProjectsPage() {
 
   // New project modal
   const [showNew, setShowNew] = useState(false);
-  const [newForm, setNewForm] = useState({ name: '', issuing_organization: '', due_date: '' });
-  const [newFile, setNewFile] = useState(null);
+  const [newForm, setNewForm] = useState({
+    name: '',
+    issuing_organization: '',
+    due_date: '',
+    output_mode: 'response_document',
+    doc_style: 'formal_questionnaire',
+  });
+  const [newFiles, setNewFiles] = useState([]);
   const [creating, setCreating] = useState(false);
 
   // Chat
@@ -75,49 +81,79 @@ export default function RFPProjectsPage() {
     const { data: { user } } = await supabase.auth.getUser();
 
     let sourceDocumentId = null;
+    let parsedDocs = null;
 
-    // Upload RFP document if provided
-    if (newFile) {
+    // Upload + parse RFP documents if provided
+    if (newFiles.length > 0) {
       try {
-        const { extractText } = await import('../../utils/docExtractor.js');
-        const result = await extractText(newFile);
-        const fileType = newFile.name.toLowerCase().endsWith('.pdf') ? 'pdf'
-          : newFile.name.toLowerCase().endsWith('.docx') ? 'docx' : 'txt';
+        const { extractText, parseRfpDocuments } = await import('../../utils/docExtractor.js');
 
-        const storagePath = buildDocumentPath(tenantId, 'rfp_source', newFile.name);
-        const { error: uploadErr } = await supabase.storage
-          .from('tenant-documents')
-          .upload(storagePath, newFile);
+        // Parse all files into normalized RFP structure
+        parsedDocs = await parseRfpDocuments(newFiles);
 
-        if (uploadErr) throw uploadErr;
+        // Upload each file and create a tenant_documents row for the FIRST file
+        // (source_document_id is single — additional files stored as related docs)
+        const uploadedDocIds = [];
+        for (const file of newFiles) {
+          const result = await extractText(file);
+          const lower = file.name.toLowerCase();
+          const fileType = lower.endsWith('.pdf') ? 'pdf'
+            : lower.endsWith('.docx') || lower.endsWith('.doc') ? 'docx'
+            : lower.endsWith('.xlsx') || lower.endsWith('.xls') ? 'xlsx'
+            : 'txt';
 
-        const { data: doc, error: insertErr } = await supabase
-          .from('tenant_documents')
-          .insert({
-            tenant_id: tenantId,
-            department: 'sales',
-            doc_type: 'reference',
-            document_scope: 'rfp_source',
-            file_name: newFile.name,
-            file_type: fileType,
-            file_size: newFile.size,
-            storage_path: storagePath,
-            page_count: result.pageCount || null,
-            extracted_text: result.text,
-            char_count: result.text.length,
-            status: result.warning ? 'failed' : 'extracted',
-            status_detail: result.warning || null,
-          })
-          .select('id')
-          .single();
+          const storagePath = buildDocumentPath(tenantId, 'rfp_source', file.name);
+          const { error: uploadErr } = await supabase.storage
+            .from('tenant-documents')
+            .upload(storagePath, file);
 
-        if (insertErr) throw insertErr;
-        sourceDocumentId = doc.id;
+          if (uploadErr) throw uploadErr;
+
+          const { data: doc, error: insertErr } = await supabase
+            .from('tenant_documents')
+            .insert({
+              tenant_id: tenantId,
+              department: 'sales',
+              doc_type: 'reference',
+              document_scope: 'rfp_source',
+              file_name: file.name,
+              file_type: fileType,
+              file_size: file.size,
+              storage_path: storagePath,
+              page_count: result.pageCount || null,
+              extracted_text: result.text,
+              char_count: result.text.length,
+              status: result.warning ? 'failed' : 'extracted',
+              status_detail: result.warning || null,
+            })
+            .select('id')
+            .single();
+
+          if (insertErr) throw insertErr;
+          uploadedDocIds.push(doc.id);
+        }
+        sourceDocumentId = uploadedDocIds[0] || null;
       } catch (err) {
-        console.error('Failed to upload RFP document:', err);
-        setError('Failed to upload document. Project created without it.');
+        console.error('Failed to upload RFP documents:', err);
+        setError('Failed to upload documents. Project created without them.');
         setTimeout(() => setError(null), 4000);
       }
+    }
+
+    // Detect document type from parsed files
+    let detectedType = null;
+    if (parsedDocs?.files?.length) {
+      const types = new Set(parsedDocs.files.map(f => f.type));
+      const hasExcel = parsedDocs.files.some(f => f.type === 'xlsx');
+      const hasPricing = parsedDocs.files.some(f => f.pricing_sheets?.length);
+      const hasQuestionnaire = parsedDocs.files.some(f => f.questionnaire_sheet);
+
+      if (hasExcel && hasPricing && !hasQuestionnaire) detectedType = 'excel_pricing';
+      else if (hasExcel && hasQuestionnaire && !hasPricing) detectedType = 'excel_questionnaire';
+      else if (hasExcel && hasPricing && hasQuestionnaire) detectedType = 'mixed';
+      else if (types.has('pdf')) detectedType = 'pdf_questionnaire';
+      else if (types.has('docx')) detectedType = 'docx_questionnaire';
+      else detectedType = 'unknown';
     }
 
     const { data: project, error: createErr } = await supabase
@@ -128,6 +164,9 @@ export default function RFPProjectsPage() {
         issuing_organization: newForm.issuing_organization.trim() || null,
         due_date: newForm.due_date || null,
         source_document_id: sourceDocumentId,
+        output_mode: newForm.output_mode,
+        doc_style: newForm.doc_style,
+        detected_type: detectedType,
         created_by: user?.id,
       })
       .select()
@@ -140,8 +179,14 @@ export default function RFPProjectsPage() {
       setSuccess('Project created');
       setTimeout(() => setSuccess(null), 3000);
       setShowNew(false);
-      setNewForm({ name: '', issuing_organization: '', due_date: '' });
-      setNewFile(null);
+      setNewForm({
+        name: '',
+        issuing_organization: '',
+        due_date: '',
+        output_mode: 'response_document',
+        doc_style: 'formal_questionnaire',
+      });
+      setNewFiles([]);
       navigate(`/portal/tools/rfp-response/${project.id}`);
     }
     setCreating(false);
@@ -423,38 +468,110 @@ export default function RFPProjectsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-secondary-text mb-1">RFP Document (optional)</label>
+                  <label className="block text-xs font-medium text-secondary-text mb-1">RFP Documents (optional)</label>
                   <div
                     onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const dropped = Array.from(e.dataTransfer.files || []).filter(f =>
+                        /\.(pdf|docx?|txt|xlsx?|xls)$/i.test(f.name)
+                      );
+                      if (dropped.length) setNewFiles(prev => [...prev, ...dropped]);
+                    }}
                     className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-aa-blue/50 hover:bg-gray-50 transition-colors"
                   >
-                    {newFile ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <FileSearch size={16} className="text-aa-blue" />
-                        <span className="text-sm text-dark-text">{newFile.name}</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setNewFile(null); }}
-                          className="text-gray-400 hover:text-red-500"
-                        >
-                          <X size={14} />
-                        </button>
+                    {newFiles.length > 0 ? (
+                      <div className="space-y-1.5 text-left">
+                        {newFiles.map((f, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            <FileSearch size={14} className="text-aa-blue shrink-0" />
+                            <span className="text-dark-text truncate flex-1">{f.name}</span>
+                            <span className="text-[10px] text-gray-400 shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setNewFiles(prev => prev.filter((_, i) => i !== idx)); }}
+                              className="text-gray-400 hover:text-red-500 shrink-0"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="text-[11px] text-secondary-text pt-1.5 border-t border-gray-100 text-center">
+                          Click or drop to add more
+                        </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-1">
                         <Upload size={20} className="text-gray-400" />
-                        <span className="text-sm text-secondary-text">Drop RFP document or click to upload</span>
-                        <span className="text-xs text-gray-400">PDF, DOCX, TXT — max 20 MB</span>
+                        <span className="text-sm text-secondary-text">Drop RFP documents or click to upload</span>
+                        <span className="text-xs text-gray-400">PDF, DOCX, TXT, XLSX, XLS — multiple files OK</span>
                       </div>
                     )}
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".pdf,.docx,.txt"
-                      onChange={e => { if (e.target.files[0]) setNewFile(e.target.files[0]); e.target.value = ''; }}
+                      accept=".pdf,.docx,.txt,.xlsx,.xls"
+                      multiple
+                      onChange={e => {
+                        const picked = Array.from(e.target.files || []);
+                        if (picked.length) setNewFiles(prev => [...prev, ...picked]);
+                        e.target.value = '';
+                      }}
                       className="hidden"
                     />
                   </div>
                 </div>
+
+                {/* Output mode */}
+                <div>
+                  <label className="block text-xs font-medium text-secondary-text mb-1.5">What should the agent produce?</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { val: 'response_document', label: 'Written response document', desc: 'Generate a polished response in PDF or DOCX format' },
+                      { val: 'fill_excel', label: 'Fill the Excel workbook', desc: 'Populate the source spreadsheet in place (requires Excel upload)' },
+                      { val: 'both', label: 'Both', desc: 'Produce a written document AND fill the Excel workbook' },
+                    ].map(opt => (
+                      <label
+                        key={opt.val}
+                        className={`flex items-start gap-2.5 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                          newForm.output_mode === opt.val
+                            ? 'bg-aa-blue/5 border-aa-blue'
+                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="output_mode"
+                          value={opt.val}
+                          checked={newForm.output_mode === opt.val}
+                          onChange={e => setNewForm(f => ({ ...f, output_mode: e.target.value }))}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-dark-text">{opt.label}</div>
+                          <div className="text-xs text-secondary-text">{opt.desc}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Doc style — only shown when generating a document */}
+                {newForm.output_mode !== 'fill_excel' && (
+                  <div>
+                    <label className="block text-xs font-medium text-secondary-text mb-1">Document style</label>
+                    <select
+                      value={newForm.doc_style}
+                      onChange={e => setNewForm(f => ({ ...f, doc_style: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-aa-blue bg-white"
+                    >
+                      <option value="formal_questionnaire">Formal Questionnaire — Q-then-A pairs (government RFPs)</option>
+                      <option value="capabilities_brief">Capabilities Brief — narrative deck (sales-led RFPs)</option>
+                      <option value="full_proposal">Full Proposal — cover, exec summary, sections</option>
+                    </select>
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-3 pt-2">
                   <button
