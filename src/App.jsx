@@ -71,6 +71,7 @@ import LeaveManagement from './pages/hr/LeaveManagement';
 import Unemployment from './pages/hr/Unemployment';
 import UnionCalendar from './pages/hr/UnionCalendar';
 import FinanceOverview from './pages/finance/FinanceOverview';
+import SafetyWorkspacePage from './pages/safety/SafetyWorkspacePage';
 import PurchasingOverview from './pages/purchasing/PurchasingOverview';
 import SalesLayout from './pages/sales/SalesLayout';
 import OpsOverview from './pages/ops/OpsOverview';
@@ -365,6 +366,15 @@ export default function App() {
                       element={
                         <ProtectedRoute moduleKey="finance">
                           <FinanceOverview />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="safety"
+                      element={
+                        <ProtectedRoute moduleKey="safety">
+                          <SafetyWorkspacePage />
                         </ProtectedRoute>
                       }
                     />
