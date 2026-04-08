@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { getSummary, listClaims } from './wcClaimsApi';
 import ClaimDetailDrawer from './ClaimDetailDrawer';
+import LifetimeTrends from './LifetimeTrends';
 
 const BAR_COLOR = '#009ADE';
 const BAR_HIGHLIGHT = '#005F8A';
@@ -462,6 +463,9 @@ export default function ClaimsDashboard() {
           </div>
         )}
       </div>
+
+      {/* Lifetime "Since 2008" panel — static aggregate data, not drillable */}
+      <LifetimeTrends />
 
       <ClaimDetailDrawer
         claimId={drawerClaimId}

@@ -39,6 +39,10 @@ export function getSummary(params = {}) {
   return authedFetch(`${BACKEND_URL}/api/wc-claims/summary${buildQuery(params)}`);
 }
 
+export function getLifetimeSummary() {
+  return authedFetch(`${BACKEND_URL}/api/wc-claims/lifetime`);
+}
+
 export function getClaim(claimId) {
   return authedFetch(`${BACKEND_URL}/api/wc-claims/${claimId}`);
 }
