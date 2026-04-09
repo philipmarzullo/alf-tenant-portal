@@ -39,6 +39,9 @@ const EMPTY_CLAIM = {
   paid_expense: '',
   total_paid: '',
   outstanding_reserve: '',
+  // Manual cost — for non-reportable incidents Liberty doesn't track
+  // (urgent care visits, first aid, OTC supplies, etc.)
+  manual_cost: '',
   // Case mgmt
   claim_stage: '',
   next_action: '',
@@ -106,6 +109,7 @@ const SECTIONS = [
       { key: 'paid_expense', label: 'Paid — Expense', type: 'money' },
       { key: 'total_paid', label: 'Total Paid', type: 'money' },
       { key: 'outstanding_reserve', label: 'Outstanding Reserve', type: 'money' },
+      { key: 'manual_cost', label: 'Manual Cost (Non-Reportable)', type: 'money', placeholder: 'Urgent care, first aid, etc.' },
     ],
   },
   {

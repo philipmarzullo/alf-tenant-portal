@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Search, Loader2, RefreshCw } from 'lucide-react';
-import { listClaims, getSummary } from './wcClaimsApi';
+import { listClaims, getSummary, updateClaim } from './wcClaimsApi';
 import ClaimDetailDrawer from './ClaimDetailDrawer';
 
 function fmtMoney(n) {
@@ -40,6 +40,11 @@ export default function ClaimTracker() {
   const [drawerClaimId, setDrawerClaimId] = useState(null);
   const [drawerNew, setDrawerNew] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Inline cost editing for non-reportable rows.
+  // editingCost = { id, value } when a cell is open; null otherwise.
+  const [editingCost, setEditingCost] = useState(null);
+  const [savingCost, setSavingCost] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -85,6 +90,28 @@ export default function ClaimTracker() {
   const handleClaimSaved = () => {
     setRefreshKey(k => k + 1);
     setDrawerNew(false);
+  };
+
+  // Save inline-edited manual_cost. We patch the row in local state on success
+  // so the UI doesn't have to wait for a full refetch.
+  const saveManualCost = async (claim) => {
+    if (!editingCost || editingCost.id !== claim.id) return;
+    const raw = editingCost.value;
+    const next = raw === '' || raw == null ? null : Number(raw);
+    if (Number(claim.manual_cost || 0) === Number(next || 0)) {
+      setEditingCost(null);
+      return;
+    }
+    setSavingCost(true);
+    try {
+      const { claim: updated } = await updateClaim(claim.id, { manual_cost: next });
+      setRows(rs => rs.map(r => (r.id === claim.id ? { ...r, manual_cost: updated.manual_cost } : r)));
+      setEditingCost(null);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSavingCost(false);
+    }
   };
 
   return (
@@ -182,19 +209,20 @@ export default function ClaimTracker() {
                 <th className="text-left px-3 py-2 font-medium text-secondary-text text-xs whitespace-nowrap">RTW Date</th>
                 <th className="text-left px-3 py-2 font-medium text-secondary-text text-xs">Body Part</th>
                 <th className="text-right px-3 py-2 font-medium text-secondary-text text-xs whitespace-nowrap">Total Incurred</th>
+                <th className="text-right px-3 py-2 font-medium text-secondary-text text-xs whitespace-nowrap">Cost (NR)</th>
                 <th className="text-left px-3 py-2 font-medium text-secondary-text text-xs">Case Manager</th>
                 <th className="text-left px-3 py-2 font-medium text-secondary-text text-xs">Claim Stage</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading && (
-                <tr><td colSpan={12} className="px-4 py-10 text-center"><Loader2 size={20} className="inline animate-spin text-aa-blue" /></td></tr>
+                <tr><td colSpan={13} className="px-4 py-10 text-center"><Loader2 size={20} className="inline animate-spin text-aa-blue" /></td></tr>
               )}
               {!loading && error && (
-                <tr><td colSpan={12} className="px-4 py-6 text-center"><span className="text-red-600 text-sm">{error}</span></td></tr>
+                <tr><td colSpan={13} className="px-4 py-6 text-center"><span className="text-red-600 text-sm">{error}</span></td></tr>
               )}
               {!loading && !error && rows.length === 0 && (
-                <tr><td colSpan={12} className="px-4 py-10 text-center text-secondary-text">No claims match the current filters</td></tr>
+                <tr><td colSpan={13} className="px-4 py-10 text-center text-secondary-text">No claims match the current filters</td></tr>
               )}
               {!loading && rows.map(c => (
                 <tr
@@ -212,6 +240,42 @@ export default function ClaimTracker() {
                   <td className="px-3 py-2 text-dark-text whitespace-nowrap">{c.rtw_date || '—'}</td>
                   <td className="px-3 py-2 text-dark-text">{c.part_of_body || '—'}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-dark-text whitespace-nowrap">{fmtMoney(c.total_incurred)}</td>
+                  <td
+                    className="px-3 py-2 text-right tabular-nums text-dark-text whitespace-nowrap"
+                    onClick={(e) => {
+                      // Only non-reportable rows are editable; clicking
+                      // anywhere else should still open the drawer.
+                      if (c.claim_status !== 'Non-Reportable') return;
+                      e.stopPropagation();
+                      if (editingCost?.id !== c.id) {
+                        setEditingCost({ id: c.id, value: c.manual_cost ?? '' });
+                      }
+                    }}
+                  >
+                    {c.claim_status !== 'Non-Reportable' ? (
+                      <span className="text-secondary-text">—</span>
+                    ) : editingCost?.id === c.id ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        autoFocus
+                        disabled={savingCost}
+                        value={editingCost.value}
+                        onChange={(e) => setEditingCost({ id: c.id, value: e.target.value })}
+                        onClick={(e) => e.stopPropagation()}
+                        onBlur={() => saveManualCost(c)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); saveManualCost(c); }
+                          if (e.key === 'Escape') { e.preventDefault(); setEditingCost(null); }
+                        }}
+                        className="w-24 px-2 py-1 text-sm text-right tabular-nums border border-aa-blue rounded focus:outline-none"
+                      />
+                    ) : (
+                      <span className="cursor-text px-2 py-1 rounded hover:bg-aa-blue/10">
+                        {c.manual_cost != null && c.manual_cost !== '' ? fmtMoney(c.manual_cost) : <span className="text-secondary-text/60 italic">add</span>}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-dark-text truncate max-w-[140px]">{c.case_manager || '—'}</td>
                   <td className="px-3 py-2 text-dark-text truncate max-w-[160px]">{c.claim_stage || '—'}</td>
                 </tr>

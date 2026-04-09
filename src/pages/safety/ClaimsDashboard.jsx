@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ShieldAlert, AlertTriangle, DollarSign, Wallet, Loader2, FileSearch,
+  Info, FileText, TrendingUp, Calendar, Calculator,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -35,26 +36,47 @@ function StatusBadge({ value }) {
   return <span className={`px-2 py-0.5 text-[11px] font-medium rounded ${cls}`}>{value}</span>;
 }
 
-function KPICard({ label, value, icon: Icon, color = '#1B2133', onClick, active }) {
+function KPICard({ label, value, icon: Icon, color = '#1B2133', onClick, active, tooltip }) {
+  const Wrapper = onClick ? 'button' : 'div';
   return (
-    <button
+    <Wrapper
       onClick={onClick}
       className={`w-full bg-white rounded-lg border p-5 text-left transition-colors ${
-        active ? 'border-aa-blue ring-1 ring-aa-blue' : 'border-gray-200 hover:border-aa-blue/40'
+        onClick ? (active ? 'border-aa-blue ring-1 ring-aa-blue' : 'border-gray-200 hover:border-aa-blue/40')
+                : 'border-gray-200'
       }`}
     >
       <div className="flex items-start justify-between mb-2">
-        <span className="text-xs font-medium text-secondary-text uppercase tracking-wider">{label}</span>
+        <span className="text-xs font-medium text-secondary-text uppercase tracking-wider flex items-center gap-1">
+          {label}
+          {tooltip && (
+            <span className="relative group inline-flex">
+              <Info size={12} className="text-secondary-text/60 hover:text-aa-blue cursor-help" />
+              <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 px-3 py-2 bg-dark-nav text-white text-[11px] font-normal normal-case tracking-normal leading-snug rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-20">
+                {tooltip}
+                <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-dark-nav" />
+              </span>
+            </span>
+          )}
+        </span>
         {Icon && <Icon size={18} style={{ color }} />}
       </div>
       <div className="text-3xl font-light text-dark-text tabular-nums">{value}</div>
-    </button>
+    </Wrapper>
   );
 }
 
 export default function ClaimsDashboard() {
-  // Applied filters (sent to API) vs pending (UI state)
-  const defaultFilters = { vp: null, state: null, year: null, dateFrom: null, dateTo: null };
+  // Recordable vs Non-Recordable toggle — primary view selector
+  // Recordable = Open + Closed (OSHA-recordable, Liberty-tracked)
+  // Non-Recordable = Non-Reportable (urgent care, first aid, etc.)
+  const [view, setView] = useState('recordable');
+
+  // Applied filters (sent to API) vs pending (UI state).
+  // Default year = current year per Armando's feedback so the dashboard
+  // opens on "this year so far" instead of all-time.
+  const currentYear = new Date().getFullYear();
+  const defaultFilters = { vp: null, state: null, year: currentYear, dateFrom: null, dateTo: null };
   const [pending, setPending] = useState(defaultFilters);
   const [filters, setFilters] = useState(defaultFilters);
 
@@ -77,21 +99,26 @@ export default function ClaimsDashboard() {
 
   const isDirty = JSON.stringify(pending) !== JSON.stringify(filters);
 
-  // Load summary whenever applied filters change
+  // Load summary whenever applied filters or view change
   useEffect(() => {
     let cancelled = false;
     setSummaryLoading(true);
     setSummaryError(null);
-    getSummary(filters)
+    getSummary({ ...filters, recordable: view === 'recordable' ? 'true' : 'false' })
       .then(d => { if (!cancelled) setSummary(d); })
       .catch(e => { if (!cancelled) setSummaryError(e.message); })
       .finally(() => { if (!cancelled) setSummaryLoading(false); });
     return () => { cancelled = true; };
-  }, [filters]);
+  }, [filters, view]);
 
-  // Build the query for the table from applied filters + drill state
+  // Build the query for the table from applied filters + drill state + view
   const tableQuery = useMemo(() => {
-    const q = { ...filters, page, limit: 50 };
+    const q = {
+      ...filters,
+      page,
+      limit: 50,
+      recordable: view === 'recordable' ? 'true' : 'false',
+    };
     if (statusDrill === 'open') q.status = 'open';
     if (statusDrill === 'closed') q.status = 'closed';
     if (yearDrill) q.year = yearDrill;
@@ -104,7 +131,7 @@ export default function ClaimsDashboard() {
     }
     if (injuryDrill) q.injury_cause = injuryDrill;
     return q;
-  }, [filters, statusDrill, yearDrill, siteDrill, injuryDrill, page, summary]);
+  }, [filters, view, statusDrill, yearDrill, siteDrill, injuryDrill, page, summary]);
 
   // Load table rows whenever query changes
   useEffect(() => {
@@ -138,6 +165,19 @@ export default function ClaimsDashboard() {
     setPage(1);
   };
 
+  // Switching view (recordable ↔ non-recordable) clears any drill state
+  // because the current drills (e.g. statusDrill='open') don't make sense
+  // in the other view's KPI set.
+  const switchView = useCallback((next) => {
+    if (next === view) return;
+    setView(next);
+    setStatusDrill(null);
+    setYearDrill(null);
+    setSiteDrill(null);
+    setInjuryDrill(null);
+    setPage(1);
+  }, [view]);
+
   const kpis = summary?.kpis;
 
   if (summaryLoading && !summary) {
@@ -170,6 +210,44 @@ export default function ClaimsDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Recordable / Non-Recordable view toggle.
+          Primary filter — pulled to the top per Armando's feedback so the
+          first thing users decide is which "world" they're looking at.
+          Recordable = OSHA-recordable claims (Open + Closed, Liberty-tracked).
+          Non-Recordable = first-aid / urgent care incidents Liberty doesn't carry. */}
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-medium text-secondary-text uppercase tracking-wider">View:</span>
+        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+          <button
+            onClick={() => switchView('recordable')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              view === 'recordable'
+                ? 'bg-aa-blue text-white shadow-sm'
+                : 'text-secondary-text hover:text-dark-text'
+            }`}
+          >
+            <ShieldAlert size={14} />
+            Recordable
+          </button>
+          <button
+            onClick={() => switchView('non-recordable')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              view === 'non-recordable'
+                ? 'bg-aa-blue text-white shadow-sm'
+                : 'text-secondary-text hover:text-dark-text'
+            }`}
+          >
+            <FileText size={14} />
+            Non-Recordable
+          </button>
+        </div>
+        <span className="text-xs text-secondary-text">
+          {view === 'recordable'
+            ? 'OSHA-recordable claims (Open + Closed) tracked by Liberty'
+            : 'First-aid / urgent-care incidents tracked manually'}
+        </span>
+      </div>
+
       {/* Filter bar */}
       <div className="flex flex-wrap items-end gap-4 bg-white rounded-lg border border-gray-200 px-4 py-3">
         <div>
@@ -232,7 +310,7 @@ export default function ClaimsDashboard() {
         >
           Apply
         </button>
-        {(pending.vp || pending.state || pending.year || pending.dateFrom || pending.dateTo) && (
+        {(pending.vp || pending.state || Number(pending.year) !== currentYear || pending.dateFrom || pending.dateTo) && (
           <button
             onClick={() => {
               setPending(defaultFilters);
@@ -241,42 +319,76 @@ export default function ClaimsDashboard() {
             }}
             className="text-xs text-aa-blue hover:underline pb-1.5"
           >
-            Clear filters
+            Reset filters
           </button>
         )}
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          label="Open Claims"
-          value={kpis.open_count.toLocaleString()}
-          icon={ShieldAlert}
-          color="#1B2133"
-          onClick={() => setStatusDrill(statusDrill === 'open' ? null : 'open')}
-          active={statusDrill === 'open'}
-        />
-        <KPICard
-          label="Out of Work"
-          value={kpis.oow_count.toLocaleString()}
-          icon={AlertTriangle}
-          color={kpis.oow_count > 0 ? RED : '#1B2133'}
-          onClick={() => setStatusDrill(statusDrill === 'oow' ? null : 'oow')}
-          active={statusDrill === 'oow'}
-        />
-        <KPICard
-          label="Total Incurred"
-          value={fmtMoney(kpis.total_incurred)}
-          icon={DollarSign}
-          color="#1B2133"
-        />
-        <KPICard
-          label="Outstanding Reserve"
-          value={fmtMoney(kpis.outstanding_reserve)}
-          icon={Wallet}
-          color="#1B2133"
-        />
-      </div>
+      {/* KPI cards — different metric set per view.
+          Recordable view shows Liberty-tracked numbers (Open / OOW / Incurred / Reserve).
+          Non-Recordable view shows the manually-tracked rollups Jackie maintains. */}
+      {view === 'recordable' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard
+            label="Open Claims"
+            value={kpis.open_count.toLocaleString()}
+            icon={ShieldAlert}
+            color="#1B2133"
+            onClick={() => setStatusDrill(statusDrill === 'open' ? null : 'open')}
+            active={statusDrill === 'open'}
+          />
+          <KPICard
+            label="Out of Work"
+            value={kpis.oow_count.toLocaleString()}
+            icon={AlertTriangle}
+            color={kpis.oow_count > 0 ? RED : '#1B2133'}
+            onClick={() => setStatusDrill(statusDrill === 'oow' ? null : 'oow')}
+            active={statusDrill === 'oow'}
+          />
+          <KPICard
+            label="Total Incurred"
+            value={fmtMoney(kpis.total_incurred)}
+            icon={DollarSign}
+            color="#1B2133"
+            tooltip="Total amount Liberty has set aside for these claims, including amounts already paid plus reserves held against future payments."
+          />
+          <KPICard
+            label="Outstanding Reserve"
+            value={fmtMoney(kpis.outstanding_reserve)}
+            icon={Wallet}
+            color="#1B2133"
+            tooltip="The portion of total incurred that has not yet been paid out — money Liberty is still holding in reserve for these claims."
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard
+            label="Non-Recordable Claims"
+            value={(kpis.non_reportable_count || 0).toLocaleString()}
+            icon={FileText}
+            color="#1B2133"
+          />
+          <KPICard
+            label="YTD Non-Recordable"
+            value={(kpis.ytd_nr_count || 0).toLocaleString()}
+            icon={Calendar}
+            color="#1B2133"
+          />
+          <KPICard
+            label="Total Cost"
+            value={fmtMoney(kpis.total_manual_cost)}
+            icon={DollarSign}
+            color="#1B2133"
+            tooltip="Total out-of-pocket cost manually entered for non-recordable incidents (urgent care visits, first-aid treatment, supplies)."
+          />
+          <KPICard
+            label="Avg Cost / Claim"
+            value={fmtMoney(kpis.avg_manual_cost)}
+            icon={Calculator}
+            color="#1B2133"
+          />
+        </div>
+      )}
 
       {/* Charts row 1: Claims by Year + Top Sites */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -412,7 +524,9 @@ export default function ClaimsDashboard() {
                 <th className="text-left px-3 py-2 font-medium text-secondary-text text-xs">VP</th>
                 <th className="text-left px-3 py-2 font-medium text-secondary-text text-xs">State</th>
                 <th className="text-left px-3 py-2 font-medium text-secondary-text text-xs">Status</th>
-                <th className="text-right px-3 py-2 font-medium text-secondary-text text-xs">Total Incurred</th>
+                <th className="text-right px-3 py-2 font-medium text-secondary-text text-xs">
+                  {view === 'recordable' ? 'Total Incurred' : 'Cost'}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -435,7 +549,9 @@ export default function ClaimsDashboard() {
                   <td className="px-3 py-2 text-dark-text">{c.vp || '—'}</td>
                   <td className="px-3 py-2 text-dark-text">{c.accident_state || '—'}</td>
                   <td className="px-3 py-2"><StatusBadge value={c.work_status || c.ee_status || c.claim_status} /></td>
-                  <td className="px-3 py-2 text-right tabular-nums text-dark-text">{fmtMoney(c.total_incurred)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-dark-text">
+                    {fmtMoney(view === 'recordable' ? c.total_incurred : c.manual_cost)}
+                  </td>
                 </tr>
               ))}
             </tbody>
