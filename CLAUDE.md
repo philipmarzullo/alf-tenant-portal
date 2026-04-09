@@ -83,3 +83,26 @@ VITE_TENANT_ID=<uuid>              # (Optional) Tenant ID — omit for unified p
 - Always verify builds before pushing
 - Commit messages: concise, explain "why" not "what"
 - Before committing: "Does any Alf branding appear?" If yes, stop.
+
+## Live Snowflake Data in the UI
+
+Any page that displays Snowflake-derived data must feel live without the
+user having to click a refresh button.
+
+- **Auto-trigger a refresh on mount.** Fire `validateWorkStatus({ maxAgeMinutes: 5 })`
+  (for wc_claims) or rely on `SyncHealthBanner`'s `/run-if-stale` flow
+  (for sync-backed dashboards). Do NOT block the initial render — let
+  the page paint with whatever data it has, then update silently when
+  the refresh resolves.
+- **Show a subtle "updating" indicator.** Pulse an icon or use a small
+  banner while the background refresh runs. See `ClaimTracker.jsx` for
+  the `ShieldCheck` pulse pattern and `SyncHealthBanner.jsx` for the
+  dashboard banner pattern.
+- **Listen for the refresh event.** Hooks that fetch sync-backed data
+  should subscribe to the `SYNC_REFRESHED_EVENT` window event (see
+  `useDashboardData.js` / `useDynamicMetrics.js`) so they re-pull when
+  `SyncHealthBanner` signals a completed background refresh.
+- **Surface last-checked timestamps.** Every dot, chart, or number
+  derived from Snowflake should have a visible "Checked X ago" hint
+  somewhere nearby — see `ValidationDot.jsx` for the reference
+  implementation.

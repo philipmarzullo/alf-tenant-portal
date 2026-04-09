@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getFreshToken } from '../lib/supabase';
 import { useTenantId } from '../contexts/TenantIdContext';
 
@@ -27,58 +27,87 @@ function setCache(data) {
   } catch { /* quota exceeded — ignore */ }
 }
 
+function clearCache() {
+  try { sessionStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
+}
+
 /**
  * Returns sync health status for the current tenant.
  * Cached in sessionStorage for 5 minutes.
  *
- * Returns: { status, credential_active, last_sync_at, connector_type, loading }
+ * Options:
+ *   poll — when true, refetches every 10 seconds (used by SyncHealthBanner
+ *          while a background sync is running so it can see the fresh
+ *          last_sync_at timestamp land).
+ *
+ * Returns: { status, credential_active, last_sync_at, connector_type, loading, refetch }
  * Status: 'no_source' | 'inactive' | 'stale' | 'healthy' | null (loading)
  */
-export default function useSyncHealth() {
+export default function useSyncHealth({ poll = false } = {}) {
   const { tenantId } = useTenantId();
   const [health, setHealth] = useState(() => getCached());
   const [loading, setLoading] = useState(!getCached());
+  const cancelRef = useRef(false);
 
-  useEffect(() => {
+  const fetchHealth = useCallback(async ({ useCache = true } = {}) => {
     if (!tenantId) {
       setLoading(false);
-      return;
+      return null;
     }
-
-    const cached = getCached();
-    if (cached) {
-      setHealth(cached);
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function fetchHealth() {
-      try {
-        const token = await getFreshToken();
-        const res = await fetch(`${BACKEND_URL}/api/sync/${tenantId}/health`, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-        if (!res.ok) throw new Error('Failed');
-        const data = await res.json();
-        if (!cancelled) {
-          setHealth(data);
-          setCache(data);
-        }
-      } catch (err) {
-        console.error('[useSyncHealth]', err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
+    if (useCache) {
+      const cached = getCached();
+      if (cached) {
+        setHealth(cached);
+        setLoading(false);
+        return cached;
       }
     }
-
-    fetchHealth();
-    return () => { cancelled = true; };
+    try {
+      const token = await getFreshToken();
+      const res = await fetch(`${BACKEND_URL}/api/sync/${tenantId}/health`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      if (cancelRef.current) return null;
+      setHealth(data);
+      setCache(data);
+      return data;
+    } catch (err) {
+      console.error('[useSyncHealth]', err.message);
+      return null;
+    } finally {
+      if (!cancelRef.current) setLoading(false);
+    }
   }, [tenantId]);
 
-  return { ...health, loading };
+  // Refetch bypasses the cache — used after a background sync completes.
+  const refetch = useCallback(() => {
+    clearCache();
+    return fetchHealth({ useCache: false });
+  }, [fetchHealth]);
+
+  // Initial fetch
+  useEffect(() => {
+    cancelRef.current = false;
+    fetchHealth();
+    return () => { cancelRef.current = true; };
+  }, [fetchHealth]);
+
+  // Polling mode — used by SyncHealthBanner while a background sync is
+  // running so it can see last_sync_at update without waiting for a manual
+  // refresh. Disabled by default to keep the home page quiet.
+  useEffect(() => {
+    if (!poll || !tenantId) return undefined;
+    const id = setInterval(() => {
+      clearCache();
+      fetchHealth({ useCache: false });
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [poll, tenantId, fetchHealth]);
+
+  return { ...health, loading, refetch };
 }

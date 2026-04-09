@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getFreshToken } from '../lib/supabase';
 import { useTenantId } from '../contexts/TenantIdContext';
+import { SYNC_REFRESHED_EVENT } from '../components/dashboards/SyncHealthBanner';
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
 /**
@@ -58,6 +59,14 @@ export default function useDashboardData(domain, filters = {}) {
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
+
+  // When SyncHealthBanner finishes a background refresh, re-pull this
+  // dashboard's data so the user sees the new numbers without reloading.
+  useEffect(() => {
+    const handler = () => { fetchData(); };
+    window.addEventListener(SYNC_REFRESHED_EVENT, handler);
+    return () => window.removeEventListener(SYNC_REFRESHED_EVENT, handler);
   }, [fetchData]);
 
   return { data, loading, error, refetch: fetchData };
