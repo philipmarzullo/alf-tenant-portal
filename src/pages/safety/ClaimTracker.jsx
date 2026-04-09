@@ -50,6 +50,9 @@ export default function ClaimTracker() {
   // Validate Work Status (WinTeam timekeeping check) — admin button
   const [validating, setValidating] = useState(false);
   const [validateMsg, setValidateMsg] = useState(null);
+  // Separate state for the background auto-refresh on mount so it doesn't
+  // disable the button and so failures stay silent.
+  const [autoValidating, setAutoValidating] = useState(false);
 
   const handleValidate = async () => {
     setValidating(true);
@@ -66,6 +69,24 @@ export default function ClaimTracker() {
       setValidating(false);
     }
   };
+
+  // Mount-time auto-refresh: kick off a background validation with a 5-min
+  // dedup window so the tracker always reflects today's timekeeping. Runs
+  // non-blocking — initial data load is not held up by Snowflake.
+  useEffect(() => {
+    let cancelled = false;
+    setAutoValidating(true);
+    validateWorkStatus({ maxAgeMinutes: 5 })
+      .then(summary => {
+        if (cancelled) return;
+        if (summary && summary.skipped === false) {
+          setRefreshKey(k => k + 1);
+        }
+      })
+      .catch(() => { /* silent — manual button still available */ })
+      .finally(() => { if (!cancelled) setAutoValidating(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   // Debounce search input
   useEffect(() => {
@@ -208,10 +229,18 @@ export default function ClaimTracker() {
         <button
           onClick={handleValidate}
           disabled={validating}
-          title="Check WinTeam timekeeping for the last 14 days and flag stale work statuses"
+          title={
+            autoValidating
+              ? 'Auto-refreshing from WinTeam…'
+              : 'Check WinTeam timekeeping for the last 14 days and flag stale work statuses'
+          }
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-aa-blue border border-aa-blue/40 rounded-lg hover:bg-aa-blue/5 disabled:opacity-50"
         >
-          {validating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+          {validating ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <ShieldCheck size={14} className={autoValidating ? 'animate-pulse' : ''} />
+          )}
           Validate Work Status
         </button>
         <button

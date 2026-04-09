@@ -7,7 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Cell,
 } from 'recharts';
-import { getSummary, listClaims } from './wcClaimsApi';
+import { getSummary, listClaims, validateWorkStatus } from './wcClaimsApi';
 import ClaimDetailDrawer from './ClaimDetailDrawer';
 import LifetimeTrends from './LifetimeTrends';
 import ValidationDot from './ValidationDot';
@@ -97,10 +97,30 @@ export default function ClaimsDashboard() {
   const [page, setPage] = useState(1);
 
   const [drawerClaimId, setDrawerClaimId] = useState(null);
+  // Bumped when a background WinTeam validation finishes with fresh data, so
+  // the summary + table re-fetch and the validation dots update.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const isDirty = JSON.stringify(pending) !== JSON.stringify(filters);
 
-  // Load summary whenever applied filters or view change
+  // Mount-time auto-refresh: kick off a background WinTeam timekeeping
+  // validation with a 5-min dedup window. Non-blocking — the summary load
+  // below runs in parallel, so dashboards render immediately with whatever
+  // data is there, then dots update silently when the refresh resolves.
+  useEffect(() => {
+    let cancelled = false;
+    validateWorkStatus({ maxAgeMinutes: 5 })
+      .then(summary => {
+        if (cancelled) return;
+        if (summary && summary.skipped === false) {
+          setRefreshKey(k => k + 1);
+        }
+      })
+      .catch(() => { /* silent — Claim Tracker has a manual button */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Load summary whenever applied filters, view, or refreshKey change
   useEffect(() => {
     let cancelled = false;
     setSummaryLoading(true);
@@ -110,7 +130,7 @@ export default function ClaimsDashboard() {
       .catch(e => { if (!cancelled) setSummaryError(e.message); })
       .finally(() => { if (!cancelled) setSummaryLoading(false); });
     return () => { cancelled = true; };
-  }, [filters, view]);
+  }, [filters, view, refreshKey]);
 
   // Build the query for the table from applied filters + drill state + view
   const tableQuery = useMemo(() => {
@@ -134,7 +154,7 @@ export default function ClaimsDashboard() {
     return q;
   }, [filters, view, statusDrill, yearDrill, siteDrill, injuryDrill, page, summary]);
 
-  // Load table rows whenever query changes
+  // Load table rows whenever query or refreshKey changes
   useEffect(() => {
     let cancelled = false;
     setTableLoading(true);
@@ -147,7 +167,7 @@ export default function ClaimsDashboard() {
       .catch(() => { if (!cancelled) setTableRows([]); })
       .finally(() => { if (!cancelled) setTableLoading(false); });
     return () => { cancelled = true; };
-  }, [tableQuery]);
+  }, [tableQuery, refreshKey]);
 
   const applyFilters = useCallback(() => {
     setFilters({ ...pending });

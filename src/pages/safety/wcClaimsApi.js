@@ -67,8 +67,14 @@ export function deleteClaim(claimId) {
   });
 }
 
-export function validateWorkStatus() {
+// Triggers a WinTeam timekeeping validation run on the backend.
+//   maxAgeMinutes — when > 0, the backend short-circuits if a previous run
+//                   is younger than the window. Page-load auto-refresh passes
+//                   5 so concurrent users share a single Snowflake query.
+//                   Explicit button clicks leave it at 0 to always run.
+export function validateWorkStatus({ maxAgeMinutes = 0 } = {}) {
   return authedFetch(`${BACKEND_URL}/api/wc-claims/validate-work-status`, {
     method: 'POST',
+    body: JSON.stringify({ max_age_minutes: maxAgeMinutes }),
   });
 }
