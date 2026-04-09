@@ -10,6 +10,7 @@ import {
 import { getSummary, listClaims } from './wcClaimsApi';
 import ClaimDetailDrawer from './ClaimDetailDrawer';
 import LifetimeTrends from './LifetimeTrends';
+import ValidationDot from './ValidationDot';
 
 const BAR_COLOR = '#009ADE';
 const BAR_HIGHLIGHT = '#005F8A';
@@ -548,7 +549,12 @@ export default function ClaimsDashboard() {
                   <td className="px-3 py-2 text-dark-text truncate max-w-[200px]">{c.job_name || '—'}</td>
                   <td className="px-3 py-2 text-dark-text">{c.vp || '—'}</td>
                   <td className="px-3 py-2 text-dark-text">{c.accident_state || '—'}</td>
-                  <td className="px-3 py-2"><StatusBadge value={c.work_status || c.ee_status || c.claim_status} /></td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <ValidationDot claim={c} />
+                      <StatusBadge value={c.work_status || c.ee_status || c.claim_status} />
+                    </div>
+                  </td>
                   <td className="px-3 py-2 text-right tabular-nums text-dark-text">
                     {fmtMoney(view === 'recordable' ? c.total_incurred : c.manual_cost)}
                   </td>

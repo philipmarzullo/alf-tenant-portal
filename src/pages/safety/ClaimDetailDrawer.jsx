@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, Edit2, Save, Trash2, AlertCircle } from 'lucide-react';
 import { getClaim, createClaim, updateClaim, deleteClaim } from './wcClaimsApi';
+import ValidationDot from './ValidationDot';
 
 const EMPTY_CLAIM = {
   claim_number: '',
@@ -360,6 +361,11 @@ export default function ClaimDetailDrawer({ claimId, isNew = false, onClose, onS
                         </label>
                         {editing ? (
                           <FieldInput field={field} value={form[field.key]} onChange={updateField} />
+                        ) : field.key === 'work_status' ? (
+                          <div className="text-sm text-dark-text flex items-center gap-1.5">
+                            <DisplayValue field={field} value={claim?.[field.key]} />
+                            <ValidationDot claim={claim} />
+                          </div>
                         ) : (
                           <div className="text-sm text-dark-text">
                             <DisplayValue field={field} value={claim?.[field.key]} />

@@ -66,3 +66,9 @@ export function deleteClaim(claimId) {
     method: 'DELETE',
   });
 }
+
+export function validateWorkStatus() {
+  return authedFetch(`${BACKEND_URL}/api/wc-claims/validate-work-status`, {
+    method: 'POST',
+  });
+}

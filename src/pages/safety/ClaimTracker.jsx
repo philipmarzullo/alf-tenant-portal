@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, Search, Loader2, RefreshCw } from 'lucide-react';
-import { listClaims, getSummary, updateClaim } from './wcClaimsApi';
+import { Plus, Search, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { listClaims, getSummary, updateClaim, validateWorkStatus } from './wcClaimsApi';
 import ClaimDetailDrawer from './ClaimDetailDrawer';
+import ValidationDot from './ValidationDot';
 
 function fmtMoney(n) {
   if (n == null || Number.isNaN(Number(n))) return '$0';
@@ -45,6 +46,26 @@ export default function ClaimTracker() {
   // editingCost = { id, value } when a cell is open; null otherwise.
   const [editingCost, setEditingCost] = useState(null);
   const [savingCost, setSavingCost] = useState(false);
+
+  // Validate Work Status (WinTeam timekeeping check) — admin button
+  const [validating, setValidating] = useState(false);
+  const [validateMsg, setValidateMsg] = useState(null);
+
+  const handleValidate = async () => {
+    setValidating(true);
+    setValidateMsg(null);
+    try {
+      const summary = await validateWorkStatus();
+      setValidateMsg(
+        `Validated ${summary.checked} · ${summary.confirmed} confirmed · ${summary.mismatched} mismatched · ${summary.no_data} no data`
+      );
+      setRefreshKey(k => k + 1);
+    } catch (e) {
+      setValidateMsg(`Validation failed: ${e.message}`);
+    } finally {
+      setValidating(false);
+    }
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -185,6 +206,15 @@ export default function ClaimTracker() {
           <RefreshCw size={16} />
         </button>
         <button
+          onClick={handleValidate}
+          disabled={validating}
+          title="Check WinTeam timekeeping for the last 14 days and flag stale work statuses"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-aa-blue border border-aa-blue/40 rounded-lg hover:bg-aa-blue/5 disabled:opacity-50"
+        >
+          {validating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+          Validate Work Status
+        </button>
+        <button
           onClick={() => setDrawerNew(true)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-aa-blue rounded-lg hover:bg-blue-700"
         >
@@ -192,6 +222,10 @@ export default function ClaimTracker() {
           Add New Claim
         </button>
       </div>
+
+      {validateMsg && (
+        <div className="text-xs text-secondary-text px-1">{validateMsg}</div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -236,7 +270,12 @@ export default function ClaimTracker() {
                   <td className="px-3 py-2 text-dark-text truncate max-w-[180px]">{c.job_name || '—'}</td>
                   <td className="px-3 py-2 text-dark-text">{c.vp || '—'}</td>
                   <td className="px-3 py-2 text-dark-text">{c.accident_state || '—'}</td>
-                  <td className="px-3 py-2"><StatusBadge value={c.work_status || c.ee_status || c.claim_status} /></td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <ValidationDot claim={c} />
+                      <StatusBadge value={c.work_status || c.ee_status || c.claim_status} />
+                    </div>
+                  </td>
                   <td className="px-3 py-2 text-dark-text whitespace-nowrap">{c.rtw_date || '—'}</td>
                   <td className="px-3 py-2 text-dark-text">{c.part_of_body || '—'}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-dark-text whitespace-nowrap">{fmtMoney(c.total_incurred)}</td>
