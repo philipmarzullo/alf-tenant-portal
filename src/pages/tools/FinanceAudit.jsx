@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Loader2, AlertTriangle, DollarSign, Search,
-  ChevronDown, ChevronRight, X,
+  Loader2, DollarSign, Search,
+  ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { getFreshToken } from '../../lib/supabase';
 import { useTenantId } from '../../contexts/TenantIdContext';
@@ -238,15 +238,6 @@ export default function FinanceAudit() {
 
   return (
     <div className="space-y-6">
-      {/* Warning banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-3">
-        <AlertTriangle size={18} className="text-amber-600 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-amber-800">Finance Audit — Internal Use Only</p>
-          <p className="text-xs text-amber-600 mt-0.5">This tool is restricted to super admins. Data shown is for Monday finance review sessions only.</p>
-        </div>
-      </div>
-
       {/* Filter bar */}
       <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex flex-wrap items-end gap-4">
         <div>
