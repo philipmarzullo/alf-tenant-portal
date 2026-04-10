@@ -10,6 +10,7 @@ export const MODULE_DEFINITIONS = [
   { key: 'sop-builder', label: 'SOP Builder', group: 'TOOLS', path: '/tools/sop-builder' },
   { key: 'rfp-response', label: 'RFP Response Builder', group: 'TOOLS', path: '/tools/rfp-response' },
   { key: 'union-benefits-report', label: 'Union Benefits Report', group: 'TOOLS', path: '/tools/union-benefits-report' },
+  { key: 'finance-audit', label: 'Finance Audit', group: 'TOOLS', path: '/tools/finance-audit' },
   { key: 'admin', label: 'Admin', group: 'ADMIN', path: '/admin' },
 ];
 

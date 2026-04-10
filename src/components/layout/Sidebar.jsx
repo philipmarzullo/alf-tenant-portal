@@ -280,14 +280,14 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
         }];
       }
 
-      // Inject super-admin-only Finance Audit link into TOOLS group
-      if (group.group === 'TOOLS' && items.length > 0 && !items[0]?._tierLocked && isSuperAdmin) {
+      // Inject Finance Audit link into TOOLS group — super-admins always, others only with explicit module grant
+      const hasFinanceAuditModule = (currentUser?.modules || []).map(m => m.toLowerCase()).includes('finance-audit');
+      if (group.group === 'TOOLS' && items.length > 0 && !items[0]?._tierLocked && (isSuperAdmin || hasFinanceAuditModule)) {
         items = [...items, {
           label: 'Finance Audit',
           path: '/portal/tools/finance-audit',
           icon: 'DollarSign',
-          moduleKey: 'tools',
-          superAdminOnly: true,
+          moduleKey: 'finance-audit',
         }];
       }
 

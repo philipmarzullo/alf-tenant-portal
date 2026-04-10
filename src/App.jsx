@@ -271,10 +271,20 @@ function PortalIndex() {
 }
 
 function ProtectedRoute({ moduleKey, adminOnly, superAdminOnly, children }) {
-  const { hasModule, isAdmin, isSuperAdmin } = useUser();
+  const { hasModule, isAdmin, isSuperAdmin, currentUser } = useUser();
   const { hasFeature, requiredTierLabel } = useTierAccess();
 
-  if (superAdminOnly && !isSuperAdmin) return <Navigate to="/portal" replace />;
+  // When both superAdminOnly and moduleKey are set, allow access if the user
+  // is a super-admin OR has the module explicitly granted (bypasses hasModule
+  // which auto-grants to all admins/managers).
+  if (superAdminOnly && moduleKey) {
+    const hasExplicitModule = (currentUser?.modules || [])
+      .map(m => m.toLowerCase())
+      .includes(moduleKey.toLowerCase());
+    if (!isSuperAdmin && !hasExplicitModule) return <Navigate to="/portal" replace />;
+  } else if (superAdminOnly && !isSuperAdmin) {
+    return <Navigate to="/portal" replace />;
+  }
   if (adminOnly && !isAdmin) return <Navigate to="/portal" replace />;
 
   // Tier gating — show upgrade prompt instead of redirecting
@@ -533,7 +543,7 @@ export default function App() {
                     <Route
                       path="tools/finance-audit"
                       element={
-                        <ProtectedRoute superAdminOnly>
+                        <ProtectedRoute superAdminOnly moduleKey="finance-audit">
                           <FinanceAudit />
                         </ProtectedRoute>
                       }
