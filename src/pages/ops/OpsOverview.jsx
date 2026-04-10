@@ -141,12 +141,15 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
                   const val = row[c.key];
                   const isThresholdCol = c.threshold;
                   const isBelow = isThresholdCol && threshold && val !== null && val < threshold;
+                  // Show VP sub-label for manager rows to disambiguate shared names
+                  const showVpSub = c.key === groupKey && groupKey === 'manager' && row.vp;
                   return (
                     <td key={c.key} className={`py-2 px-3 whitespace-nowrap font-medium
                       ${c.key === groupKey ? 'text-gray-900' : ''}
                       ${isBelow ? 'text-red-600 font-semibold' : 'text-gray-700'}
                     `}>
                       {val === null || val === undefined ? '—' : fmt(val, c.format)}
+                      {showVpSub && <div className="text-[10px] text-gray-400 font-normal">{row.vp}</div>}
                     </td>
                   );
                 })}
@@ -468,29 +471,36 @@ export default function OpsOverview() {
                     <KPIRow label="Active Headcount"  value={workforceKpis.activeHeadcount} type="integer" />
                     <KPIRow
                       label="Turnover Rate"
-                      value={workforceKpis.turnoverRate}
+                      value={workforceKpis.hasTurnoverData ? workforceKpis.turnoverRate : null}
                       type="pct"
                       alert={workforceKpis.turnoverRate > 10}
-                      sub={`${workforceKpis.terminations} terminations`}
+                      sub={workforceKpis.hasTurnoverData
+                        ? `${workforceKpis.terminations} terminations`
+                        : 'No activity in selected period'}
                     />
                     <KPIRow
                       label="Overtime %"
-                      value={workforceKpis.overtimePct}
+                      value={workforceKpis.hasOvertimeData ? workforceKpis.overtimePct : null}
                       type="pct"
                       alert={workforceKpis.overtimePct > 15}
-                      sub={`of ${Number(workforceKpis.totalHours).toLocaleString()} total hours`}
+                      sub={workforceKpis.hasOvertimeData
+                        ? `of ${Number(workforceKpis.totalHours).toLocaleString()} total hours`
+                        : 'No activity in selected period'}
                     />
                     <KPIRow
                       label="Unexcused Absences"
-                      value={workforceKpis.unexcusedAbsences}
+                      value={workforceKpis.hasAbsenceData ? workforceKpis.unexcusedAbsences : null}
                       type="integer"
                       alert={workforceKpis.unexcusedAbsences > 0}
+                      sub={workforceKpis.hasAbsenceData ? null : 'No activity in selected period'}
                     />
-                    <KPIRow
-                      label="Total Absence Hours"
-                      value={workforceKpis.totalAbsenceHours}
-                      type="integer"
-                    />
+                    {workforceKpis.hasAbsenceData && (
+                      <KPIRow
+                        label="Total Absence Hours"
+                        value={workforceKpis.totalAbsenceHours}
+                        type="integer"
+                      />
+                    )}
                   </>
                 )}
               </KPICard>
@@ -541,6 +551,12 @@ export default function OpsOverview() {
                   <KPICardSkeleton />
                 ) : financialKpis.hasData ? (
                   <>
+                    {financialKpis.note && (
+                      <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded mb-2">
+                        <Info size={10} />
+                        {financialKpis.note}
+                      </div>
+                    )}
                     <KPIRow
                       label="Actual Labor"
                       value={financialKpis.actualLaborDollars}
