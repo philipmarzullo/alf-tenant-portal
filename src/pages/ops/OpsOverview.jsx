@@ -2,7 +2,7 @@
 // Operations Workspace — live Snowflake-backed VP/Manager summary,
 // workforce, quality, and financial KPI cards.
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users, TrendingUp, ShieldCheck, DollarSign,
   ChevronDown, ChevronUp, Info, RefreshCw,
@@ -276,16 +276,33 @@ export default function OpsOverview() {
 
   // Filters
   const [vpOptions, setVpOptions]         = useState([]);
-  const [managerOptions, setManagerOptions] = useState([]);
   const [allManagers, setAllManagers]     = useState([]);
   const [allJobs, setAllJobs]             = useState([]);
-  const [jobOptions, setJobOptions]       = useState([]);
   const [vp, setVp]                       = useState('all');
   const [manager, setManager]             = useState('all');
   const [job, setJob]                     = useState('all');
   const [startDate, setStartDate]         = useState(getQuarterStart());
   const [endDate, setEndDate]             = useState(today());
   const [threshold, setThreshold]         = useState(50);
+
+  // Derived: cascade manager options from VP, deduplicate by name
+  const managerOptions = useMemo(() => {
+    const filtered = vp === 'all' ? allManagers : allManagers.filter(m => m.vp === vp);
+    const seen = new Set();
+    return filtered.filter(m => {
+      if (seen.has(m.manager)) return false;
+      seen.add(m.manager);
+      return true;
+    });
+  }, [vp, allManagers]);
+
+  // Derived: cascade job options from VP + Manager
+  const jobOptions = useMemo(() => {
+    return allJobs.filter(j =>
+      (vp === 'all' || j.vp === vp) &&
+      (manager === 'all' || j.manager === manager)
+    );
+  }, [vp, manager, allJobs]);
 
   // Data
   const [vpSummary, setVpSummary]         = useState([]);
@@ -315,38 +332,15 @@ export default function OpsOverview() {
       .then(d => {
         setVpOptions(d.vps || []);
         setAllManagers(d.managers || []);
-        setManagerOptions(d.managers || []);
         setAllJobs(d.jobs || []);
-        setJobOptions(d.jobs || []);
       })
       .catch(err => console.error('filter-options error', err))
       .finally(() => setLoadingFilters(false));
   }, [tenantId]);
 
-  // ── Cascade manager and job dropdowns when VP changes
-  useEffect(() => {
-    if (vp === 'all') {
-      setManagerOptions(allManagers);
-    } else {
-      setManagerOptions(allManagers.filter(m => m.vp === vp));
-    }
-    setManager('all');
-    setJob('all');
-    setSelectedVP(null);
-  }, [vp, allManagers]);
-
-  // ── Cascade job dropdown when Manager changes
-  useEffect(() => {
-    if (vp === 'all' && manager === 'all') {
-      setJobOptions(allJobs);
-    } else {
-      setJobOptions(allJobs.filter(j =>
-        (vp === 'all' || j.vp === vp) &&
-        (manager === 'all' || j.manager === manager)
-      ));
-    }
-    setJob('all');
-  }, [manager, vp, allJobs]);
+  // ── Reset child selections when parent changes
+  useEffect(() => { setManager('all'); setJob('all'); setSelectedVP(null); }, [vp]);
+  useEffect(() => { setJob('all'); }, [manager]);
 
   // ── Fetch all data
   const fetchData = useCallback(async () => {
