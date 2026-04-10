@@ -310,6 +310,7 @@ export default function OpsOverview() {
   const [workforceKpis, setWorkforceKpis] = useState(null);
   const [qualityKpis, setQualityKpis]     = useState(null);
   const [financialKpis, setFinancialKpis] = useState(null);
+  const [safetyKpis, setSafetyKpis]     = useState(null);
 
   // UI state
   const [activeTab, setActiveTab]         = useState('dashboard');
@@ -357,12 +358,13 @@ export default function OpsOverview() {
     const params = new URLSearchParams(shared).toString();
 
     try {
-      const [vpRes, mgRes, wfRes, qlRes, finRes] = await Promise.all([
+      const [vpRes, mgRes, wfRes, qlRes, finRes, sfRes] = await Promise.all([
         apiFetch(`/api/ops-workspace/${tenantId}/vp-summary?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/manager-summary?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/workforce-kpis?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/quality-kpis?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/financial-kpis?${params}`),
+        apiFetch(`/api/ops-workspace/${tenantId}/safety-kpis?${params}`),
       ]);
 
       setVpSummary(vpRes.rows || []);
@@ -370,6 +372,7 @@ export default function OpsOverview() {
       setWorkforceKpis(wfRes);
       setQualityKpis(qlRes);
       setFinancialKpis(finRes);
+      setSafetyKpis(sfRes);
       setLastRefreshed(new Date());
     } catch (err) {
       console.error('ops-workspace fetch error:', err);
@@ -807,19 +810,66 @@ export default function OpsOverview() {
 
               {/* Safety */}
               <KPICard title="Safety & Compliance" icon={ShieldCheck} color="text-red-700 bg-red-50">
-                <div className="text-sm text-gray-500 py-1">
-                  Live safety data is available in the{' '}
-                  <a href="/portal/safety" className="text-blue-600 hover:underline font-medium">
-                    Safety Workspace
-                  </a>
-                  .
-                </div>
-                <div className="pt-2 border-t border-gray-100 space-y-2 mt-2">
-                  <KPIRow label="Compliance Obligations Due" value={null} />
-                  <div className="text-xs text-gray-400">
-                    FACT_EMPLOYEE_COMPLIANCE_OBLIGATION — query pending implementation
+                {loading || !safetyKpis ? (
+                  <KPICardSkeleton />
+                ) : safetyKpis.hasData ? (
+                  <>
+                    <KPIRow
+                      label="Open Claims"
+                      value={safetyKpis.openClaims}
+                      type="integer"
+                      alert={safetyKpis.openClaims > 0}
+                    />
+                    <KPIRow
+                      label="Out of Work"
+                      value={safetyKpis.outOfWork}
+                      type="integer"
+                      alert={safetyKpis.outOfWork > 0}
+                    />
+                    <KPIRow
+                      label="Total Incurred"
+                      value={safetyKpis.totalIncurred}
+                      type="currency"
+                    />
+                    <KPIRow
+                      label="Recordable Incidents"
+                      value={safetyKpis.recordableIncidents}
+                      type="integer"
+                      sub={`${safetyKpis.totalClaims} total claims`}
+                    />
+                    <KPIRow
+                      label="Lost Time Incidents"
+                      value={safetyKpis.lostTimeIncidents}
+                      type="integer"
+                      alert={safetyKpis.lostTimeIncidents > 0}
+                    />
+                    {safetyKpis.highRiskSites?.length > 0 && (
+                      <div className="pt-2 border-t border-gray-100">
+                        <div className="text-xs text-gray-500 font-medium mb-1">High Risk Sites</div>
+                        {safetyKpis.highRiskSites.map((s, i) => (
+                          <div key={i} className="flex justify-between text-xs py-0.5">
+                            <span className="text-gray-700 truncate mr-2">{s.name}</span>
+                            <span className="text-gray-500 flex-shrink-0">{s.count} claims</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="pt-2 border-t border-gray-100">
+                      <a href="/portal/safety" className="text-xs text-blue-600 hover:underline">
+                        View full safety detail →
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-sm text-gray-400 py-2">
+                      No claims data in selected period
+                    </div>
+                    <a href="/portal/safety" className="text-xs text-blue-600 hover:underline">
+                      View full safety detail →
+                    </a>
                   </div>
-                </div>
+                )}
               </KPICard>
 
             </div>
