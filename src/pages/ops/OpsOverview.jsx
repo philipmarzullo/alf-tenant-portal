@@ -121,7 +121,7 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
           {rows.map((row, i) => {
             const isSelected = selectedRow && row[groupKey] === selectedRow;
             const belowSafety = threshold && row.safetyPct !== null && row.safetyPct < threshold;
-            const belowComm   = threshold && row.commercialPct !== null && row.commercialPct < threshold;
+            const belowComm   = threshold && row.inspectionScore !== null && row.inspectionScore < threshold;
             const rowAlert    = belowSafety || belowComm;
 
             return (
