@@ -280,6 +280,17 @@ export default function Sidebar({ collapsed, onToggle, isMobile, mobileOpen, onM
         }];
       }
 
+      // Inject super-admin-only Finance Audit link into TOOLS group
+      if (group.group === 'TOOLS' && items.length > 0 && !items[0]?._tierLocked && isSuperAdmin) {
+        items = [...items, {
+          label: 'Finance Audit',
+          path: '/portal/tools/finance-audit',
+          icon: 'DollarSign',
+          moduleKey: 'tools',
+          superAdminOnly: true,
+        }];
+      }
+
       return { ...group, items };
     })
     .filter((group) => {

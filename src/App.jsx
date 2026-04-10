@@ -92,6 +92,7 @@ import RFPProjectsPage from './pages/tools/RFPProjectsPage';
 import RFPLibraryPage from './pages/tools/RFPLibraryPage';
 import RFPProjectDetail from './pages/tools/RFPProjectDetail';
 import UnionBenefitsReport from './pages/tools/UnionBenefitsReport';
+import FinanceAudit from './pages/tools/FinanceAudit';
 import JobDirectoryPage from './pages/jobs/JobDirectoryPage';
 import AgentKnowledgePage from './pages/admin/AgentKnowledgePage';
 import SettingsPage from './pages/admin/SettingsPage';
@@ -526,6 +527,14 @@ export default function App() {
                       element={
                         <ProtectedRoute moduleKey="tools">
                           <UnionBenefitsReport />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="tools/finance-audit"
+                      element={
+                        <ProtectedRoute superAdminOnly>
+                          <FinanceAudit />
                         </ProtectedRoute>
                       }
                     />
