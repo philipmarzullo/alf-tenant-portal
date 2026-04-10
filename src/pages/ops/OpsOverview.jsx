@@ -277,12 +277,9 @@ export default function OpsOverview() {
   // Filters
   const [vpOptions, setVpOptions]         = useState([]);
   const [managerOptions, setManagerOptions] = useState([]);
-  const [regionOptions, setRegionOptions] = useState([]);
   const [allManagers, setAllManagers]     = useState([]);
-  const [allRegions, setAllRegions]       = useState([]);
   const [vp, setVp]                       = useState('all');
   const [manager, setManager]             = useState('all');
-  const [region, setRegion]               = useState('all');
   const [startDate, setStartDate]         = useState(getQuarterStart());
   const [endDate, setEndDate]             = useState(today());
   const [threshold, setThreshold]         = useState(50);
@@ -316,40 +313,21 @@ export default function OpsOverview() {
         setVpOptions(d.vps || []);
         setAllManagers(d.managers || []);
         setManagerOptions(d.managers || []);
-        setAllRegions(d.regions || []);
-        setRegionOptions(d.regions || []);
       })
       .catch(err => console.error('filter-options error', err))
       .finally(() => setLoadingFilters(false));
   }, [tenantId]);
 
-  // ── Cascade manager and region dropdowns when VP changes
+  // ── Cascade manager dropdown when VP changes
   useEffect(() => {
     if (vp === 'all') {
       setManagerOptions(allManagers);
-      setRegionOptions(allRegions);
     } else {
       setManagerOptions(allManagers.filter(m => m.vp === vp));
-      setRegionOptions(allRegions.filter(r => r.vp === vp));
     }
     setManager('all');
-    setRegion('all');
     setSelectedVP(null);
-  }, [vp, allManagers, allRegions]);
-
-  // ── Cascade region when manager changes
-  useEffect(() => {
-    if (manager === 'all') {
-      if (vp === 'all') {
-        setRegionOptions(allRegions);
-      } else {
-        setRegionOptions(allRegions.filter(r => r.vp === vp));
-      }
-    } else {
-      setRegionOptions(allRegions.filter(r => r.manager === manager));
-    }
-    setRegion('all');
-  }, [manager, vp, allRegions]);
+  }, [vp, allManagers]);
 
   // ── Fetch all data
   const fetchData = useCallback(async () => {
@@ -361,7 +339,6 @@ export default function OpsOverview() {
       startDate, endDate, threshold,
       ...(vp !== 'all' ? { vp } : {}),
       ...(manager !== 'all' ? { manager } : {}),
-      ...(region !== 'all' ? { region } : {}),
     };
     const params = new URLSearchParams(shared).toString();
 
@@ -386,7 +363,7 @@ export default function OpsOverview() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, startDate, endDate, vp, manager, region, threshold]);
+  }, [tenantId, startDate, endDate, vp, manager, threshold]);
 
   // Initial load
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -489,22 +466,6 @@ export default function OpsOverview() {
               <option value="all">(All)</option>
               {managerOptions.map(m => (
                 <option key={m.manager} value={m.manager}>{m.manager}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Region */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500">Region</label>
-            <select
-              value={region}
-              onChange={e => setRegion(e.target.value)}
-              disabled={loadingFilters}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white min-w-[140px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">(All)</option>
-              {[...new Set(regionOptions.map(r => r.region))].sort().map(r => (
-                <option key={r} value={r}>{r}</option>
               ))}
             </select>
           </div>
