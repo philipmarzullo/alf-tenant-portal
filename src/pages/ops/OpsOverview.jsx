@@ -93,7 +93,7 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
     { key: 'safetyInspCount',     label: 'Safety Insp.',   format: 'integer' },
     { key: 'safetyPct',           label: 'Safety %',       format: 'pct',     threshold: true },
     { key: 'commercialInspCount', label: 'Comm. Insp.',    format: 'integer' },
-    { key: 'commercialPct',       label: 'Commercial %',   format: 'pct',     threshold: true },
+    { key: 'inspectionScore',     label: 'Insp. Score',    format: 'number',  threshold: true },
     { key: 'totalDeficiencies',   label: 'Deficiencies',   format: 'integer' },
     { key: 'openDeficiencies',    label: 'Open Def.',      format: 'integer' },
     { key: 'incidents',           label: 'Incidents',      pending: true },
