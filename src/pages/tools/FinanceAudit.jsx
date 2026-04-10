@@ -131,8 +131,10 @@ export default function FinanceAudit() {
     fetchTabData();
   }
 
-  // Auto-fetch on tab change if we have date params
+  // Clear stale data and auto-fetch on tab change
   useEffect(() => {
+    setData(null);
+    setError(null);
     if (activeTab === 'explorer') return;
     if (startDate && endDate) fetchTabData();
   }, [activeTab]);
