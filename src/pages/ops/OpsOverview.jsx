@@ -2,7 +2,7 @@
 // Operations Workspace — live Snowflake-backed VP/Manager summary,
 // workforce, quality, and financial KPI cards.
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Users, TrendingUp, ShieldCheck, DollarSign,
   ChevronDown, ChevronUp, Info, RefreshCw,
@@ -88,6 +88,7 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
 
   const cols = [
     { key: groupKey, label: groupLabel, width: 'w-32' },
+    ...(groupKey === 'manager' ? [{ key: 'vp', label: 'VP', width: 'w-28' }] : []),
     { key: 'jobCount',            label: 'Jobs',           format: 'integer' },
     { key: 'safetyInspCount',     label: 'Safety Insp.',   format: 'integer' },
     { key: 'safetyPct',           label: 'Safety %',       format: 'pct',     threshold: true },
@@ -141,15 +142,12 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
                   const val = row[c.key];
                   const isThresholdCol = c.threshold;
                   const isBelow = isThresholdCol && threshold && val !== null && val < threshold;
-                  // Show VP sub-label for manager rows to disambiguate shared names
-                  const showVpSub = c.key === groupKey && groupKey === 'manager' && row.vp;
                   return (
                     <td key={c.key} className={`py-2 px-3 whitespace-nowrap font-medium
                       ${c.key === groupKey ? 'text-gray-900' : ''}
                       ${isBelow ? 'text-red-600 font-semibold' : 'text-gray-700'}
                     `}>
                       {val === null || val === undefined ? '—' : fmt(val, c.format)}
-                      {showVpSub && <div className="text-[10px] text-gray-400 font-normal">{row.vp}</div>}
                     </td>
                   );
                 })}
@@ -176,6 +174,10 @@ export default function OpsOverview() {
   const [startDate, setStartDate]         = useState(getQuarterStart());
   const [endDate, setEndDate]             = useState(today());
   const [threshold, setThreshold]         = useState(50);
+
+  // Financial card uses a wider default range (full year) on first load;
+  // once the user explicitly changes dates, it syncs to the main pickers.
+  const userChangedDates = useRef(false);
 
   // Data
   const [vpSummary, setVpSummary]         = useState([]);
@@ -223,10 +225,18 @@ export default function OpsOverview() {
     setLoading(true);
     setError(null);
 
-    const params = new URLSearchParams({
+    const shared = {
       startDate, endDate, threshold,
       ...(vp !== 'all' ? { vp } : {}),
       ...(manager !== 'all' ? { manager } : {}),
+    };
+    const params = new URLSearchParams(shared).toString();
+
+    // Financial card defaults to full-year range until the user changes dates
+    const finStartDate = userChangedDates.current ? startDate : '2026-01-01';
+    const finEndDate   = userChangedDates.current ? endDate   : '2026-12-31';
+    const finParams = new URLSearchParams({
+      ...shared, startDate: finStartDate, endDate: finEndDate,
     }).toString();
 
     try {
@@ -235,7 +245,7 @@ export default function OpsOverview() {
         apiFetch(`/api/ops-workspace/${tenantId}/manager-summary?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/workforce-kpis?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/quality-kpis?${params}`),
-        apiFetch(`/api/ops-workspace/${tenantId}/financial-kpis?${params}`),
+        apiFetch(`/api/ops-workspace/${tenantId}/financial-kpis?${finParams}`),
       ]);
 
       setVpSummary(vpRes.rows || []);
@@ -323,7 +333,7 @@ export default function OpsOverview() {
             <input
               type="date"
               value={startDate}
-              onChange={e => setStartDate(e.target.value)}
+              onChange={e => { userChangedDates.current = true; setStartDate(e.target.value); }}
               className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -334,7 +344,7 @@ export default function OpsOverview() {
             <input
               type="date"
               value={endDate}
-              onChange={e => setEndDate(e.target.value)}
+              onChange={e => { userChangedDates.current = true; setEndDate(e.target.value); }}
               className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -501,6 +511,11 @@ export default function OpsOverview() {
                         type="integer"
                       />
                     )}
+                    {workforceKpis.dataNote && (
+                      <div className="pt-2 border-t border-gray-100 text-xs text-gray-400">
+                        {workforceKpis.dataNote}
+                      </div>
+                    )}
                   </>
                 )}
               </KPICard>
@@ -551,12 +566,6 @@ export default function OpsOverview() {
                   <KPICardSkeleton />
                 ) : financialKpis.hasData ? (
                   <>
-                    {financialKpis.note && (
-                      <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded mb-2">
-                        <Info size={10} />
-                        {financialKpis.note}
-                      </div>
-                    )}
                     <KPIRow
                       label="Actual Labor"
                       value={financialKpis.actualLaborDollars}
@@ -580,6 +589,12 @@ export default function OpsOverview() {
                       type="integer"
                       sub={`Budget: ${Number(financialKpis.budgetHours).toLocaleString()}`}
                     />
+                    {financialKpis.dateFiltered === false && (
+                      <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded mt-2">
+                        <Info size={10} />
+                        Showing all available data — no records found in selected period
+                      </div>
+                    )}
                     <div className="pt-2 border-t border-gray-100 text-xs text-gray-400">
                       Full margin reporting pending finance data alignment
                     </div>
