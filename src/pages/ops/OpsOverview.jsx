@@ -92,9 +92,9 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
     ...(groupKey === 'manager' ? [{ key: 'vp', label: 'VP', width: 'w-28' }] : []),
     { key: 'jobCount',            label: 'Jobs',           format: 'integer' },
     { key: 'safetyInspCount',     label: 'Safety Insp.',   format: 'integer' },
-    { key: 'safetyPct',           label: 'Safety %',       format: 'pct',     threshold: true },
-    { key: 'commercialInspCount', label: 'Comm. Insp.',    format: 'integer' },
-    { key: 'inspectionScore',     label: 'Insp. Score',    format: 'number',  threshold: true },
+    { key: 'safetyPassRate',       label: 'Safety Pass Rate', format: 'pct',   threshold: true },
+    { key: 'commercialInspCount', label: 'Comm. Insp.',      format: 'integer' },
+    { key: 'inspectionPassRate',  label: 'Quality Pass Rate', format: 'pct',  threshold: true },
     { key: 'totalDeficiencies',   label: 'Deficiencies',   format: 'integer' },
     { key: 'openDeficiencies',    label: 'Open Def.',      format: 'integer' },
     { key: 'incidents',           label: 'Incidents',      pending: true },
@@ -121,8 +121,8 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
         <tbody>
           {rows.map((row, i) => {
             const isSelected = selectedRow && row[groupKey] === selectedRow;
-            const belowSafety = threshold && row.safetyPct !== null && row.safetyPct < threshold;
-            const belowComm   = threshold && row.inspectionScore !== null && row.inspectionScore < threshold;
+            const belowSafety = threshold && row.safetyPassRate !== null && row.safetyPassRate < threshold;
+            const belowComm   = threshold && row.inspectionPassRate !== null && row.inspectionPassRate < threshold;
             const rowAlert    = belowSafety || belowComm;
 
             return (
@@ -708,6 +708,13 @@ export default function OpsOverview() {
                 ) : (
                   <>
                     <KPIRow
+                      label="Quality Pass Rate"
+                      value={qualityKpis.passRate}
+                      type="pct"
+                      alert={qualityKpis.passRate < threshold}
+                      sub={`${qualityKpis.passedInspections} of ${qualityKpis.totalInspections} inspections met objective`}
+                    />
+                    <KPIRow
                       label="Avg Inspection Score"
                       value={qualityKpis.avgScore}
                       type="pct"
@@ -914,7 +921,7 @@ export default function OpsOverview() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      {['Job Name', 'Safety %', 'Insp. Score', 'Deficiencies', 'Open Def.', 'Avg Close Days'].map(h => (
+                      {['Job Name', 'Safety Pass Rate', 'Quality Pass Rate', 'Deficiencies', 'Open Def.', 'Avg Close Days'].map(h => (
                         <th key={h} className="text-left py-2 px-2 font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -927,11 +934,11 @@ export default function OpsOverview() {
                         className="border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors"
                       >
                         <td className="py-2 px-2 font-medium text-gray-900 whitespace-nowrap">{site.jobName}</td>
-                        <td className={`py-2 px-2 ${site.safetyPct !== null && site.safetyPct < 50 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                          {site.safetyPct != null ? `${site.safetyPct}%` : '—'}
+                        <td className={`py-2 px-2 ${site.safetyPassRate !== null && site.safetyPassRate < 50 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                          {site.safetyPassRate != null ? `${site.safetyPassRate}%` : '—'}
                         </td>
-                        <td className={`py-2 px-2 ${site.inspectionScore !== null && site.inspectionScore < 50 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                          {site.inspectionScore != null ? site.inspectionScore : '—'}
+                        <td className={`py-2 px-2 ${site.inspectionPassRate !== null && site.inspectionPassRate < 50 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                          {site.inspectionPassRate != null ? `${site.inspectionPassRate}%` : '—'}
                         </td>
                         <td className="py-2 px-2 text-gray-700">{site.totalDeficiencies}</td>
                         <td className={`py-2 px-2 ${site.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>

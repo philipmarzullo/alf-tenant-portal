@@ -9,8 +9,8 @@
  */
 export const HEALTH_THRESHOLDS = {
   operations: {
-    metric: 'avgInspectionScore',
-    label: 'Avg Inspection Score',
+    metric: 'qualityPassRate',
+    label: 'Quality Pass Rate',
     format: 'percent',
     green: { min: 90 },
     yellow: { min: 80 },
