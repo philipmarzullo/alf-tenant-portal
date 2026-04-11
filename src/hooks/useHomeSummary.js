@@ -60,7 +60,6 @@ export default function useHomeSummary() {
         totalHours: wf.totalHours,
         // Quality
         avgInspectionScore: ql.avgScore,
-        qualityPassRate: ql.passRate,
         openDeficiencies: ql.openDeficiencies,
         totalInspections: ql.totalInspections,
         sitesBelowObjective: ql.sitesBelowObjective,
@@ -81,7 +80,7 @@ export default function useHomeSummary() {
           hasData: ql.totalInspections > 0,
           stats: [
             `${ql.totalInspections.toLocaleString()} inspections`,
-            `${ql.passRate}% pass rate`,
+            `${ql.avgScore}% avg score`,
             `${ql.openDeficiencies} open deficiencies`,
           ],
         },

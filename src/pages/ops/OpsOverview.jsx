@@ -92,9 +92,10 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
     ...(groupKey === 'manager' ? [{ key: 'vp', label: 'VP', width: 'w-28' }] : []),
     { key: 'jobCount',            label: 'Jobs',           format: 'integer' },
     { key: 'safetyInspCount',     label: 'Safety Insp.',   format: 'integer' },
-    { key: 'safetyPassRate',       label: 'Safety Pass Rate', format: 'pct',   threshold: true },
-    { key: 'commercialInspCount', label: 'Comm. Insp.',      format: 'integer' },
-    { key: 'inspectionPassRate',  label: 'Quality Pass Rate', format: 'pct',  threshold: true },
+    { key: 'safetyPassRate',             label: 'Safety Pass Rate', format: 'pct', threshold: true },
+    { key: 'commercialInspCount',       label: 'Comm. Insp.',     format: 'integer' },
+    { key: 'qualityAvgScore',           label: 'Avg Score',       format: 'pct', fixedThreshold: 80 },
+    { key: 'inspectionsBelowObjective', label: 'Below Obj.',      format: 'integer', alertAbove: 0 },
     { key: 'totalDeficiencies',   label: 'Deficiencies',   format: 'integer' },
     { key: 'openDeficiencies',    label: 'Open Def.',      format: 'integer' },
     { key: 'incidents',           label: 'Incidents',      pending: true },
@@ -122,8 +123,8 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
           {rows.map((row, i) => {
             const isSelected = selectedRow && row[groupKey] === selectedRow;
             const belowSafety = threshold && row.safetyPassRate !== null && row.safetyPassRate < threshold;
-            const belowComm   = threshold && row.inspectionPassRate !== null && row.inspectionPassRate < threshold;
-            const rowAlert    = belowSafety || belowComm;
+            const belowScore  = row.qualityAvgScore !== null && row.qualityAvgScore < 80;
+            const rowAlert    = belowSafety || belowScore;
 
             return (
               <tr
@@ -141,8 +142,9 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
                     );
                   }
                   const val = row[c.key];
-                  const isThresholdCol = c.threshold;
-                  const isBelow = isThresholdCol && threshold && val !== null && val < threshold;
+                  const isBelow = (c.threshold === true && threshold && val !== null && val < threshold)
+                    || (c.fixedThreshold && val !== null && val < c.fixedThreshold)
+                    || (c.alertAbove !== undefined && val !== null && val > c.alertAbove);
                   return (
                     <td key={c.key} className={`py-2 px-3 whitespace-nowrap font-medium
                       ${c.key === groupKey ? 'text-gray-900' : ''}
@@ -162,21 +164,19 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
 }
 
 function SiteDeficiencyDetail({ data, loading }) {
-  const [tab, setTab] = useState('open');
   const [expanded, setExpanded] = useState({});
 
   if (loading) return <KPICardSkeleton />;
   if (!data || !data.items || data.items.length === 0) {
-    return <div className="text-sm text-gray-400 py-6 text-center">No deficiencies found for this site.</div>;
+    return <div className="text-sm text-gray-400 py-6 text-center">No deficiencies on record for this site</div>;
   }
 
-  const { summary } = data;
-  const filtered = tab === 'open' ? data.items.filter(i => i.isOpen) : data.items;
+  const { summary, items } = data;
 
-  // Group by areaType
+  // Group by area
   const groups = {};
-  for (const item of filtered) {
-    const key = item.areaType || 'Other';
+  for (const item of items) {
+    const key = item.area || 'Other';
     if (!groups[key]) groups[key] = [];
     groups[key].push(item);
   }
@@ -186,80 +186,60 @@ function SiteDeficiencyDetail({ data, loading }) {
   return (
     <div className="space-y-4">
       <div className="text-sm text-gray-600">
-        <strong>{summary.openCount}</strong> open deficiencies across <strong>{summary.areaCount}</strong> areas
+        <strong>{summary.openCount}</strong> open deficiencies, <strong>{summary.totalCount}</strong> total recorded
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200">
-        {[{ key: 'open', label: 'Open' }, { key: 'all', label: 'All' }].map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.key
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {t.label}
-            {t.key === 'open' && <span className="ml-1 text-xs">({summary.openCount})</span>}
-            {t.key === 'all' && <span className="ml-1 text-xs">({summary.totalCount})</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* Grouped sections */}
-      {Object.entries(groups).map(([areaType, items]) => {
-        const isExpanded = expanded[areaType] !== false; // default open
+      {/* Grouped by area */}
+      {Object.entries(groups).map(([area, areaItems]) => {
+        const isExpanded = expanded[area] !== false; // default open
+        const openInArea = areaItems.filter(i => i.isOpen).length;
         return (
-          <div key={areaType} className="border border-gray-200 rounded-lg overflow-hidden">
+          <div key={area} className="border border-gray-200 rounded-lg overflow-hidden">
             <button
-              onClick={() => toggleGroup(areaType)}
+              onClick={() => toggleGroup(area)}
               className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
             >
               <span className="text-xs font-semibold text-gray-700">
-                {areaType} <span className="text-gray-400 font-normal">({items.length})</span>
+                {area}
+                <span className="text-gray-400 font-normal ml-1">({areaItems.length})</span>
+                {openInArea > 0 && (
+                  <span className="text-red-600 font-normal ml-1">· {openInArea} open</span>
+                )}
               </span>
               {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
             {isExpanded && (
               <div className="divide-y divide-gray-100">
-                {items.map((item, i) => {
-                  const daysOpen = item.isOpen && item.inspectionDate
-                    ? Math.floor((Date.now() - new Date(item.inspectionDate).getTime()) / 86400000)
-                    : null;
-                  return (
-                    <div key={i} className="px-3 py-2 text-xs space-y-1">
-                      <div className="flex items-start gap-2">
-                        <span className={`mt-0.5 flex-shrink-0 w-2 h-2 rounded-full ${item.isOpen ? 'bg-red-500' : 'bg-green-500'}`} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-gray-900">{item.area}</span>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-gray-700">{item.item}</span>
-                            {tab === 'all' && item.isRepeat && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
-                                Repeat
-                              </span>
-                            )}
-                          </div>
-                          {item.detail && <div className="text-gray-500 mt-0.5">{item.detail}</div>}
-                          <div className="flex items-center gap-3 mt-1 text-gray-400">
-                            <span>{item.inspectionDate ? new Date(item.inspectionDate).toLocaleDateString() : '—'}</span>
-                            {item.isOpen && daysOpen !== null && (
-                              <span className={daysOpen > 30 ? 'text-red-500 font-medium' : ''}>
-                                {daysOpen}d open
-                              </span>
-                            )}
-                            {item.isClosed && item.closedBy && (
-                              <span>Closed by {item.closedBy}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                {areaItems.map((item, i) => (
+                  <div key={i} className="px-3 py-2 text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-900">{item.item}</span>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                        item.isOpen
+                          ? 'bg-red-100 text-red-700 border border-red-200'
+                          : 'bg-green-100 text-green-700 border border-green-200'
+                      }`}>
+                        {item.isOpen ? 'Open' : 'Closed'}
+                      </span>
+                      {item.repeatCount > 2 && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700 border border-red-200">
+                          Recurring x{item.repeatCount}
+                        </span>
+                      )}
+                      {item.repeatCount === 2 && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                          Repeat x{item.repeatCount}
+                        </span>
+                      )}
                     </div>
-                  );
-                })}
+                    {item.detail && <div className="text-gray-500 mt-1">{item.detail}</div>}
+                    <div className="flex items-center gap-3 mt-1 text-gray-400">
+                      <span>{item.inspectionDate ? new Date(item.inspectionDate).toLocaleDateString() : '—'}</span>
+                      {item.inspectionType && <span>{item.inspectionType}</span>}
+                      {item.isClosed && item.closedBy && <span>Closed by {item.closedBy}</span>}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -412,7 +392,7 @@ export default function OpsOverview() {
     setDrilldownLoading(true);
     setDrilldownData(null);
     try {
-      const qs = new URLSearchParams({ jobNumber: site.jobNumber, startDate, endDate }).toString();
+      const qs = new URLSearchParams({ jobNumber: site.jobNumber }).toString();
       const res = await apiFetch(`/api/ops-workspace/${tenantId}/site-deficiencies?${qs}`);
       setDrilldownData(res);
     } catch (err) {
@@ -708,17 +688,10 @@ export default function OpsOverview() {
                 ) : (
                   <>
                     <KPIRow
-                      label="Quality Pass Rate"
-                      value={qualityKpis.passRate}
-                      type="pct"
-                      alert={qualityKpis.passRate < threshold}
-                      sub={`${qualityKpis.passedInspections} of ${qualityKpis.totalInspections} inspections met objective`}
-                    />
-                    <KPIRow
                       label="Avg Inspection Score"
                       value={qualityKpis.avgScore}
                       type="pct"
-                      alert={qualityKpis.avgScore < threshold}
+                      alert={qualityKpis.avgScore < 80}
                       sub={`${Number(qualityKpis.totalInspections).toLocaleString()} inspections`}
                     />
                     <KPIRow
@@ -921,7 +894,7 @@ export default function OpsOverview() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      {['Job Name', 'Safety Pass Rate', 'Quality Pass Rate', 'Deficiencies', 'Open Def.', 'Avg Close Days'].map(h => (
+                      {['Job Name', 'Safety Pass Rate', 'Avg Score', 'Below Obj.', 'Deficiencies', 'Open Def.', 'Avg Close Days'].map(h => (
                         <th key={h} className="text-left py-2 px-2 font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -937,8 +910,11 @@ export default function OpsOverview() {
                         <td className={`py-2 px-2 ${site.safetyPassRate !== null && site.safetyPassRate < 50 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                           {site.safetyPassRate != null ? `${site.safetyPassRate}%` : '—'}
                         </td>
-                        <td className={`py-2 px-2 ${site.inspectionPassRate !== null && site.inspectionPassRate < 50 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                          {site.inspectionPassRate != null ? `${site.inspectionPassRate}%` : '—'}
+                        <td className={`py-2 px-2 ${site.qualityAvgScore !== null && site.qualityAvgScore < 80 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                          {site.qualityAvgScore != null ? `${site.qualityAvgScore}%` : '—'}
+                        </td>
+                        <td className={`py-2 px-2 ${site.inspectionsBelowObjective > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                          {site.inspectionsBelowObjective}
                         </td>
                         <td className="py-2 px-2 text-gray-700">{site.totalDeficiencies}</td>
                         <td className={`py-2 px-2 ${site.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
