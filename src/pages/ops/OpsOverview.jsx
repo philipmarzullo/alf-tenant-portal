@@ -71,15 +71,31 @@ function vpRowStatus(safetyPassRate, qualityScore) {
   return 'bg-green-500';
 }
 
-function BudgetLastUpdated({ date }) {
-  const d = new Date(date);
+function budgetDateColor(dateStr) {
+  const d = new Date(dateStr);
   const daysSince = Math.round((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
-  const formatted = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  const color = daysSince > 365 ? 'text-red-600' : daysSince > 180 ? 'text-amber-600' : 'text-green-600';
+  return daysSince > 365 ? 'text-red-600' : daysSince > 180 ? 'text-amber-600' : 'text-green-600';
+}
+
+function BudgetLastUpdated({ date, oldestDate, isJobSelected }) {
+  const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  if (isJobSelected || !oldestDate || oldestDate === date) {
+    // Single date display
+    return (
+      <div className="pt-2 border-t border-gray-100 mt-2">
+        <span className="text-xs text-gray-500">Budget last updated: </span>
+        <span className={`text-xs font-medium ${budgetDateColor(date)}`}>{fmtDate(date)}</span>
+      </div>
+    );
+  }
+  // Range display
   return (
     <div className="pt-2 border-t border-gray-100 mt-2">
-      <span className="text-xs text-gray-500">Budget last updated: </span>
-      <span className={`text-xs font-medium ${color}`}>{formatted}</span>
+      <span className="text-xs text-gray-500">Budget range: </span>
+      <span className={`text-xs font-medium ${budgetDateColor(oldestDate)}`}>{fmtDate(oldestDate)}</span>
+      <span className="text-xs text-gray-400"> → </span>
+      <span className="text-xs text-gray-700">{fmtDate(date)}</span>
     </div>
   );
 }
@@ -645,11 +661,14 @@ export default function OpsOverview() {
                           <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 w-6"></th>
                           <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">VP</th>
                           <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Jobs</th>
-                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Safety</th>
-                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Quality</th>
-                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Open Def.</th>
+                          <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Safety Insp.</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Safety Score</th>
+                          <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Quality Insp.</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Quality Score</th>
+                          <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Deficiencies</th>
+                          <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Open Def.</th>
                           <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Payroll</th>
-                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Claims</th>
+                          <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Claims</th>
                           <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Avg Close Days</th>
                         </tr>
                       </thead>
@@ -671,11 +690,13 @@ export default function OpsOverview() {
                               </td>
                               <td className="py-2 px-3 font-medium text-gray-900">{row.vp}</td>
                               <td className="py-2 px-3 text-gray-700">{row.jobCount}</td>
+                              <td className="py-2 px-3 text-right text-gray-700">{row.safetyInspCount || 0}</td>
                               <td className="py-2 px-3">
                                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${safety.color}`}>
                                   {safety.label}
                                 </span>
                               </td>
+                              <td className="py-2 px-3 text-right text-gray-700">{row.standardInspCount || 0}</td>
                               <td className="py-2 px-3">
                                 <span
                                   className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}
@@ -687,11 +708,12 @@ export default function OpsOverview() {
                                   <div className="text-[10px] text-gray-400 mt-0.5">{quality.nullLabel}</div>
                                 )}
                               </td>
-                              <td className={`py-2 px-3 ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                              <td className="py-2 px-3 text-right text-gray-700">{row.totalDeficiencies || 0}</td>
+                              <td className={`py-2 px-3 text-right ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                                 {row.openDeficiencies}
                               </td>
                               <td className="py-2 px-3 text-gray-700">{fmt(row.payroll, 'currency')}</td>
-                              <td className={`py-2 px-3 ${row.claims > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                              <td className={`py-2 px-3 text-right ${row.claims > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                                 {row.claims}
                               </td>
                               <td className="py-2 px-3 text-gray-700">{row.avgCloseDays ?? '—'}</td>
@@ -732,9 +754,12 @@ export default function OpsOverview() {
                           <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Manager</th>
                           <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">VP</th>
                           <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Jobs</th>
-                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Safety</th>
-                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Quality</th>
-                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Open Def.</th>
+                          <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Safety Insp.</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Safety Score</th>
+                          <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Quality Insp.</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Quality Score</th>
+                          <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Deficiencies</th>
+                          <th className="text-right py-2 px-3 text-xs font-semibold text-gray-500">Open Def.</th>
                           <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Avg Close Days</th>
                         </tr>
                       </thead>
@@ -757,11 +782,13 @@ export default function OpsOverview() {
                               <td className="py-2 px-3 font-medium text-gray-900">{row.manager}</td>
                               <td className="py-2 px-3 text-gray-500 text-xs">{row.vp}</td>
                               <td className="py-2 px-3 text-gray-700">{row.jobCount}</td>
+                              <td className="py-2 px-3 text-right text-gray-700">{row.safetyInspCount || 0}</td>
                               <td className="py-2 px-3">
                                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${safety.color}`}>
                                   {safety.label}
                                 </span>
                               </td>
+                              <td className="py-2 px-3 text-right text-gray-700">{row.standardInspCount || 0}</td>
                               <td className="py-2 px-3">
                                 <span
                                   className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}
@@ -773,7 +800,8 @@ export default function OpsOverview() {
                                   <div className="text-[10px] text-gray-400 mt-0.5">{quality.nullLabel}</div>
                                 )}
                               </td>
-                              <td className={`py-2 px-3 ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                              <td className="py-2 px-3 text-right text-gray-700">{row.totalDeficiencies || 0}</td>
+                              <td className={`py-2 px-3 text-right ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                                 {row.openDeficiencies}
                               </td>
                               <td className="py-2 px-3 text-gray-700">{row.avgCloseDays ?? '—'}</td>
@@ -867,7 +895,7 @@ export default function OpsOverview() {
                             </>
                           )}
                           {financialKpis.budgetLastUpdated && (
-                            <BudgetLastUpdated date={financialKpis.budgetLastUpdated} />
+                            <BudgetLastUpdated date={financialKpis.budgetLastUpdated} oldestDate={financialKpis.oldestBudgetUpdate} isJobSelected={job !== 'all'} />
                           )}
                         </>
                       ) : (
