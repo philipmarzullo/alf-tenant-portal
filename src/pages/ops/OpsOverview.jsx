@@ -82,7 +82,7 @@ function KPIRow({ label, value, type, sub, alert }) {
   );
 }
 
-function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selectedRow }) {
+function SummaryTable({ rows, groupKey, groupLabel, onRowClick, selectedRow }) {
   if (!rows || rows.length === 0) {
     return <div className="text-sm text-gray-400 py-6 text-center">No data for selected filters.</div>;
   }
@@ -92,10 +92,12 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
     ...(groupKey === 'manager' ? [{ key: 'vp', label: 'VP', width: 'w-28' }] : []),
     { key: 'jobCount',            label: 'Jobs',           format: 'integer' },
     { key: 'safetyInspCount',     label: 'Safety Insp.',   format: 'integer' },
-    { key: 'safetyPassRate',             label: 'Safety Pass Rate', format: 'pct', threshold: true },
-    { key: 'commercialInspCount',       label: 'Comm. Insp.',     format: 'integer' },
-    { key: 'qualityAvgScore',           label: 'Avg Score',       format: 'pct', fixedThreshold: 80 },
-    { key: 'inspectionsBelowObjective', label: 'Below Obj.',      format: 'integer', alertAbove: 0 },
+    { key: 'safetyPassRate',             label: 'Safety Pass Rate', format: 'pct', fixedThreshold: 50 },
+    { key: 'standardInspCount',          label: 'Std. Insp.',      format: 'integer' },
+    { key: 'standardAvgScore',          label: 'Std. Score',      format: 'pct', fixedThreshold: 80, amberThreshold: 85 },
+    { key: 'standardBelowObjPct',       label: 'Below Obj. %',    format: 'pct', alertAbove: 30, amberAbove: 15 },
+    { key: 'tieredInspCount',           label: 'Tiered Insp.',    format: 'integer', muted: true },
+    { key: 'tieredAvgScore',            label: 'Tiered Score',    format: 'pct' },
     { key: 'totalDeficiencies',   label: 'Deficiencies',   format: 'integer' },
     { key: 'openDeficiencies',    label: 'Open Def.',      format: 'integer' },
     { key: 'incidents',           label: 'Incidents',      pending: true },
@@ -122,8 +124,8 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
         <tbody>
           {rows.map((row, i) => {
             const isSelected = selectedRow && row[groupKey] === selectedRow;
-            const belowSafety = threshold && row.safetyPassRate !== null && row.safetyPassRate < threshold;
-            const belowScore  = row.qualityAvgScore !== null && row.qualityAvgScore < 80;
+            const belowSafety = row.safetyPassRate !== null && row.safetyPassRate < 50;
+            const belowScore  = row.standardAvgScore !== null && row.standardAvgScore < 80;
             const rowAlert    = belowSafety || belowScore;
 
             return (
@@ -142,13 +144,16 @@ function SummaryTable({ rows, threshold, groupKey, groupLabel, onRowClick, selec
                     );
                   }
                   const val = row[c.key];
-                  const isBelow = (c.threshold === true && threshold && val !== null && val < threshold)
-                    || (c.fixedThreshold && val !== null && val < c.fixedThreshold)
+                  const isRed = (c.fixedThreshold && val !== null && val < c.fixedThreshold)
                     || (c.alertAbove !== undefined && val !== null && val > c.alertAbove);
+                  const isAmber = !isRed && (
+                    (c.amberThreshold && val !== null && val < c.amberThreshold)
+                    || (c.amberAbove !== undefined && val !== null && val > c.amberAbove)
+                  );
                   return (
                     <td key={c.key} className={`py-2 px-3 whitespace-nowrap font-medium
                       ${c.key === groupKey ? 'text-gray-900' : ''}
-                      ${isBelow ? 'text-red-600 font-semibold' : 'text-gray-700'}
+                      ${isRed ? 'text-red-600 font-semibold' : isAmber ? 'text-amber-600 font-semibold' : c.muted ? 'text-gray-400' : 'text-gray-700'}
                     `}>
                       {val === null || val === undefined ? '—' : fmt(val, c.format)}
                     </td>
@@ -263,7 +268,6 @@ export default function OpsOverview() {
   const [job, setJob]                     = useState('all');
   const [startDate, setStartDate]         = useState(getQuarterStart());
   const [endDate, setEndDate]             = useState(today());
-  const [threshold, setThreshold]         = useState(50);
 
   // Derived: cascade manager options from VP, deduplicate by name
   const managerOptions = useMemo(() => {
@@ -330,7 +334,7 @@ export default function OpsOverview() {
     setError(null);
 
     const shared = {
-      startDate, endDate, threshold,
+      startDate, endDate,
       ...(vp !== 'all' ? { vp } : {}),
       ...(manager !== 'all' ? { manager } : {}),
       ...(job !== 'all' ? { jobNumber: job } : {}),
@@ -360,7 +364,7 @@ export default function OpsOverview() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, startDate, endDate, vp, manager, job, threshold]);
+  }, [tenantId, startDate, endDate, vp, manager, job]);
 
   // Initial load
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -505,18 +509,6 @@ export default function OpsOverview() {
             />
           </div>
 
-          {/* Threshold */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500">Highlight Below % Inspected</label>
-            <input
-              type="number"
-              value={threshold}
-              min={0} max={100}
-              onChange={e => setThreshold(Number(e.target.value))}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white w-20 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
           <button
             onClick={fetchData}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -589,7 +581,6 @@ export default function OpsOverview() {
                 ) : (
                   <SummaryTable
                     rows={vpSummary}
-                    threshold={threshold}
                     groupKey="vp"
                     groupLabel="VP"
                     onRowClick={setSelectedVP}
@@ -620,7 +611,6 @@ export default function OpsOverview() {
                 ) : (
                   <SummaryTable
                     rows={filteredManagerSummary}
-                    threshold={threshold}
                     groupKey="manager"
                     groupLabel="Manager"
                     onRowClick={openManagerDrilldown}
@@ -894,7 +884,7 @@ export default function OpsOverview() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      {['Job Name', 'Safety Pass Rate', 'Avg Score', 'Below Obj.', 'Deficiencies', 'Open Def.', 'Avg Close Days'].map(h => (
+                      {['Job Name', 'Safety Pass', 'Std. Score', 'Below Obj. %', 'Tiered Score', 'Deficiencies', 'Open Def.', 'Avg Close Days'].map(h => (
                         <th key={h} className="text-left py-2 px-2 font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -910,11 +900,14 @@ export default function OpsOverview() {
                         <td className={`py-2 px-2 ${site.safetyPassRate !== null && site.safetyPassRate < 50 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                           {site.safetyPassRate != null ? `${site.safetyPassRate}%` : '—'}
                         </td>
-                        <td className={`py-2 px-2 ${site.qualityAvgScore !== null && site.qualityAvgScore < 80 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                          {site.qualityAvgScore != null ? `${site.qualityAvgScore}%` : '—'}
+                        <td className={`py-2 px-2 ${site.standardAvgScore !== null && site.standardAvgScore < 80 ? 'text-red-600 font-semibold' : site.standardAvgScore !== null && site.standardAvgScore < 85 ? 'text-amber-600 font-semibold' : 'text-gray-700'}`}>
+                          {site.standardAvgScore != null ? `${site.standardAvgScore}%` : '—'}
                         </td>
-                        <td className={`py-2 px-2 ${site.inspectionsBelowObjective > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                          {site.inspectionsBelowObjective}
+                        <td className={`py-2 px-2 ${site.standardBelowObjPct !== null && site.standardBelowObjPct > 30 ? 'text-red-600 font-semibold' : site.standardBelowObjPct !== null && site.standardBelowObjPct > 15 ? 'text-amber-600 font-semibold' : 'text-gray-700'}`}>
+                          {site.standardBelowObjPct != null ? `${site.standardBelowObjPct}%` : '—'}
+                        </td>
+                        <td className="py-2 px-2 text-gray-400">
+                          {site.tieredAvgScore != null ? `${site.tieredAvgScore}%` : '—'}
                         </td>
                         <td className="py-2 px-2 text-gray-700">{site.totalDeficiencies}</td>
                         <td className={`py-2 px-2 ${site.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
