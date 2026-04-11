@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Users, TrendingUp, ShieldCheck, DollarSign,
-  ChevronDown, ChevronUp, Info, RefreshCw,
+  ChevronDown, ChevronUp, ChevronRight, Info, RefreshCw,
   ClipboardList, BarChart2, ChevronLeft, AlertTriangle
 } from 'lucide-react';
 import { useTenantId } from '../../contexts/TenantIdContext';
@@ -98,10 +98,16 @@ function KPICard({ title, icon: Icon, color, children }) {
   );
 }
 
-function KPIRow({ label, value, type, sub, alert }) {
+function KPIRow({ label, value, type, sub, alert, onClick }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-500">{label}</span>
+    <div
+      className={`flex items-center justify-between ${onClick ? 'cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors' : ''}`}
+      onClick={onClick}
+    >
+      <span className="text-xs text-gray-500 flex items-center gap-1">
+        {label}
+        {onClick && <ChevronRight size={10} className="text-gray-300" />}
+      </span>
       <div className="text-right">
         <span className={`text-sm font-semibold ${alert ? 'text-red-600' : 'text-gray-900'}`}>
           {fmt(value, type)}
@@ -112,13 +118,18 @@ function KPIRow({ label, value, type, sub, alert }) {
   );
 }
 
-function MiniKPI({ label, value, type, alert }) {
+function MiniKPI({ label, value, type, alert, onClick, sub }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center">
+    <div
+      onClick={onClick}
+      className={`bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center relative ${onClick ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all' : ''}`}
+    >
+      {onClick && <ChevronRight size={12} className="absolute top-2 right-2 text-gray-300" />}
       <div className={`text-2xl font-bold ${alert ? 'text-red-600' : 'text-gray-900'}`}>
         {fmt(value, type)}
       </div>
       <div className="text-xs text-gray-500 mt-1 text-center">{label}</div>
+      {sub && <div className="text-[10px] text-gray-400 mt-0.5 text-center">{sub}</div>}
     </div>
   );
 }
@@ -271,6 +282,12 @@ export default function OpsOverview() {
   const [drilldownData, setDrilldownData] = useState(null);
   const [drilldownLoading, setDrilldownLoading] = useState(false);
 
+  // KPI detail panel state
+  const [kpiPanel, setKpiPanel]             = useState(null); // null | { type: 'absences'|'deficiencies'|'belowObj'|'turnover', title }
+  const [kpiPanelData, setKpiPanelData]     = useState(null);
+  const [kpiPanelLoading, setKpiPanelLoading] = useState(false);
+  const [kpiPanelSort, setKpiPanelSort]     = useState({ col: null, dir: 'desc' });
+
   // ── Load filter options once
   useEffect(() => {
     if (!tenantId) return;
@@ -383,6 +400,37 @@ export default function OpsOverview() {
       openManagerDrilldown(drilldown.manager);
     }
   }, [drilldown, openManagerDrilldown]);
+
+  // ── KPI Panel handlers
+  const openKpiPanel = useCallback(async (type, title) => {
+    setKpiPanel({ type, title });
+    setKpiPanelLoading(true);
+    setKpiPanelData(null);
+    setKpiPanelSort({ col: null, dir: 'desc' });
+    try {
+      const shared = { startDate, endDate };
+      if (vp !== 'all') shared.vp = vp;
+      if (manager !== 'all') shared.manager = manager;
+      if (job !== 'all') shared.jobNumber = job;
+      const qs = new URLSearchParams(shared).toString();
+
+      const endpointMap = {
+        absences: 'absence-detail',
+        deficiencies: 'open-deficiencies-detail',
+        belowObj: 'sites-below-objective',
+        turnover: 'turnover-detail',
+      };
+      const res = await apiFetch(`/api/ops-workspace/${tenantId}/${endpointMap[type]}?${qs}`);
+      setKpiPanelData(res.rows || []);
+    } catch (err) {
+      console.error('kpi-panel fetch error:', err);
+      setKpiPanelData([]);
+    } finally {
+      setKpiPanelLoading(false);
+    }
+  }, [tenantId, startDate, endDate, vp, manager, job]);
+
+  const closeKpiPanel = () => { setKpiPanel(null); setKpiPanelData(null); };
 
   // ── Render
   return (
@@ -528,12 +576,14 @@ export default function OpsOverview() {
                 value={workforceKpis?.hasTurnoverData ? workforceKpis?.turnoverRate : null}
                 type="pct"
                 alert={workforceKpis?.turnoverRate > 10}
+                onClick={workforceKpis?.hasTurnoverData ? () => openKpiPanel('turnover', 'Turnover Detail') : undefined}
               />
               <MiniKPI
                 label="Open Deficiencies"
                 value={qualityKpis?.openDeficiencies}
                 type="integer"
                 alert={qualityKpis?.openDeficiencies > 0}
+                onClick={qualityKpis?.openDeficiencies > 0 ? () => openKpiPanel('deficiencies', 'Open Deficiencies') : undefined}
               />
               <MiniKPI
                 label="Open Claims"
@@ -557,12 +607,14 @@ export default function OpsOverview() {
                 value={qualityKpis?.avgScore}
                 type="pct"
                 alert={qualityKpis?.avgScore < 80}
+                sub="Standard inspections only"
               />
               <MiniKPI
                 label="Sites Below Objective"
                 value={qualityKpis?.sitesBelowObjective}
                 type="integer"
                 alert={qualityKpis?.sitesBelowObjective > 0}
+                onClick={qualityKpis?.sitesBelowObjective > 0 ? () => openKpiPanel('belowObj', 'Sites Below Objective') : undefined}
               />
             </div>
 
@@ -762,6 +814,7 @@ export default function OpsOverview() {
                             type="pct"
                             alert={workforceKpis.turnoverRate > 10}
                             sub={workforceKpis.hasTurnoverData ? `${workforceKpis.terminations} terminations` : 'No activity'}
+                            onClick={workforceKpis.hasTurnoverData ? () => openKpiPanel('turnover', 'Turnover Detail') : undefined}
                           />
                           <KPIRow
                             label="Overtime %"
@@ -775,6 +828,7 @@ export default function OpsOverview() {
                             value={workforceKpis.hasAbsenceData ? workforceKpis.unexcusedAbsences : null}
                             type="integer"
                             alert={workforceKpis.unexcusedAbsences > 0}
+                            onClick={workforceKpis.unexcusedAbsences > 0 ? () => openKpiPanel('absences', 'Unexcused Absences') : undefined}
                           />
                         </>
                       )}
@@ -786,9 +840,9 @@ export default function OpsOverview() {
                         <KPICardSkeleton />
                       ) : (
                         <>
-                          <KPIRow label="Avg Inspection Score" value={qualityKpis.avgScore} type="pct" alert={qualityKpis.avgScore < 80} sub={`${Number(qualityKpis.totalInspections).toLocaleString()} inspections`} />
-                          <KPIRow label="Open Deficiencies" value={qualityKpis.openDeficiencies} type="integer" alert={qualityKpis.openDeficiencies > 0} sub={`${Number(qualityKpis.totalDeficiencies).toLocaleString()} total`} />
-                          <KPIRow label="Sites Below Objective" value={qualityKpis.sitesBelowObjective} type="integer" alert={qualityKpis.sitesBelowObjective > 0} sub={`of ${qualityKpis.totalSitesInspected} inspected`} />
+                          <KPIRow label="Avg Inspection Score" value={qualityKpis.avgScore} type="pct" alert={qualityKpis.avgScore < 80} sub="Standard inspections only" />
+                          <KPIRow label="Open Deficiencies" value={qualityKpis.openDeficiencies} type="integer" alert={qualityKpis.openDeficiencies > 0} sub={`${Number(qualityKpis.totalDeficiencies).toLocaleString()} total`} onClick={qualityKpis.openDeficiencies > 0 ? () => openKpiPanel('deficiencies', 'Open Deficiencies') : undefined} />
+                          <KPIRow label="Sites Below Objective" value={qualityKpis.sitesBelowObjective} type="integer" alert={qualityKpis.sitesBelowObjective > 0} sub={`of ${qualityKpis.totalSitesInspected} inspected`} onClick={qualityKpis.sitesBelowObjective > 0 ? () => openKpiPanel('belowObj', 'Sites Below Objective') : undefined} />
                         </>
                       )}
                     </KPICard>
@@ -1030,13 +1084,13 @@ export default function OpsOverview() {
               <div className="text-xs text-gray-400">VP: {drilldown.vp}</div>
             )}
             {drilldownLoading ? (
-              <LoadingSkeleton rows={5} cols={6} />
+              <LoadingSkeleton rows={5} cols={4} />
             ) : drilldownData?.rows?.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      {['Job Name', 'Safety Pass', 'Std. Score', 'Below Obj. %', 'Tiered Score', 'Deficiencies', 'Open Def.', 'Avg Close Days'].map(h => (
+                      {['Job Name', 'Safety Pass', 'Std. Score', 'Open Def.'].map(h => (
                         <th key={h} className="text-left py-2 px-2 font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -1048,28 +1102,21 @@ export default function OpsOverview() {
                         onClick={() => openSiteDrilldown(site)}
                         className="border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors"
                       >
-                        <td className="py-2 px-2 font-medium text-gray-900 whitespace-nowrap">{site.jobName}</td>
-                        <td className={`py-2 px-2 ${site.safetyPassRate !== null && site.safetyPassRate < 50 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                        <td className="py-2 px-2 font-medium text-gray-900">{site.jobName}</td>
+                        <td className={`py-2 px-2 ${site.safetyPassRate !== null && site.safetyPassRate < 85 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                           {site.safetyPassRate != null ? `${site.safetyPassRate}%` : '—'}
                         </td>
                         <td className={`py-2 px-2 ${site.standardAvgScore !== null && site.standardAvgScore < 80 ? 'text-red-600 font-semibold' : site.standardAvgScore !== null && site.standardAvgScore < 85 ? 'text-amber-600 font-semibold' : 'text-gray-700'}`}>
                           {site.standardAvgScore != null ? `${site.standardAvgScore}%` : '—'}
                         </td>
-                        <td className={`py-2 px-2 ${site.standardBelowObjPct !== null && site.standardBelowObjPct > 30 ? 'text-red-600 font-semibold' : site.standardBelowObjPct !== null && site.standardBelowObjPct > 15 ? 'text-amber-600 font-semibold' : 'text-gray-700'}`}>
-                          {site.standardBelowObjPct != null ? `${site.standardBelowObjPct}%` : '—'}
-                        </td>
-                        <td className="py-2 px-2 text-gray-400">
-                          {site.tieredAvgScore != null ? `${site.tieredAvgScore}%` : '—'}
-                        </td>
-                        <td className="py-2 px-2 text-gray-700">{site.totalDeficiencies}</td>
                         <td className={`py-2 px-2 ${site.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                           {site.openDeficiencies}
                         </td>
-                        <td className="py-2 px-2 text-gray-700">{site.avgCloseDays != null ? site.avgCloseDays : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                <p className="text-xs text-gray-400 mt-2">{drilldownData.rows.length} sites</p>
               </div>
             ) : (
               <div className="text-sm text-gray-400 py-6 text-center">No sites found for this manager.</div>
@@ -1090,6 +1137,130 @@ export default function OpsOverview() {
           </div>
         )}
       </SlidePanel>
+
+      {/* ── KPI Detail Panel ── */}
+      <SlidePanel
+        open={!!kpiPanel}
+        onClose={closeKpiPanel}
+        title={kpiPanel ? `${kpiPanel.title}${kpiPanelData ? ` (${kpiPanelData.length})` : ''}` : ''}
+      >
+        {kpiPanelLoading ? (
+          <LoadingSkeleton rows={8} cols={4} />
+        ) : kpiPanelData && kpiPanelData.length > 0 ? (
+          <KpiDetailTable type={kpiPanel?.type} data={kpiPanelData} sort={kpiPanelSort} setSort={setKpiPanelSort} />
+        ) : (
+          <div className="text-sm text-gray-400 py-6 text-center">No records found for selected filters.</div>
+        )}
+      </SlidePanel>
+    </div>
+  );
+}
+
+// ─── KPI Detail Table ─────────────────────────────────────────────────────────
+
+function KpiDetailTable({ type, data, sort, setSort }) {
+  const columns = {
+    absences: [
+      { key: 'employeeName', label: 'Employee', align: 'left' },
+      { key: 'jobName', label: 'Job Name', align: 'left' },
+      { key: 'manager', label: 'Manager', align: 'left' },
+      { key: 'absenceDate', label: 'Date', align: 'left' },
+      { key: 'reason', label: 'Reason', align: 'left' },
+      { key: 'hours', label: 'Hours', align: 'right' },
+    ],
+    deficiencies: [
+      { key: 'jobName', label: 'Site', align: 'left' },
+      { key: 'area', label: 'Area', align: 'left' },
+      { key: 'item', label: 'Item', align: 'left' },
+      { key: 'daysOpen', label: 'Days Open', align: 'right' },
+      { key: 'manager', label: 'Manager', align: 'left' },
+    ],
+    belowObj: [
+      { key: 'jobName', label: 'Site', align: 'left' },
+      { key: 'manager', label: 'Manager', align: 'left' },
+      { key: 'avgScore', label: 'Avg Score', align: 'right' },
+      { key: 'objective', label: 'Objective', align: 'right' },
+      { key: 'belowCount', label: '# Below', align: 'right' },
+      { key: 'totalInspections', label: 'Total Insp.', align: 'right' },
+    ],
+    turnover: [
+      { key: 'employeeName', label: 'Employee', align: 'left' },
+      { key: 'status', label: 'Status', align: 'left' },
+      { key: 'jobName', label: 'Job Name', align: 'left' },
+      { key: 'manager', label: 'Manager', align: 'left' },
+      { key: 'effectiveDate', label: 'Date', align: 'left' },
+    ],
+  };
+
+  const cols = columns[type] || [];
+
+  const sorted = useMemo(() => {
+    if (!sort.col) return data;
+    return [...data].sort((a, b) => {
+      let av = a[sort.col], bv = b[sort.col];
+      if (av == null) av = '';
+      if (bv == null) bv = '';
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return sort.dir === 'asc' ? -1 : 1;
+      if (av > bv) return sort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [data, sort]);
+
+  const toggleSort = (col) => {
+    setSort(s => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }));
+  };
+
+  const formatCell = (row, col) => {
+    const val = row[col.key];
+    if (val == null || val === '') return '—';
+    if (col.key === 'absenceDate' || col.key === 'effectiveDate' || col.key === 'inspectionDate') {
+      return new Date(val).toLocaleDateString();
+    }
+    if (col.key === 'hours') return Number(val).toFixed(1);
+    if (col.key === 'avgScore' || col.key === 'objective') return `${val}%`;
+    return val;
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead className="sticky top-0 bg-white">
+          <tr className="border-b border-gray-200">
+            {cols.map(col => (
+              <th
+                key={col.key}
+                onClick={() => toggleSort(col.key)}
+                className={`${col.align === 'right' ? 'text-right' : 'text-left'} py-2 px-2 font-semibold text-gray-500 cursor-pointer hover:text-gray-800 select-none whitespace-nowrap`}
+              >
+                {col.label}
+                {sort.col === col.key && (
+                  <span className="ml-0.5">{sort.dir === 'asc' ? '↑' : '↓'}</span>
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((row, i) => (
+            <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+              {cols.map(col => (
+                <td
+                  key={col.key}
+                  className={`py-2 px-2 ${col.align === 'right' ? 'text-right' : ''} ${
+                    col.key === 'daysOpen' && row.daysOpen > 90 ? 'text-red-600 font-semibold' :
+                    col.key === 'avgScore' && row.avgScore < 80 ? 'text-red-600 font-semibold' :
+                    'text-gray-700'
+                  }`}
+                >
+                  {formatCell(row, col)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
