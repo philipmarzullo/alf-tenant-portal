@@ -55,19 +55,33 @@ function today() {
   return new Date().toISOString().split('T')[0];
 }
 
-function statusBadge(value, greenMin, amberMin) {
-  if (value === null || value === undefined) return { color: 'bg-gray-200 text-gray-500', label: '—' };
-  if (value >= greenMin) return { color: 'bg-green-100 text-green-700', label: `${value}%` };
-  if (value >= amberMin) return { color: 'bg-amber-100 text-amber-700', label: `${value}%` };
-  return { color: 'bg-red-100 text-red-700', label: `${value}%` };
+function statusBadge(value, greenMin, amberMin, nullLabel = null) {
+  if (value === null || value === undefined) return { color: 'bg-gray-100 text-gray-400', label: '—', isNull: true, nullLabel };
+  if (value >= greenMin) return { color: 'bg-green-100 text-green-700', label: `${value}%`, isNull: false };
+  if (value >= amberMin) return { color: 'bg-amber-100 text-amber-700', label: `${value}%`, isNull: false };
+  return { color: 'bg-red-100 text-red-700', label: `${value}%`, isNull: false };
 }
 
 function vpRowStatus(safetyPassRate, qualityScore) {
-  const safetyStatus = safetyPassRate >= 95 ? 'green' : safetyPassRate >= 85 ? 'amber' : 'red';
-  const qualityStatus = qualityScore >= 80 ? 'green' : qualityScore >= 65 ? 'amber' : 'red';
+  const safetyStatus = safetyPassRate == null ? 'gray' : safetyPassRate >= 95 ? 'green' : safetyPassRate >= 85 ? 'amber' : 'red';
+  const qualityStatus = qualityScore == null ? 'gray' : qualityScore >= 80 ? 'green' : qualityScore >= 65 ? 'amber' : 'red';
   if (safetyStatus === 'red' || qualityStatus === 'red') return 'bg-red-500';
   if (safetyStatus === 'amber' || qualityStatus === 'amber') return 'bg-amber-500';
+  if (safetyStatus === 'gray' && qualityStatus === 'gray') return 'bg-gray-300';
   return 'bg-green-500';
+}
+
+function BudgetLastUpdated({ date }) {
+  const d = new Date(date);
+  const daysSince = Math.round((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+  const formatted = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const color = daysSince > 365 ? 'text-red-600' : daysSince > 180 ? 'text-amber-600' : 'text-green-600';
+  return (
+    <div className="pt-2 border-t border-gray-100 mt-2">
+      <span className="text-xs text-gray-500">Budget last updated: </span>
+      <span className={`text-xs font-medium ${color}`}>{formatted}</span>
+    </div>
+  );
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -240,6 +254,8 @@ export default function OpsOverview() {
   const [deficiencyByArea, setDeficiencyByArea]   = useState(null);
   const [sitesByDeficiency, setSitesByDeficiency] = useState(null);
   const [daysSinceInspection, setDaysSinceInspection] = useState(null);
+  const [daysActiveOnly, setDaysActiveOnly]       = useState(true);
+  const [daysSort, setDaysSort]                   = useState({ col: 'daysSince', dir: 'desc' });
 
   // UI state
   const [activeTab, setActiveTab]         = useState('executive');
@@ -298,7 +314,7 @@ export default function OpsOverview() {
         apiFetch(`/api/ops-workspace/${tenantId}/deficiency-trend?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/deficiency-by-area?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/sites-by-deficiency?${params}`),
-        apiFetch(`/api/ops-workspace/${tenantId}/days-since-inspection?${params}`),
+        apiFetch(`/api/ops-workspace/${tenantId}/days-since-inspection?${params}&activeOnly=${daysActiveOnly}`),
       ]);
 
       setVpSummary(vpRes.rows || []);
@@ -318,7 +334,7 @@ export default function OpsOverview() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, startDate, endDate, vp, manager, job]);
+  }, [tenantId, startDate, endDate, vp, manager, job, daysActiveOnly]);
 
   // Initial load
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -591,8 +607,8 @@ export default function OpsOverview() {
                         {vpSummary.map((row, i) => {
                           const isSelected = selectedVP === row.vp;
                           const safety = statusBadge(row.safetyPassRate, 95, 85);
-                          const quality = statusBadge(row.standardAvgScore, 80, 65);
-                          const dot = vpRowStatus(row.safetyPassRate || 0, row.standardAvgScore || 0);
+                          const quality = statusBadge(row.standardAvgScore, 80, 65, 'No standard inspections');
+                          const dot = vpRowStatus(row.safetyPassRate, row.standardAvgScore);
                           return (
                             <tr
                               key={i}
@@ -611,16 +627,22 @@ export default function OpsOverview() {
                                 </span>
                               </td>
                               <td className="py-2 px-3">
-                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}>
+                                <span
+                                  className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}
+                                  title={quality.isNull ? quality.nullLabel : undefined}
+                                >
                                   {quality.label}
                                 </span>
+                                {quality.isNull && quality.nullLabel && (
+                                  <div className="text-[10px] text-gray-400 mt-0.5">{quality.nullLabel}</div>
+                                )}
                               </td>
                               <td className={`py-2 px-3 ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                                 {row.openDeficiencies}
                               </td>
-                              <td className="py-2 px-3 text-gray-700">{fmt(row.payroll || null, 'currency')}</td>
+                              <td className="py-2 px-3 text-gray-700">{fmt(row.payroll, 'currency')}</td>
                               <td className={`py-2 px-3 ${row.claims > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
-                                {row.claims ?? '—'}
+                                {row.claims}
                               </td>
                               <td className="py-2 px-3 text-gray-700">{row.avgCloseDays ?? '—'}</td>
                             </tr>
@@ -670,8 +692,8 @@ export default function OpsOverview() {
                         {filteredManagerSummary.map((row, i) => {
                           const isSelected = drilldown?.type === 'manager' && drilldown.manager === row.manager;
                           const safety = statusBadge(row.safetyPassRate, 95, 85);
-                          const quality = statusBadge(row.standardAvgScore, 80, 65);
-                          const dot = vpRowStatus(row.safetyPassRate || 0, row.standardAvgScore || 0);
+                          const quality = statusBadge(row.standardAvgScore, 80, 65, 'No standard inspections');
+                          const dot = vpRowStatus(row.safetyPassRate, row.standardAvgScore);
                           return (
                             <tr
                               key={i}
@@ -691,9 +713,15 @@ export default function OpsOverview() {
                                 </span>
                               </td>
                               <td className="py-2 px-3">
-                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}>
+                                <span
+                                  className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}
+                                  title={quality.isNull ? quality.nullLabel : undefined}
+                                >
                                   {quality.label}
                                 </span>
+                                {quality.isNull && quality.nullLabel && (
+                                  <div className="text-[10px] text-gray-400 mt-0.5">{quality.nullLabel}</div>
+                                )}
                               </td>
                               <td className={`py-2 px-3 ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
                                 {row.openDeficiencies}
@@ -776,6 +804,19 @@ export default function OpsOverview() {
                           <KPIRow label="Overtime Pay" value={financialKpis.otPay} type="currency" />
                           <KPIRow label="Total Hours" value={financialKpis.totalHours} type="integer" />
                           <KPIRow label="Overtime %" value={financialKpis.otPct} type="pct" alert={financialKpis.otPct > 15} />
+                          {financialKpis.hasBudgetData && (
+                            <>
+                              <div className="pt-3 mt-3 border-t border-gray-200">
+                                <div className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-2">Budget</div>
+                              </div>
+                              <KPIRow label="Budget Labor" value={financialKpis.budgetLaborDollars} type="currency" />
+                              <KPIRow label="Budget Hours" value={financialKpis.budgetHours} type="integer" />
+                              <KPIRow label="Variance" value={financialKpis.laborVariancePct} type="pct" alert={financialKpis.laborVariancePct > 0} sub={financialKpis.laborVariancePct > 0 ? 'Over budget' : 'Under budget'} />
+                            </>
+                          )}
+                          {financialKpis.budgetLastUpdated && (
+                            <BudgetLastUpdated date={financialKpis.budgetLastUpdated} />
+                          )}
                         </>
                       ) : (
                         <div className="text-sm text-gray-400 py-2">No payroll data in selected period</div>
@@ -878,45 +919,81 @@ export default function OpsOverview() {
 
             {/* Bottom right: Days Since Last Inspection */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Days Since Last Inspection</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900">Days Since Last Inspection</h3>
+                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={daysActiveOnly}
+                    onChange={e => setDaysActiveOnly(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                  />
+                  Active only (within 2 years)
+                </label>
+              </div>
               {loading || !daysSinceInspection ? (
                 <LoadingSkeleton rows={8} cols={4} />
-              ) : daysSinceInspection.sites?.length > 0 ? (
-                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                  <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-white">
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-2 font-semibold text-gray-500">Site</th>
-                        <th className="text-left py-2 px-2 font-semibold text-gray-500">Manager</th>
-                        <th className="text-right py-2 px-2 font-semibold text-gray-500">Days</th>
-                        <th className="text-left py-2 px-2 font-semibold text-gray-500">Last Inspected</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {daysSinceInspection.sites.map((site, i) => (
-                        <tr
-                          key={i}
-                          onClick={() => openSiteDrilldown(site)}
-                          className="border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors"
-                        >
-                          <td className="py-2 px-2 font-medium text-gray-900">{site.jobName}</td>
-                          <td className="py-2 px-2 text-gray-500">{site.manager}</td>
-                          <td className={`py-2 px-2 text-right font-semibold ${
-                            site.daysSince > 180 ? 'text-red-600' : site.daysSince > 90 ? 'text-amber-600' : 'text-gray-700'
-                          }`}>
-                            {site.daysSince}
-                          </td>
-                          <td className="py-2 px-2 text-gray-500">
-                            {site.lastInspectionDate ? new Date(site.lastInspectionDate).toLocaleDateString() : '—'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-sm text-gray-400 py-12 text-center">All active sites inspected within 30 days</div>
-              )}
+              ) : (() => {
+                const sorted = [...(daysSinceInspection.sites || [])].sort((a, b) => {
+                  const { col, dir } = daysSort;
+                  let av = a[col], bv = b[col];
+                  if (typeof av === 'string') av = av.toLowerCase();
+                  if (typeof bv === 'string') bv = bv.toLowerCase();
+                  if (av < bv) return dir === 'asc' ? -1 : 1;
+                  if (av > bv) return dir === 'asc' ? 1 : -1;
+                  return 0;
+                });
+                const SortHeader = ({ col, label, align }) => (
+                  <th
+                    className={`${align === 'right' ? 'text-right' : 'text-left'} py-2 px-2 font-semibold text-gray-500 cursor-pointer hover:text-gray-800 select-none`}
+                    onClick={() => setDaysSort(s => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }))}
+                  >
+                    {label}
+                    {daysSort.col === col && (
+                      <span className="ml-0.5">{daysSort.dir === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </th>
+                );
+                return sorted.length > 0 ? (
+                  <>
+                    <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                      <table className="w-full text-xs">
+                        <thead className="sticky top-0 bg-white">
+                          <tr className="border-b border-gray-200">
+                            <SortHeader col="jobName" label="Site" align="left" />
+                            <SortHeader col="manager" label="Manager" align="left" />
+                            <SortHeader col="daysSince" label="Days" align="right" />
+                            <SortHeader col="lastInspectionDate" label="Last Inspected" align="left" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sorted.map((site, i) => (
+                            <tr
+                              key={i}
+                              onClick={() => openSiteDrilldown(site)}
+                              className="border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors"
+                            >
+                              <td className="py-2 px-2 font-medium text-gray-900">{site.jobName}</td>
+                              <td className="py-2 px-2 text-gray-500">{site.manager}</td>
+                              <td className={`py-2 px-2 text-right font-semibold ${
+                                site.daysSince > 180 ? 'text-red-600' : site.daysSince > 90 ? 'text-amber-600' : 'text-gray-700'
+                              }`}>
+                                {site.daysSince}
+                              </td>
+                              <td className="py-2 px-2 text-gray-500">
+                                {site.lastInspectionDate ? new Date(site.lastInspectionDate).toLocaleDateString() : '—'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">Showing {sorted.length} sites</p>
+                  </>
+                ) : (
+                  <div className="text-sm text-gray-400 py-12 text-center">All active sites inspected within 30 days</div>
+                );
+              })()}
             </div>
 
           </div>
