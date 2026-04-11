@@ -1,16 +1,26 @@
 // src/pages/ops/OpsOverview.jsx
-// Operations Workspace — live Snowflake-backed VP/Manager summary,
-// workforce, quality, and financial KPI cards.
+// Operations Workspace — three-tab layout with shared filter bar.
+// Tab 1: Executive Summary (KPI cards + VP/Manager tables)
+// Tab 2: Inspection Dashboard (charts + tables)
+// Tab 3: VP Report (placeholder)
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Users, TrendingUp, ShieldCheck, DollarSign,
   ChevronDown, ChevronUp, Info, RefreshCw,
-  ClipboardList, BarChart2, ChevronLeft
+  ClipboardList, BarChart2, ChevronLeft, AlertTriangle
 } from 'lucide-react';
 import { useTenantId } from '../../contexts/TenantIdContext';
 import { getFreshToken } from '../../lib/supabase';
 import SlidePanel from '../../components/layout/SlidePanel';
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale, BarElement,
+  Title, Tooltip, Legend
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
@@ -45,16 +55,22 @@ function today() {
   return new Date().toISOString().split('T')[0];
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function PendingBadge({ label = 'Pending data share' }) {
-  return (
-    <span className="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-      <Info size={10} />
-      {label}
-    </span>
-  );
+function statusBadge(value, greenMin, amberMin) {
+  if (value === null || value === undefined) return { color: 'bg-gray-200 text-gray-500', label: '—' };
+  if (value >= greenMin) return { color: 'bg-green-100 text-green-700', label: `${value}%` };
+  if (value >= amberMin) return { color: 'bg-amber-100 text-amber-700', label: `${value}%` };
+  return { color: 'bg-red-100 text-red-700', label: `${value}%` };
 }
+
+function vpRowStatus(safetyPassRate, qualityScore) {
+  const safetyStatus = safetyPassRate >= 95 ? 'green' : safetyPassRate >= 85 ? 'amber' : 'red';
+  const qualityStatus = qualityScore >= 80 ? 'green' : qualityScore >= 65 ? 'amber' : 'red';
+  if (safetyStatus === 'red' || qualityStatus === 'red') return 'bg-red-500';
+  if (safetyStatus === 'amber' || qualityStatus === 'amber') return 'bg-amber-500';
+  return 'bg-green-500';
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function KPICard({ title, icon: Icon, color, children }) {
   return (
@@ -82,88 +98,13 @@ function KPIRow({ label, value, type, sub, alert }) {
   );
 }
 
-function SummaryTable({ rows, groupKey, groupLabel, onRowClick, selectedRow }) {
-  if (!rows || rows.length === 0) {
-    return <div className="text-sm text-gray-400 py-6 text-center">No data for selected filters.</div>;
-  }
-
-  const cols = [
-    { key: groupKey, label: groupLabel, width: 'w-32' },
-    ...(groupKey === 'manager' ? [{ key: 'vp', label: 'VP', width: 'w-28' }] : []),
-    { key: 'jobCount',            label: 'Jobs',           format: 'integer' },
-    { key: 'safetyInspCount',     label: 'Safety Insp.',   format: 'integer' },
-    { key: 'safetyPassRate',             label: 'Safety Pass Rate', format: 'pct', fixedThreshold: 50 },
-    { key: 'standardInspCount',          label: 'Std. Insp.',      format: 'integer' },
-    { key: 'standardAvgScore',          label: 'Std. Score',      format: 'pct', fixedThreshold: 80, amberThreshold: 85 },
-    { key: 'standardBelowObjPct',       label: 'Below Obj. %',    format: 'pct', alertAbove: 30, amberAbove: 15 },
-    { key: 'tieredInspCount',           label: 'Tiered Insp.',    format: 'integer', muted: true },
-    { key: 'tieredAvgScore',            label: 'Tiered Score',    format: 'pct' },
-    { key: 'totalDeficiencies',   label: 'Deficiencies',   format: 'integer' },
-    { key: 'openDeficiencies',    label: 'Open Def.',      format: 'integer' },
-    { key: 'incidents',           label: 'Incidents',      pending: true },
-    { key: 'goodSaves',           label: 'Good Saves',     pending: true },
-    { key: 'compliments',         label: 'Compliments',    pending: true },
-    { key: 'avgCloseDays',        label: 'Avg Close Days', format: 'number' },
-  ];
-
+function MiniKPI({ label, value, type, alert }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-gray-200">
-            {cols.map(c => (
-              <th key={c.key} className={`text-left py-2 px-3 text-xs font-semibold text-gray-500 whitespace-nowrap ${c.width || ''}`}>
-                {c.label}
-                {c.pending && (
-                  <Info size={10} className="inline ml-1 text-amber-400" title="Pending data share expansion" />
-                )}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => {
-            const isSelected = selectedRow && row[groupKey] === selectedRow;
-            const belowSafety = row.safetyPassRate !== null && row.safetyPassRate < 50;
-            const belowScore  = row.standardAvgScore !== null && row.standardAvgScore < 80;
-            const rowAlert    = belowSafety || belowScore;
-
-            return (
-              <tr
-                key={i}
-                onClick={() => onRowClick && onRowClick(row[groupKey])}
-                className={`border-b border-gray-100 transition-colors
-                  ${onRowClick ? 'cursor-pointer hover:bg-blue-50' : ''}
-                  ${isSelected ? 'bg-blue-50' : rowAlert ? 'bg-red-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
-                `}
-              >
-                {cols.map(c => {
-                  if (c.pending) {
-                    return (
-                      <td key={c.key} className="py-2 px-3 text-gray-300">—</td>
-                    );
-                  }
-                  const val = row[c.key];
-                  const isRed = (c.fixedThreshold && val !== null && val < c.fixedThreshold)
-                    || (c.alertAbove !== undefined && val !== null && val > c.alertAbove);
-                  const isAmber = !isRed && (
-                    (c.amberThreshold && val !== null && val < c.amberThreshold)
-                    || (c.amberAbove !== undefined && val !== null && val > c.amberAbove)
-                  );
-                  return (
-                    <td key={c.key} className={`py-2 px-3 whitespace-nowrap font-medium
-                      ${c.key === groupKey ? 'text-gray-900' : ''}
-                      ${isRed ? 'text-red-600 font-semibold' : isAmber ? 'text-amber-600 font-semibold' : c.muted ? 'text-gray-400' : 'text-gray-700'}
-                    `}>
-                      {val === null || val === undefined ? '—' : fmt(val, c.format)}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center">
+      <div className={`text-2xl font-bold ${alert ? 'text-red-600' : 'text-gray-900'}`}>
+        {fmt(value, type)}
+      </div>
+      <div className="text-xs text-gray-500 mt-1 text-center">{label}</div>
     </div>
   );
 }
@@ -178,7 +119,6 @@ function SiteDeficiencyDetail({ data, loading }) {
 
   const { summary, items } = data;
 
-  // Group by area
   const groups = {};
   for (const item of items) {
     const key = item.area || 'Other';
@@ -194,9 +134,8 @@ function SiteDeficiencyDetail({ data, loading }) {
         <strong>{summary.openCount}</strong> open deficiencies, <strong>{summary.totalCount}</strong> total recorded
       </div>
 
-      {/* Grouped by area */}
       {Object.entries(groups).map(([area, areaItems]) => {
-        const isExpanded = expanded[area] !== false; // default open
+        const isExpanded = expanded[area] !== false;
         const openInArea = areaItems.filter(i => i.isOpen).length;
         return (
           <div key={area} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -269,7 +208,7 @@ export default function OpsOverview() {
   const [startDate, setStartDate]         = useState(getQuarterStart());
   const [endDate, setEndDate]             = useState(today());
 
-  // Derived: cascade manager options from VP, deduplicate by name
+  // Derived: cascade manager options from VP
   const managerOptions = useMemo(() => {
     const filtered = vp === 'all' ? allManagers : allManagers.filter(m => m.vp === vp);
     const seen = new Set();
@@ -288,21 +227,28 @@ export default function OpsOverview() {
     );
   }, [vp, manager, allJobs]);
 
-  // Data
+  // Data — Tab 1
   const [vpSummary, setVpSummary]         = useState([]);
   const [managerSummary, setManagerSummary] = useState([]);
   const [workforceKpis, setWorkforceKpis] = useState(null);
   const [qualityKpis, setQualityKpis]     = useState(null);
   const [financialKpis, setFinancialKpis] = useState(null);
-  const [safetyKpis, setSafetyKpis]     = useState(null);
+  const [safetyKpis, setSafetyKpis]       = useState(null);
+
+  // Data — Tab 2
+  const [deficiencyTrend, setDeficiencyTrend]     = useState(null);
+  const [deficiencyByArea, setDeficiencyByArea]   = useState(null);
+  const [sitesByDeficiency, setSitesByDeficiency] = useState(null);
+  const [daysSinceInspection, setDaysSinceInspection] = useState(null);
 
   // UI state
-  const [activeTab, setActiveTab]         = useState('dashboard');
+  const [activeTab, setActiveTab]         = useState('executive');
   const [selectedVP, setSelectedVP]       = useState(null);
   const [loading, setLoading]             = useState(false);
   const [loadingFilters, setLoadingFilters] = useState(true);
   const [error, setError]                 = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(null);
+  const [kpiDetailOpen, setKpiDetailOpen] = useState(false);
 
   // Drilldown state
   const [drilldown, setDrilldown]         = useState(null);
@@ -342,13 +288,17 @@ export default function OpsOverview() {
     const params = new URLSearchParams(shared).toString();
 
     try {
-      const [vpRes, mgRes, wfRes, qlRes, finRes, sfRes] = await Promise.all([
+      const [vpRes, mgRes, wfRes, qlRes, finRes, sfRes, trendRes, areaRes, sitesRes, daysRes] = await Promise.all([
         apiFetch(`/api/ops-workspace/${tenantId}/vp-summary?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/manager-summary?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/workforce-kpis?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/quality-kpis?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/financial-kpis?${params}`),
         apiFetch(`/api/ops-workspace/${tenantId}/safety-kpis?${params}`),
+        apiFetch(`/api/ops-workspace/${tenantId}/deficiency-trend?${params}`),
+        apiFetch(`/api/ops-workspace/${tenantId}/deficiency-by-area?${params}`),
+        apiFetch(`/api/ops-workspace/${tenantId}/sites-by-deficiency?${params}`),
+        apiFetch(`/api/ops-workspace/${tenantId}/days-since-inspection?${params}`),
       ]);
 
       setVpSummary(vpRes.rows || []);
@@ -357,6 +307,10 @@ export default function OpsOverview() {
       setQualityKpis(qlRes);
       setFinancialKpis(finRes);
       setSafetyKpis(sfRes);
+      setDeficiencyTrend(trendRes);
+      setDeficiencyByArea(areaRes);
+      setSitesByDeficiency(sitesRes);
+      setDaysSinceInspection(daysRes);
       setLastRefreshed(new Date());
     } catch (err) {
       console.error('ops-workspace fetch error:', err);
@@ -404,7 +358,7 @@ export default function OpsOverview() {
     } finally {
       setDrilldownLoading(false);
     }
-  }, [tenantId, startDate, endDate]);
+  }, [tenantId]);
 
   const closeDrilldown = () => { setDrilldown(null); setDrilldownData(null); };
 
@@ -441,7 +395,6 @@ export default function OpsOverview() {
 
         {/* Filter Bar */}
         <div className="flex flex-wrap items-end gap-3 mt-4">
-          {/* VP */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500">VP</label>
             <select
@@ -455,7 +408,6 @@ export default function OpsOverview() {
             </select>
           </div>
 
-          {/* Manager */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500">Manager</label>
             <select
@@ -471,7 +423,6 @@ export default function OpsOverview() {
             </select>
           </div>
 
-          {/* Job */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500">Job</label>
             <select
@@ -487,7 +438,6 @@ export default function OpsOverview() {
             </select>
           </div>
 
-          {/* Start Date */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500">Start Date</label>
             <input
@@ -498,7 +448,6 @@ export default function OpsOverview() {
             />
           </div>
 
-          {/* End Date */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500">End Date</label>
             <input
@@ -520,8 +469,9 @@ export default function OpsOverview() {
         {/* Tabs */}
         <div className="flex gap-1 mt-4">
           {[
-            { key: 'dashboard', label: 'Dashboard',   icon: BarChart2 },
-            { key: 'vp-report', label: 'VP Report',   icon: ClipboardList },
+            { key: 'executive',  label: 'Executive Summary', icon: BarChart2 },
+            { key: 'inspection', label: 'Inspection Dashboard', icon: ClipboardList },
+            { key: 'vp-report',  label: 'VP Report', icon: TrendingUp },
           ].map(tab => (
             <button
               key={tab.key}
@@ -547,19 +497,60 @@ export default function OpsOverview() {
           </div>
         )}
 
-        {/* ── DASHBOARD TAB ── */}
-        {activeTab === 'dashboard' && (
+        {/* ── TAB 1: EXECUTIVE SUMMARY ── */}
+        {activeTab === 'executive' && (
           <>
-            {/* Action Items pending banner */}
-            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
-              <Info size={14} className="flex-shrink-0" />
-              <span>
-                <strong>Incidents, Good Saves, and Compliments</strong> are pending a data share expansion with WorkWave.
-                All other columns are live from WinTeam.
-              </span>
+            {/* KPI Cards — 2 rows of 4 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <MiniKPI
+                label="Active Headcount"
+                value={workforceKpis?.activeHeadcount}
+                type="integer"
+              />
+              <MiniKPI
+                label="Turnover Rate"
+                value={workforceKpis?.hasTurnoverData ? workforceKpis?.turnoverRate : null}
+                type="pct"
+                alert={workforceKpis?.turnoverRate > 10}
+              />
+              <MiniKPI
+                label="Open Deficiencies"
+                value={qualityKpis?.openDeficiencies}
+                type="integer"
+                alert={qualityKpis?.openDeficiencies > 0}
+              />
+              <MiniKPI
+                label="Open Claims"
+                value={safetyKpis?.openClaims}
+                type="integer"
+                alert={safetyKpis?.openClaims > 0}
+              />
+              <MiniKPI
+                label="Total Payroll YTD"
+                value={financialKpis?.totalPayroll}
+                type="currency"
+              />
+              <MiniKPI
+                label="Overtime %"
+                value={workforceKpis?.hasOvertimeData ? workforceKpis?.overtimePct : null}
+                type="pct"
+                alert={workforceKpis?.overtimePct > 15}
+              />
+              <MiniKPI
+                label="Avg Inspection Score"
+                value={qualityKpis?.avgScore}
+                type="pct"
+                alert={qualityKpis?.avgScore < 80}
+              />
+              <MiniKPI
+                label="Sites Below Objective"
+                value={qualityKpis?.sitesBelowObjective}
+                type="integer"
+                alert={qualityKpis?.sitesBelowObjective > 0}
+              />
             </div>
 
-            {/* VP Performance Summary */}
+            {/* VP Performance Table */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <div>
@@ -577,15 +568,67 @@ export default function OpsOverview() {
               </div>
               <div className="p-5">
                 {loading ? (
-                  <LoadingSkeleton rows={5} cols={12} />
+                  <LoadingSkeleton rows={5} cols={8} />
+                ) : vpSummary.length === 0 ? (
+                  <div className="text-sm text-gray-400 py-6 text-center">No data for selected filters.</div>
                 ) : (
-                  <SummaryTable
-                    rows={vpSummary}
-                    groupKey="vp"
-                    groupLabel="VP"
-                    onRowClick={setSelectedVP}
-                    selectedRow={selectedVP}
-                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 w-6"></th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">VP</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Jobs</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Safety</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Quality</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Open Def.</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Payroll</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Claims</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Avg Close Days</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {vpSummary.map((row, i) => {
+                          const isSelected = selectedVP === row.vp;
+                          const safety = statusBadge(row.safetyPassRate, 95, 85);
+                          const quality = statusBadge(row.standardAvgScore, 80, 65);
+                          const dot = vpRowStatus(row.safetyPassRate || 0, row.standardAvgScore || 0);
+                          return (
+                            <tr
+                              key={i}
+                              onClick={() => setSelectedVP(isSelected ? null : row.vp)}
+                              className={`border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors
+                                ${isSelected ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                            >
+                              <td className="py-2 px-3">
+                                <span className={`inline-block w-2.5 h-2.5 rounded-full ${dot}`}></span>
+                              </td>
+                              <td className="py-2 px-3 font-medium text-gray-900">{row.vp}</td>
+                              <td className="py-2 px-3 text-gray-700">{row.jobCount}</td>
+                              <td className="py-2 px-3">
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${safety.color}`}>
+                                  {safety.label}
+                                </span>
+                              </td>
+                              <td className="py-2 px-3">
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}>
+                                  {quality.label}
+                                </span>
+                              </td>
+                              <td className={`py-2 px-3 ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                                {row.openDeficiencies}
+                              </td>
+                              <td className="py-2 px-3 text-gray-700">{fmt(row.payroll || null, 'currency')}</td>
+                              <td className={`py-2 px-3 ${row.claims > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                                {row.claims ?? '—'}
+                              </td>
+                              <td className="py-2 px-3 text-gray-700">{row.avgCloseDays ?? '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             </div>
@@ -593,267 +636,299 @@ export default function OpsOverview() {
             {/* Manager Summary */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
               <div className="px-5 py-4 border-b border-gray-100">
-                <div>
-                  <h2 className="text-sm font-semibold text-gray-900">
-                    Manager Summary
-                    {selectedVP && (
-                      <span className="ml-2 text-xs font-normal text-blue-600">
-                        — Filtered to VP: {selectedVP}
-                      </span>
-                    )}
-                  </h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Click a manager to see their site breakdown</p>
-                </div>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Manager Summary
+                  {selectedVP && (
+                    <span className="ml-2 text-xs font-normal text-blue-600">
+                      — Filtered to VP: {selectedVP}
+                    </span>
+                  )}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">Click a manager to see their site breakdown</p>
               </div>
               <div className="p-5">
                 {loading ? (
-                  <LoadingSkeleton rows={8} cols={12} />
+                  <LoadingSkeleton rows={8} cols={8} />
+                ) : filteredManagerSummary.length === 0 ? (
+                  <div className="text-sm text-gray-400 py-6 text-center">No data for selected filters.</div>
                 ) : (
-                  <SummaryTable
-                    rows={filteredManagerSummary}
-                    groupKey="manager"
-                    groupLabel="Manager"
-                    onRowClick={openManagerDrilldown}
-                    selectedRow={drilldown?.type === 'manager' ? drilldown.manager : null}
-                  />
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 w-6"></th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Manager</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">VP</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Jobs</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Safety</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Quality</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Open Def.</th>
+                          <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">Avg Close Days</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredManagerSummary.map((row, i) => {
+                          const isSelected = drilldown?.type === 'manager' && drilldown.manager === row.manager;
+                          const safety = statusBadge(row.safetyPassRate, 95, 85);
+                          const quality = statusBadge(row.standardAvgScore, 80, 65);
+                          const dot = vpRowStatus(row.safetyPassRate || 0, row.standardAvgScore || 0);
+                          return (
+                            <tr
+                              key={i}
+                              onClick={() => openManagerDrilldown(row.manager)}
+                              className={`border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors
+                                ${isSelected ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                            >
+                              <td className="py-2 px-3">
+                                <span className={`inline-block w-2.5 h-2.5 rounded-full ${dot}`}></span>
+                              </td>
+                              <td className="py-2 px-3 font-medium text-gray-900">{row.manager}</td>
+                              <td className="py-2 px-3 text-gray-500 text-xs">{row.vp}</td>
+                              <td className="py-2 px-3 text-gray-700">{row.jobCount}</td>
+                              <td className="py-2 px-3">
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${safety.color}`}>
+                                  {safety.label}
+                                </span>
+                              </td>
+                              <td className="py-2 px-3">
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}>
+                                  {quality.label}
+                                </span>
+                              </td>
+                              <td className={`py-2 px-3 ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
+                                {row.openDeficiencies}
+                              </td>
+                              <td className="py-2 px-3 text-gray-700">{row.avgCloseDays ?? '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* KPI Domain Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* KPI Detail — Collapsible */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <button
+                onClick={() => setKpiDetailOpen(!kpiDetailOpen)}
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+              >
+                <span className="text-sm font-semibold text-gray-700">KPI Detail</span>
+                {kpiDetailOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+              </button>
+              {kpiDetailOpen && (
+                <div className="px-5 pb-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Workforce */}
+                    <KPICard title="Workforce & Labor" icon={Users} color="text-blue-700 bg-blue-50">
+                      {loading || !workforceKpis ? (
+                        <KPICardSkeleton />
+                      ) : (
+                        <>
+                          <KPIRow label="Active Headcount" value={workforceKpis.activeHeadcount} type="integer" />
+                          <KPIRow
+                            label="Turnover Rate"
+                            value={workforceKpis.hasTurnoverData ? workforceKpis.turnoverRate : null}
+                            type="pct"
+                            alert={workforceKpis.turnoverRate > 10}
+                            sub={workforceKpis.hasTurnoverData ? `${workforceKpis.terminations} terminations` : 'No activity'}
+                          />
+                          <KPIRow
+                            label="Overtime %"
+                            value={workforceKpis.hasOvertimeData ? workforceKpis.overtimePct : null}
+                            type="pct"
+                            alert={workforceKpis.overtimePct > 15}
+                            sub={workforceKpis.hasOvertimeData ? `of ${Number(workforceKpis.totalHours).toLocaleString()} total hours` : 'No activity'}
+                          />
+                          <KPIRow
+                            label="Unexcused Absences"
+                            value={workforceKpis.hasAbsenceData ? workforceKpis.unexcusedAbsences : null}
+                            type="integer"
+                            alert={workforceKpis.unexcusedAbsences > 0}
+                          />
+                        </>
+                      )}
+                    </KPICard>
 
-              {/* Workforce */}
-              <KPICard title="Workforce & Labor" icon={Users} color="text-blue-700 bg-blue-50">
-                {loading || !workforceKpis ? (
-                  <KPICardSkeleton />
-                ) : (
-                  <>
-                    <KPIRow label="Active Headcount"  value={workforceKpis.activeHeadcount} type="integer" />
-                    <KPIRow
-                      label="Turnover Rate"
-                      value={workforceKpis.hasTurnoverData ? workforceKpis.turnoverRate : null}
-                      type="pct"
-                      alert={workforceKpis.turnoverRate > 10}
-                      sub={workforceKpis.hasTurnoverData
-                        ? `${workforceKpis.terminations} terminations`
-                        : 'No activity in selected period'}
-                    />
-                    <KPIRow
-                      label="Overtime %"
-                      value={workforceKpis.hasOvertimeData ? workforceKpis.overtimePct : null}
-                      type="pct"
-                      alert={workforceKpis.overtimePct > 15}
-                      sub={workforceKpis.hasOvertimeData
-                        ? `of ${Number(workforceKpis.totalHours).toLocaleString()} total hours`
-                        : 'No activity in selected period'}
-                    />
-                    <KPIRow
-                      label="Unexcused Absences"
-                      value={workforceKpis.hasAbsenceData ? workforceKpis.unexcusedAbsences : null}
-                      type="integer"
-                      alert={workforceKpis.unexcusedAbsences > 0}
-                      sub={workforceKpis.hasAbsenceData ? null : 'No activity in selected period'}
-                    />
-                    {workforceKpis.hasAbsenceData && (
-                      <KPIRow
-                        label="Total Absence Hours"
-                        value={workforceKpis.totalAbsenceHours}
-                        type="integer"
-                      />
-                    )}
-                    {workforceKpis.dataNote && (
-                      <div className="pt-2 border-t border-gray-100 text-xs text-gray-400">
-                        {workforceKpis.dataNote}
-                      </div>
-                    )}
-                  </>
-                )}
-              </KPICard>
+                    {/* Quality */}
+                    <KPICard title="Quality" icon={ClipboardList} color="text-green-700 bg-green-50">
+                      {loading || !qualityKpis ? (
+                        <KPICardSkeleton />
+                      ) : (
+                        <>
+                          <KPIRow label="Avg Inspection Score" value={qualityKpis.avgScore} type="pct" alert={qualityKpis.avgScore < 80} sub={`${Number(qualityKpis.totalInspections).toLocaleString()} inspections`} />
+                          <KPIRow label="Open Deficiencies" value={qualityKpis.openDeficiencies} type="integer" alert={qualityKpis.openDeficiencies > 0} sub={`${Number(qualityKpis.totalDeficiencies).toLocaleString()} total`} />
+                          <KPIRow label="Sites Below Objective" value={qualityKpis.sitesBelowObjective} type="integer" alert={qualityKpis.sitesBelowObjective > 0} sub={`of ${qualityKpis.totalSitesInspected} inspected`} />
+                        </>
+                      )}
+                    </KPICard>
 
-              {/* Quality */}
-              <KPICard title="Quality" icon={ClipboardList} color="text-green-700 bg-green-50">
-                {loading || !qualityKpis ? (
-                  <KPICardSkeleton />
-                ) : (
-                  <>
-                    <KPIRow
-                      label="Avg Inspection Score"
-                      value={qualityKpis.avgScore}
-                      type="pct"
-                      alert={qualityKpis.avgScore < 80}
-                      sub={`${Number(qualityKpis.totalInspections).toLocaleString()} inspections`}
-                    />
-                    <KPIRow
-                      label="Open Deficiencies"
-                      value={qualityKpis.openDeficiencies}
-                      type="integer"
-                      alert={qualityKpis.openDeficiencies > 0}
-                      sub={`${Number(qualityKpis.totalDeficiencies).toLocaleString()} total`}
-                    />
-                    <KPIRow
-                      label="Sites Below Objective"
-                      value={qualityKpis.sitesBelowObjective}
-                      type="integer"
-                      alert={qualityKpis.sitesBelowObjective > 0}
-                      sub={`of ${qualityKpis.totalSitesInspected} inspected`}
-                    />
-                    <KPIRow
-                      label="Avg Variance from Objective"
-                      value={qualityKpis.avgVarianceFromObjective}
-                      type="pct"
-                      alert={qualityKpis.avgVarianceFromObjective < -5}
-                    />
-                    <div className="pt-2 border-t border-gray-100">
-                      <PendingBadge label="Incidents / Good Saves / Compliments pending" />
-                    </div>
-                  </>
-                )}
-              </KPICard>
+                    {/* Payroll */}
+                    <KPICard title="Payroll Actuals" icon={DollarSign} color="text-purple-700 bg-purple-50">
+                      {loading || !financialKpis ? (
+                        <KPICardSkeleton />
+                      ) : financialKpis.hasPayrollData ? (
+                        <>
+                          <KPIRow label="Total Payroll" value={financialKpis.totalPayroll} type="currency" />
+                          <KPIRow label="Regular Pay" value={financialKpis.regularPay} type="currency" />
+                          <KPIRow label="Overtime Pay" value={financialKpis.otPay} type="currency" />
+                          <KPIRow label="Total Hours" value={financialKpis.totalHours} type="integer" />
+                          <KPIRow label="Overtime %" value={financialKpis.otPct} type="pct" alert={financialKpis.otPct > 15} />
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-400 py-2">No payroll data in selected period</div>
+                      )}
+                    </KPICard>
 
-              {/* Payroll & Budget */}
-              <KPICard title="Payroll Actuals" icon={DollarSign} color="text-purple-700 bg-purple-50">
-                {loading || !financialKpis ? (
-                  <KPICardSkeleton />
-                ) : financialKpis.hasPayrollData ? (
-                  <>
-                    <KPIRow
-                      label="Total Payroll"
-                      value={financialKpis.totalPayroll}
-                      type="currency"
-                    />
-                    <KPIRow
-                      label="Regular Pay"
-                      value={financialKpis.regularPay}
-                      type="currency"
-                    />
-                    <KPIRow
-                      label="Overtime Pay"
-                      value={financialKpis.otPay}
-                      type="currency"
-                    />
-                    <KPIRow
-                      label="Total Hours"
-                      value={financialKpis.totalHours}
-                      type="integer"
-                    />
-                    <KPIRow
-                      label="Overtime %"
-                      value={financialKpis.otPct}
-                      type="pct"
-                      alert={financialKpis.otPct > 15}
-                    />
-                    {financialKpis.hasBudgetData && (
-                      <>
-                        <div className="pt-3 mt-3 border-t border-gray-200">
-                          <div className="flex items-center gap-1 text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-2">
-                            Budget
-                            <span className="font-normal normal-case tracking-normal">(system data — under review for accuracy)</span>
-                          </div>
-                        </div>
-                        <KPIRow
-                          label="Budget Labor"
-                          value={financialKpis.budgetLaborDollars}
-                          type="currency"
-                        />
-                        <KPIRow
-                          label="Budget Hours"
-                          value={financialKpis.budgetHours}
-                          type="integer"
-                        />
-                        <KPIRow
-                          label="Variance"
-                          value={financialKpis.laborVariancePct}
-                          type="pct"
-                          alert={financialKpis.laborVariancePct > 0}
-                          sub={financialKpis.laborVariancePct > 0 ? 'Over budget' : 'Under budget'}
-                        />
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-sm text-gray-400 py-2">
-                    No payroll data in selected period
+                    {/* Safety */}
+                    <KPICard title="Safety & Compliance" icon={ShieldCheck} color="text-red-700 bg-red-50">
+                      {loading || !safetyKpis ? (
+                        <KPICardSkeleton />
+                      ) : safetyKpis.hasData ? (
+                        <>
+                          <KPIRow label="Open Claims" value={safetyKpis.openClaims} type="integer" alert={safetyKpis.openClaims > 0} />
+                          <KPIRow label="Out of Work" value={safetyKpis.outOfWork} type="integer" alert={safetyKpis.outOfWork > 0} />
+                          <KPIRow label="Total Incurred" value={safetyKpis.totalIncurred} type="currency" />
+                          <KPIRow label="Recordable Incidents" value={safetyKpis.recordableIncidents} type="integer" sub={`${safetyKpis.totalClaims} total claims`} />
+                          <KPIRow label="Lost Time Incidents" value={safetyKpis.lostTimeIncidents} type="integer" alert={safetyKpis.lostTimeIncidents > 0} />
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-400 py-2">No claims data in selected period</div>
+                      )}
+                    </KPICard>
                   </div>
-                )}
-              </KPICard>
-
-              {/* Safety */}
-              <KPICard title="Safety & Compliance" icon={ShieldCheck} color="text-red-700 bg-red-50">
-                {loading || !safetyKpis ? (
-                  <KPICardSkeleton />
-                ) : safetyKpis.hasData ? (
-                  <>
-                    <KPIRow
-                      label="Open Claims"
-                      value={safetyKpis.openClaims}
-                      type="integer"
-                      alert={safetyKpis.openClaims > 0}
-                    />
-                    <KPIRow
-                      label="Out of Work"
-                      value={safetyKpis.outOfWork}
-                      type="integer"
-                      alert={safetyKpis.outOfWork > 0}
-                    />
-                    <KPIRow
-                      label="Total Incurred"
-                      value={safetyKpis.totalIncurred}
-                      type="currency"
-                    />
-                    <KPIRow
-                      label="Recordable Incidents"
-                      value={safetyKpis.recordableIncidents}
-                      type="integer"
-                      sub={`${safetyKpis.totalClaims} total claims`}
-                    />
-                    <KPIRow
-                      label="Lost Time Incidents"
-                      value={safetyKpis.lostTimeIncidents}
-                      type="integer"
-                      alert={safetyKpis.lostTimeIncidents > 0}
-                    />
-                    {safetyKpis.highRiskSites?.length > 0 && (
-                      <div className="pt-2 border-t border-gray-100">
-                        <div className="text-xs text-gray-500 font-medium mb-1">High Risk Sites</div>
-                        {safetyKpis.highRiskSites.map((s, i) => (
-                          <div key={i} className="flex justify-between text-xs py-0.5">
-                            <span className="text-gray-700 truncate mr-2">{s.name}</span>
-                            <span className="text-gray-500 flex-shrink-0">{s.count} claims</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="pt-2 border-t border-gray-100">
-                      <a href="/portal/safety" className="text-xs text-blue-600 hover:underline">
-                        View full safety detail →
-                      </a>
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="text-sm text-gray-400 py-2">
-                      No claims data in selected period
-                    </div>
-                    <a href="/portal/safety" className="text-xs text-blue-600 hover:underline">
-                      View full safety detail →
-                    </a>
-                  </div>
-                )}
-              </KPICard>
-
+                </div>
+              )}
             </div>
           </>
         )}
 
-        {/* ── VP REPORT TAB ── */}
+        {/* ── TAB 2: INSPECTION DASHBOARD ── */}
+        {activeTab === 'inspection' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Top left: Deficiency Trend */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Deficiency Trend (Weekly %)</h3>
+              {loading || !deficiencyTrend ? (
+                <LoadingSkeleton rows={6} cols={4} />
+              ) : deficiencyTrend.weeks?.length > 0 ? (
+                <DeficiencyTrendChart weeks={deficiencyTrend.weeks} />
+              ) : (
+                <div className="text-sm text-gray-400 py-12 text-center">No data for selected period</div>
+              )}
+            </div>
+
+            {/* Top right: Deficiency by Area */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Deficiency % by Area (Top 10)</h3>
+              {loading || !deficiencyByArea ? (
+                <LoadingSkeleton rows={6} cols={4} />
+              ) : deficiencyByArea.areas?.length > 0 ? (
+                <DeficiencyByAreaChart areas={deficiencyByArea.areas} />
+              ) : (
+                <div className="text-sm text-gray-400 py-12 text-center">No data for selected period</div>
+              )}
+            </div>
+
+            {/* Bottom left: Sites by Deficiency Rate */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Sites by Deficiency Rate</h3>
+              {loading || !sitesByDeficiency ? (
+                <LoadingSkeleton rows={8} cols={5} />
+              ) : sitesByDeficiency.sites?.length > 0 ? (
+                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-white">
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-2 px-2 font-semibold text-gray-500">Site</th>
+                        <th className="text-left py-2 px-2 font-semibold text-gray-500">Manager</th>
+                        <th className="text-right py-2 px-2 font-semibold text-gray-500">Def. %</th>
+                        <th className="text-right py-2 px-2 font-semibold text-gray-500">Deficient</th>
+                        <th className="text-right py-2 px-2 font-semibold text-gray-500">Total Items</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sitesByDeficiency.sites.map((site, i) => (
+                        <tr
+                          key={i}
+                          onClick={() => openSiteDrilldown(site)}
+                          className="border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors"
+                        >
+                          <td className="py-2 px-2 font-medium text-gray-900">{site.jobName}</td>
+                          <td className="py-2 px-2 text-gray-500">{site.manager}</td>
+                          <td className={`py-2 px-2 text-right font-semibold ${
+                            site.deficiencyPct > 5 ? 'text-red-600' : site.deficiencyPct > 3 ? 'text-amber-600' : 'text-green-600'
+                          }`}>
+                            {site.deficiencyPct}%
+                          </td>
+                          <td className="py-2 px-2 text-right text-gray-700">{site.deficientItems}</td>
+                          <td className="py-2 px-2 text-right text-gray-500">{site.totalItems}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-400 py-12 text-center">No data for selected period</div>
+              )}
+            </div>
+
+            {/* Bottom right: Days Since Last Inspection */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Days Since Last Inspection</h3>
+              {loading || !daysSinceInspection ? (
+                <LoadingSkeleton rows={8} cols={4} />
+              ) : daysSinceInspection.sites?.length > 0 ? (
+                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-white">
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-2 px-2 font-semibold text-gray-500">Site</th>
+                        <th className="text-left py-2 px-2 font-semibold text-gray-500">Manager</th>
+                        <th className="text-right py-2 px-2 font-semibold text-gray-500">Days</th>
+                        <th className="text-left py-2 px-2 font-semibold text-gray-500">Last Inspected</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {daysSinceInspection.sites.map((site, i) => (
+                        <tr
+                          key={i}
+                          onClick={() => openSiteDrilldown(site)}
+                          className="border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors"
+                        >
+                          <td className="py-2 px-2 font-medium text-gray-900">{site.jobName}</td>
+                          <td className="py-2 px-2 text-gray-500">{site.manager}</td>
+                          <td className={`py-2 px-2 text-right font-semibold ${
+                            site.daysSince > 180 ? 'text-red-600' : site.daysSince > 90 ? 'text-amber-600' : 'text-gray-700'
+                          }`}>
+                            {site.daysSince}
+                          </td>
+                          <td className="py-2 px-2 text-gray-500">
+                            {site.lastInspectionDate ? new Date(site.lastInspectionDate).toLocaleDateString() : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-400 py-12 text-center">All active sites inspected within 30 days</div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* ── TAB 3: VP REPORT ── */}
         {activeTab === 'vp-report' && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
             <ClipboardList size={40} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-base font-semibold text-gray-700">VP Quarterly Report</h3>
+            <h3 className="text-base font-semibold text-gray-700">VP Report — coming soon</h3>
             <p className="text-sm text-gray-400 mt-2 max-w-sm mx-auto">
-              Auto-generated quarterly performance reports for VPs are coming soon.
-              Data foundation is live — report builder in progress.
+              Select a VP and date range above, then generate a quarterly performance report.
             </p>
           </div>
         )}
@@ -938,6 +1013,114 @@ export default function OpsOverview() {
           </div>
         )}
       </SlidePanel>
+    </div>
+  );
+}
+
+// ─── Chart Components ─────────────────────────────────────────────────────────
+
+function DeficiencyTrendChart({ weeks }) {
+  const labels = weeks.map(w => {
+    const d = new Date(w.weekStart);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  });
+
+  const colors = weeks.map(w => {
+    if (w.deficiencyPct > 5) return 'rgba(239, 68, 68, 0.7)';
+    if (w.deficiencyPct > 3) return 'rgba(245, 158, 11, 0.7)';
+    return 'rgba(34, 197, 94, 0.7)';
+  });
+
+  const data = {
+    labels,
+    datasets: [{
+      label: 'Deficiency %',
+      data: weeks.map(w => w.deficiencyPct),
+      backgroundColor: colors,
+      borderRadius: 3,
+    }],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const w = weeks[ctx.dataIndex];
+            return `${w.deficiencyPct}% (${w.deficientItems}/${w.totalItems})`;
+          },
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { callback: v => `${v}%`, font: { size: 10 } },
+        grid: { color: 'rgba(0,0,0,0.05)' },
+      },
+      x: {
+        ticks: { font: { size: 10 } },
+        grid: { display: false },
+      },
+    },
+  };
+
+  return (
+    <div className="h-[250px]">
+      <Bar data={data} options={options} />
+    </div>
+  );
+}
+
+function DeficiencyByAreaChart({ areas }) {
+  const data = {
+    labels: areas.map(a => a.area.length > 25 ? a.area.slice(0, 25) + '...' : a.area),
+    datasets: [{
+      label: 'Deficiency %',
+      data: areas.map(a => a.deficiencyPct),
+      backgroundColor: areas.map(a => {
+        if (a.deficiencyPct > 5) return 'rgba(239, 68, 68, 0.7)';
+        if (a.deficiencyPct > 3) return 'rgba(245, 158, 11, 0.7)';
+        return 'rgba(34, 197, 94, 0.7)';
+      }),
+      borderRadius: 3,
+    }],
+  };
+
+  const options = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const a = areas[ctx.dataIndex];
+            return `${a.deficiencyPct}% (${a.deficientItems}/${a.totalItems})`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: { callback: v => `${v}%`, font: { size: 10 } },
+        grid: { color: 'rgba(0,0,0,0.05)' },
+      },
+      y: {
+        ticks: { font: { size: 10 } },
+        grid: { display: false },
+      },
+    },
+  };
+
+  return (
+    <div className="h-[300px]">
+      <Bar data={data} options={options} />
     </div>
   );
 }
