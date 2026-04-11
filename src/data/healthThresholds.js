@@ -1,7 +1,7 @@
 /**
  * Department Health threshold rules for the Command Center.
- * Each domain maps to a metric from home-summary hero data,
- * with green/yellow/red thresholds.
+ * Each domain maps to a metric from the home-summary hero data
+ * (sourced from live ops-workspace endpoints).
  *
  * - "min" means >= threshold is that level (higher is better)
  * - "max" means <= threshold is that level (lower is better)
@@ -9,39 +9,31 @@
  */
 export const HEALTH_THRESHOLDS = {
   operations: {
-    metric: 'completionRate',
-    label: 'Completion Rate',
-    format: 'percent',
-    green: { min: 90 },
-    yellow: { min: 75 },
-  },
-  labor: {
-    metric: 'laborVariance',
-    label: 'Budget Variance',
-    format: 'percent',
-    green: { max: 5 },
-    yellow: { max: 10 },
-    invertColor: true,
-    useAbsolute: true, // compare absolute value
-  },
-  quality: {
-    metric: 'caRatio',
-    label: 'CA Ratio',
-    format: 'percent',
-    green: { max: 5 },
-    yellow: { max: 10 },
-    invertColor: true,
-  },
-  timekeeping: {
-    metric: 'acceptanceRate',
-    label: 'Punch Acceptance',
+    metric: 'avgInspectionScore',
+    label: 'Avg Inspection Score',
     format: 'percent',
     green: { min: 90 },
     yellow: { min: 80 },
   },
+  labor: {
+    metric: 'overtimePct',
+    label: 'Overtime %',
+    format: 'percent',
+    green: { max: 10 },
+    yellow: { max: 15 },
+    invertColor: true,
+  },
+  quality: {
+    metric: 'openDeficiencies',
+    label: 'Open Deficiencies',
+    format: 'number',
+    green: { max: 5 },
+    yellow: { max: 15 },
+    invertColor: true,
+  },
   safety: {
-    metric: 'recordableIncidents',
-    label: 'Recordable Incidents',
+    metric: 'openClaims',
+    label: 'Open Claims',
     format: 'number',
     green: { max: 2 },
     yellow: { max: 5 },

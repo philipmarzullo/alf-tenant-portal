@@ -37,29 +37,24 @@ const DOMAIN_ICON_MAP = {
 // KPI selection per domain per tier — the single most important number
 const DOMAIN_KPI_BY_TIER = {
   operations: {
-    operational:  { key: 'completionRate', label: 'Completion Rate', format: 'percent' },
-    managerial:   { key: 'completionRate', label: 'Completion Rate', format: 'percent' },
-    financial:    { key: 'completionRate', label: 'Completion Rate', format: 'percent' },
+    operational:  { key: 'avgInspectionScore', label: 'Avg Inspection Score', format: 'percent' },
+    managerial:   { key: 'avgInspectionScore', label: 'Avg Inspection Score', format: 'percent' },
+    financial:    { key: 'avgInspectionScore', label: 'Avg Inspection Score', format: 'percent' },
   },
   labor: {
-    operational:  { key: 'totalOtHours', label: 'OT Hours', format: 'number' },
-    managerial:   { key: 'totalOtHours', label: 'OT Hours', format: 'number' },
+    operational:  { key: 'overtimePct', label: 'Overtime %', format: 'percent' },
+    managerial:   { key: 'overtimePct', label: 'Overtime %', format: 'percent' },
     financial:    { key: 'laborVariance', label: 'Budget Variance', format: 'signedPercent' },
   },
   quality: {
-    operational:  { key: 'totalAudits', label: 'Total Audits', format: 'number' },
-    managerial:   { key: 'caRatio', label: 'CA Ratio', format: 'percent' },
-    financial:    { key: 'caRatio', label: 'CA Ratio', format: 'percent' },
-  },
-  timekeeping: {
-    operational:  { key: 'acceptanceRate', label: 'Acceptance Rate', format: 'percent' },
-    managerial:   { key: 'acceptanceRate', label: 'Acceptance Rate', format: 'percent' },
-    financial:    { key: 'acceptanceRate', label: 'Acceptance Rate', format: 'percent' },
+    operational:  { key: 'openDeficiencies', label: 'Open Deficiencies', format: 'number' },
+    managerial:   { key: 'openDeficiencies', label: 'Open Deficiencies', format: 'number' },
+    financial:    { key: 'openDeficiencies', label: 'Open Deficiencies', format: 'number' },
   },
   safety: {
-    operational:  { key: 'recordableIncidents', label: 'Recordable Incidents', format: 'number' },
-    managerial:   { key: 'avgTrir', label: 'Avg TRIR', format: 'decimal' },
-    financial:    { key: 'avgTrir', label: 'Avg TRIR', format: 'decimal' },
+    operational:  { key: 'openClaims', label: 'Open Claims', format: 'number' },
+    managerial:   { key: 'openClaims', label: 'Open Claims', format: 'number' },
+    financial:    { key: 'totalIncurred', label: 'Total Incurred', format: 'number' },
   },
 };
 
