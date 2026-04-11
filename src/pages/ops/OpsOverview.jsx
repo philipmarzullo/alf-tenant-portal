@@ -316,7 +316,7 @@ export default function OpsOverview() {
       startDate, endDate,
       ...(vp !== 'all' ? { vp } : {}),
       ...(manager !== 'all' ? { manager } : {}),
-      ...(job !== 'all' ? { jobNumber: job } : {}),
+      ...(job !== 'all' ? { jobName: job } : {}),
     };
     const params = new URLSearchParams(shared).toString();
 
@@ -411,7 +411,7 @@ export default function OpsOverview() {
       const shared = { startDate, endDate };
       if (vp !== 'all') shared.vp = vp;
       if (manager !== 'all') shared.manager = manager;
-      if (job !== 'all') shared.jobNumber = job;
+      if (job !== 'all') shared.jobName = job;
       const qs = new URLSearchParams(shared).toString();
 
       const endpointMap = {
@@ -497,7 +497,7 @@ export default function OpsOverview() {
             >
               <option value="all">(All)</option>
               {jobOptions.map(j => (
-                <option key={j.jobNumber} value={j.jobNumber}>{j.jobName}</option>
+                <option key={j.jobName} value={j.jobName}>{j.jobName}</option>
               ))}
             </select>
           </div>
