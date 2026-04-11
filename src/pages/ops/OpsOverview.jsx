@@ -610,11 +610,9 @@ export default function OpsOverview() {
                 sub="Standard inspections only"
               />
               <MiniKPI
-                label="Sites Below Objective"
-                value={qualityKpis?.sitesBelowObjective}
+                label="Inspections"
+                value={qualityKpis?.totalInspections}
                 type="integer"
-                alert={qualityKpis?.sitesBelowObjective > 0}
-                onClick={qualityKpis?.sitesBelowObjective > 0 ? () => openKpiPanel('belowObj', 'Sites Below Objective') : undefined}
               />
             </div>
 
@@ -982,7 +980,7 @@ export default function OpsOverview() {
                     onChange={e => setDaysActiveOnly(e.target.checked)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
                   />
-                  Active only (within 2 years)
+                  Active only (inspected within 2 years + never inspected)
                 </label>
               </div>
               {loading || !daysSinceInspection ? (
@@ -1030,12 +1028,12 @@ export default function OpsOverview() {
                               <td className="py-2 px-2 font-medium text-gray-900">{site.jobName}</td>
                               <td className="py-2 px-2 text-gray-500">{site.manager}</td>
                               <td className={`py-2 px-2 text-right font-semibold ${
-                                site.daysSince > 180 ? 'text-red-600' : site.daysSince > 90 ? 'text-amber-600' : 'text-gray-700'
+                                site.daysSince >= 9999 ? 'text-red-600' : site.daysSince > 180 ? 'text-red-600' : site.daysSince > 90 ? 'text-amber-600' : 'text-gray-700'
                               }`}>
-                                {site.daysSince}
+                                {site.daysSince >= 9999 ? 'Never' : site.daysSince}
                               </td>
                               <td className="py-2 px-2 text-gray-500">
-                                {site.lastInspectionDate ? new Date(site.lastInspectionDate).toLocaleDateString() : '—'}
+                                {site.daysSince >= 9999 ? '—' : site.lastInspectionDate ? new Date(site.lastInspectionDate).toLocaleDateString() : '—'}
                               </td>
                             </tr>
                           ))}
