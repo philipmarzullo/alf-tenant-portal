@@ -684,8 +684,10 @@ export default function OpsOverview() {
                         {vpSummary.map((row, i) => {
                           const isSelected = selectedVP === row.vp;
                           const safety = statusBadge(row.safetyPassRate, 95, 85);
-                          const quality = statusBadge(row.standardAvgScore, 80, 65, 'No standard inspections');
-                          const dot = vpRowStatus(row.safetyPassRate, row.standardAvgScore);
+                          const quality = row.qualityInspType === 'tiered'
+                            ? { color: 'bg-gray-100 text-gray-500', label: `T · ${row.qualityAvgScore}%`, isNull: false }
+                            : statusBadge(row.qualityAvgScore, 80, 65);
+                          const dot = vpRowStatus(row.safetyPassRate, row.qualityInspType === 'standard' ? row.qualityAvgScore : null);
                           return (
                             <tr
                               key={i}
@@ -704,17 +706,14 @@ export default function OpsOverview() {
                                   {safety.label}
                                 </span>
                               </td>
-                              <td className="py-2 px-3 text-right text-gray-700">{row.standardInspCount || 0}</td>
+                              <td className="py-2 px-3 text-right text-gray-700">{row.qualityInspCount || 0}</td>
                               <td className="py-2 px-3">
                                 <span
                                   className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}
-                                  title={quality.isNull ? quality.nullLabel : undefined}
+                                  title={row.qualityInspType === 'tiered' ? 'Tiered inspection (Level 1/2) — objective is 100% by design, scores reflect task completion rate' : undefined}
                                 >
                                   {quality.label}
                                 </span>
-                                {quality.isNull && quality.nullLabel && (
-                                  <div className="text-[10px] text-gray-400 mt-0.5">{quality.nullLabel}</div>
-                                )}
                               </td>
                               <td className="py-2 px-3 text-right text-gray-700">{row.totalDeficiencies || 0}</td>
                               <td className={`py-2 px-3 text-right ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
@@ -775,8 +774,10 @@ export default function OpsOverview() {
                         {filteredManagerSummary.map((row, i) => {
                           const isSelected = drilldown?.type === 'manager' && drilldown.manager === row.manager;
                           const safety = statusBadge(row.safetyPassRate, 95, 85);
-                          const quality = statusBadge(row.standardAvgScore, 80, 65, 'No standard inspections');
-                          const dot = vpRowStatus(row.safetyPassRate, row.standardAvgScore);
+                          const quality = row.qualityInspType === 'tiered'
+                            ? { color: 'bg-gray-100 text-gray-500', label: `T · ${row.qualityAvgScore}%`, isNull: false }
+                            : statusBadge(row.qualityAvgScore, 80, 65);
+                          const dot = vpRowStatus(row.safetyPassRate, row.qualityInspType === 'standard' ? row.qualityAvgScore : null);
                           return (
                             <tr
                               key={i}
@@ -796,17 +797,14 @@ export default function OpsOverview() {
                                   {safety.label}
                                 </span>
                               </td>
-                              <td className="py-2 px-3 text-right text-gray-700">{row.standardInspCount || 0}</td>
+                              <td className="py-2 px-3 text-right text-gray-700">{row.qualityInspCount || 0}</td>
                               <td className="py-2 px-3">
                                 <span
                                   className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${quality.color}`}
-                                  title={quality.isNull ? quality.nullLabel : undefined}
+                                  title={row.qualityInspType === 'tiered' ? 'Tiered inspection (Level 1/2) — objective is 100% by design, scores reflect task completion rate' : undefined}
                                 >
                                   {quality.label}
                                 </span>
-                                {quality.isNull && quality.nullLabel && (
-                                  <div className="text-[10px] text-gray-400 mt-0.5">{quality.nullLabel}</div>
-                                )}
                               </td>
                               <td className="py-2 px-3 text-right text-gray-700">{row.totalDeficiencies || 0}</td>
                               <td className={`py-2 px-3 text-right ${row.openDeficiencies > 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
