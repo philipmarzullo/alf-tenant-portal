@@ -291,7 +291,7 @@ export default function OpsOverview() {
   const [loadingFilters, setLoadingFilters] = useState(true);
   const [error, setError]                 = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(null);
-  const [kpiDetailOpen, setKpiDetailOpen] = useState(false);
+  // kpiDetailOpen removed — section is always open
 
   // Drilldown state
   const [drilldown, setDrilldown]         = useState(null);
@@ -815,17 +815,12 @@ export default function OpsOverview() {
               </div>
             </div>
 
-            {/* KPI Detail — Collapsible */}
+            {/* KPI Detail */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-              <button
-                onClick={() => setKpiDetailOpen(!kpiDetailOpen)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
-              >
+              <div className="px-5 py-4 border-b border-gray-100">
                 <span className="text-sm font-semibold text-gray-700">KPI Detail</span>
-                {kpiDetailOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-              </button>
-              {kpiDetailOpen && (
-                <div className="px-5 pb-5">
+              </div>
+              <div className="px-5 pb-5 pt-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Workforce */}
                     <KPICard title="Workforce & Labor" icon={Users} color="text-blue-700 bg-blue-50">
@@ -921,7 +916,6 @@ export default function OpsOverview() {
                     </KPICard>
                   </div>
                 </div>
-              )}
             </div>
           </>
         )}
