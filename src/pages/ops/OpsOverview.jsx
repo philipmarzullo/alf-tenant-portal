@@ -291,7 +291,6 @@ export default function OpsOverview() {
   const [activeTab, setActiveTab]         = useState('executive');
   const [selectedVP, setSelectedVP]       = useState(null);
   const [loading, setLoading]             = useState(false);
-  const [pdfGenerating, setPdfGenerating] = useState(false);
   const [loadingFilters, setLoadingFilters] = useState(true);
   const [error, setError]                 = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(null);
@@ -381,21 +380,14 @@ export default function OpsOverview() {
     ? managerSummary.filter(r => r.vp === selectedVP)
     : managerSummary;
 
-  // ── PDF export
-  const handleDownloadPdf = useCallback(async () => {
-    setPdfGenerating(true);
-    try {
-      await generateOpsWorkspacePdf({
-        filters: { vp, manager, job, startDate, endDate },
-        workforceKpis, qualityKpis, financialKpis, safetyKpis,
-        vpSummary,
-        managerSummary: filteredManagerSummary,
-      });
-    } catch (err) {
-      console.error('PDF generation error:', err);
-    } finally {
-      setPdfGenerating(false);
-    }
+  // ── PDF export (opens print-ready popup)
+  const handleDownloadPdf = useCallback(() => {
+    generateOpsWorkspacePdf({
+      filters: { vp, manager, job, startDate, endDate },
+      workforceKpis, qualityKpis, financialKpis, safetyKpis,
+      vpSummary,
+      managerSummary: filteredManagerSummary,
+    });
   }, [vp, manager, job, startDate, endDate, workforceKpis, qualityKpis, financialKpis, safetyKpis, vpSummary, filteredManagerSummary]);
 
   // ── Drilldown handlers
@@ -607,16 +599,14 @@ export default function OpsOverview() {
         {/* ── TAB 1: EXECUTIVE SUMMARY ── */}
         {activeTab === 'executive' && (
           <>
-            {/* PDF download */}
+            {/* Print / Save as PDF */}
             <div className="flex justify-end">
               <button
                 onClick={handleDownloadPdf}
-                disabled={pdfGenerating || loading || !workforceKpis}
+                disabled={loading || !workforceKpis}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
               >
-                {pdfGenerating
-                  ? <><RefreshCw size={13} className="animate-spin" /> Generating…</>
-                  : <><FileDown size={13} /> Download PDF</>}
+                <FileDown size={13} /> Print / Save PDF
               </button>
             </div>
 
