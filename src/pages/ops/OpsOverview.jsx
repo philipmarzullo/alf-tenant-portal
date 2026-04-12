@@ -282,7 +282,7 @@ export default function OpsOverview() {
   const [sitesByDeficiency, setSitesByDeficiency] = useState(null);
   const [daysSinceInspection, setDaysSinceInspection] = useState(null);
   const [daysActiveOnly, setDaysActiveOnly]       = useState(true);
-  const [daysSort, setDaysSort]                   = useState({ col: 'daysSince', dir: 'desc' });
+  const [daysSort, setDaysSort]                   = useState({ col: 'daysSince', dir: 'asc' });
 
   // UI state
   const [activeTab, setActiveTab]         = useState('executive');
