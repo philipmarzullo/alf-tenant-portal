@@ -93,23 +93,29 @@ function buildHeroCards(data) {
 
   function card(label, value, alert = false) {
     return `
-      <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 10px;text-align:center;background:#fff;">
-        <div style="font-size:20px;font-weight:700;${alertStyle(alert)}">${value}</div>
-        <div style="font-size:10px;color:#6b7280;margin-top:3px;">${label}</div>
-      </div>`;
+      <td style="width:25%;padding:5px;">
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 10px;text-align:center;background:#fff;">
+          <div style="font-size:20px;font-weight:700;${alertStyle(alert)}">${value}</div>
+          <div style="font-size:10px;color:#6b7280;margin-top:3px;">${label}</div>
+        </div>
+      </td>`;
   }
 
   return `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;">
-      ${card('Active Headcount', fmtNum(w?.activeHeadcount))}
-      ${card('Turnover Rate', w?.hasTurnoverData ? fmtPct(w?.turnoverRate) : '—', w?.turnoverRate > 10)}
-      ${card('Open Deficiencies', fmtNum(q?.openDeficiencies), q?.openDeficiencies > 0)}
-      ${card('Open Claims', fmtNum(s?.openClaims), s?.openClaims > 0)}
-      ${card('Total Payroll YTD', fmtCurrency(f?.totalPayroll))}
-      ${card('Overtime %', w?.hasOvertimeData ? fmtPct(w?.overtimePct) : '—', w?.overtimePct > 15)}
-      ${card('Avg Inspection Score', fmtPct(q?.avgScore), q?.avgScore != null && q?.avgScore < 80)}
-      ${card('Inspections', fmtNum(q?.totalInspections))}
-    </div>`;
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;table-layout:fixed;">
+      <tr>
+        ${card('Active Headcount', fmtNum(w?.activeHeadcount))}
+        ${card('Turnover Rate', w?.hasTurnoverData ? fmtPct(w?.turnoverRate) : '—', w?.turnoverRate > 10)}
+        ${card('Open Deficiencies', fmtNum(q?.openDeficiencies), q?.openDeficiencies > 0)}
+        ${card('Open Claims', fmtNum(s?.openClaims), s?.openClaims > 0)}
+      </tr>
+      <tr>
+        ${card('Total Payroll YTD', fmtCurrency(f?.totalPayroll))}
+        ${card('Overtime %', w?.hasOvertimeData ? fmtPct(w?.overtimePct) : '—', w?.overtimePct > 15)}
+        ${card('Avg Inspection Score', fmtPct(q?.avgScore), q?.avgScore != null && q?.avgScore < 80)}
+        ${card('Inspections', fmtNum(q?.totalInspections))}
+      </tr>
+    </table>`;
 }
 
 function buildVpTable(rows) {
@@ -230,13 +236,13 @@ function buildKpiDetail(data) {
 
   function kpiRow(label, value, alert = false, sub = null) {
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;">
-        <span style="font-size:11px;color:#6b7280;">${label}</span>
-        <div style="text-align:right;">
+      <table style="width:100%;border-collapse:collapse;"><tr>
+        <td style="font-size:11px;color:#6b7280;padding:3px 0;">${label}</td>
+        <td style="text-align:right;padding:3px 0;">
           <span style="font-size:12px;font-weight:600;${alertStyle(alert)}">${value}</span>
           ${sub ? `<div style="font-size:10px;color:#9ca3af;">${sub}</div>` : ''}
-        </div>
-      </div>`;
+        </td>
+      </tr></table>`;
   }
 
   function cardWrap(title, headerBg, headerColor, content) {
@@ -305,12 +311,16 @@ function buildKpiDetail(data) {
   return `
     <div style="page-break-before:always;margin-bottom:20px;">
       <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:10px;">KPI Detail</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        ${cardWrap('Workforce & Labor', '#eff6ff', '#1d4ed8', workforceContent)}
-        ${cardWrap('Quality', '#f0fdf4', '#15803d', qualityContent)}
-        ${cardWrap('Payroll Actuals', '#faf5ff', '#7e22ce', payrollContent)}
-        ${cardWrap('Safety & Compliance', '#fef2f2', '#b91c1c', safetyContent)}
-      </div>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <tr>
+          <td style="width:50%;padding:6px;vertical-align:top;">${cardWrap('Workforce & Labor', '#eff6ff', '#1d4ed8', workforceContent)}</td>
+          <td style="width:50%;padding:6px;vertical-align:top;">${cardWrap('Quality', '#f0fdf4', '#15803d', qualityContent)}</td>
+        </tr>
+        <tr>
+          <td style="width:50%;padding:6px;vertical-align:top;">${cardWrap('Payroll Actuals', '#faf5ff', '#7e22ce', payrollContent)}</td>
+          <td style="width:50%;padding:6px;vertical-align:top;">${cardWrap('Safety & Compliance', '#fef2f2', '#b91c1c', safetyContent)}</td>
+        </tr>
+      </table>
     </div>`;
 }
 
@@ -340,7 +350,7 @@ export async function generateOpsWorkspacePdf(data) {
     </div>`;
 
   const container = document.createElement('div');
-  container.style.cssText = 'position:absolute;left:-9999px;top:0;width:10in;';
+  container.style.cssText = 'position:fixed;left:0;top:0;width:10in;z-index:-9999;opacity:0;pointer-events:none;';
   container.innerHTML = html;
   document.body.appendChild(container);
 
