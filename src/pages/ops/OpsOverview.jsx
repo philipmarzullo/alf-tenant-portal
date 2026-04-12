@@ -2,9 +2,10 @@
 // Operations Workspace — three-tab layout with shared filter bar.
 // Tab 1: Executive Summary (KPI cards + VP/Manager tables)
 // Tab 2: Inspection Dashboard (charts + tables)
-// Tab 3: VP Report (placeholder)
+// Tab 3: VP Report
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import VPReportTab from './VPReportTab';
 import {
   Users, TrendingUp, ShieldCheck, DollarSign,
   ChevronDown, ChevronUp, ChevronRight, Info, RefreshCw,
@@ -1075,13 +1076,18 @@ export default function OpsOverview() {
 
         {/* ── TAB 3: VP REPORT ── */}
         {activeTab === 'vp-report' && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
-            <ClipboardList size={40} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-base font-semibold text-gray-700">VP Report — coming soon</h3>
-            <p className="text-sm text-gray-400 mt-2 max-w-sm mx-auto">
-              Select a VP and date range above, then generate a quarterly performance report.
-            </p>
-          </div>
+          <VPReportTab
+            vp={vp}
+            startDate={startDate}
+            endDate={endDate}
+            workforceKpis={workforceKpis}
+            qualityKpis={qualityKpis}
+            financialKpis={financialKpis}
+            safetyKpis={safetyKpis}
+            deficiencyByArea={deficiencyByArea}
+            vpSummary={vpSummary}
+            tenantId={tenantId}
+          />
         )}
 
       </div>
