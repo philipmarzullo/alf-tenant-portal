@@ -115,11 +115,12 @@ function KPICard({ title, icon: Icon, color, children }) {
   );
 }
 
-function KPIRow({ label, value, type, sub, alert, onClick }) {
+function KPIRow({ label, value, type, sub, alert, onClick, title }) {
   return (
     <div
       className={`flex items-center justify-between ${onClick ? 'cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors' : ''}`}
       onClick={onClick}
+      title={title}
     >
       <span className="text-xs text-gray-500 flex items-center gap-1">
         {label}
@@ -429,14 +430,20 @@ export default function OpsOverview() {
       if (vp !== 'all') shared.vp = vp;
       if (manager !== 'all') shared.manager = manager;
       if (job !== 'all') shared.jobName = job;
-      const qs = new URLSearchParams(shared).toString();
 
       const endpointMap = {
-        absences: 'absence-detail',
+        'absences-pto':   'absence-detail',
+        'absences-sick':  'absence-detail',
+        'absences-other': 'absence-detail',
         deficiencies: 'open-deficiencies-detail',
         belowObj: 'sites-below-objective',
         turnover: 'turnover-detail',
       };
+      const categoryMap = { 'absences-pto': 'pto', 'absences-sick': 'sick', 'absences-other': 'other' };
+      if (categoryMap[type]) {
+        shared.absenceCategory = categoryMap[type];
+      }
+      const qs = new URLSearchParams(shared).toString();
       const res = await apiFetch(`/api/ops-workspace/${tenantId}/${endpointMap[type]}?${qs}`);
       setKpiPanelData(res.rows || []);
     } catch (err) {
@@ -845,13 +852,18 @@ export default function OpsOverview() {
                             alert={workforceKpis.overtimePct > 15}
                             sub={workforceKpis.hasOvertimeData ? `of ${Number(workforceKpis.totalHours).toLocaleString()} total hours` : 'No activity'}
                           />
-                          <KPIRow
-                            label="Unexcused Absences"
-                            value={workforceKpis.hasAbsenceData ? workforceKpis.unexcusedAbsences : null}
-                            type="integer"
-                            alert={workforceKpis.unexcusedAbsences > 0}
-                            onClick={workforceKpis.unexcusedAbsences > 0 ? () => openKpiPanel('absences', 'Unexcused Absences') : undefined}
-                          />
+                          <KPIRow label="Paid Time Off" value={workforceKpis.hasAbsenceData ? workforceKpis.ptoCount : null}
+                            type="integer" sub={`${fmt(workforceKpis.ptoHours, 'integer')} hrs`}
+                            onClick={() => openKpiPanel('absences-pto', 'Paid Time Off')} />
+                          <KPIRow label="Sick Days" value={workforceKpis.hasAbsenceData ? workforceKpis.sickCount : null}
+                            type="integer" alert={workforceKpis.activeHeadcount > 0 && (workforceKpis.sickCount / workforceKpis.activeHeadcount) > 0.15}
+                            sub={`${fmt(workforceKpis.sickHours, 'integer')} hrs`}
+                            onClick={() => openKpiPanel('absences-sick', 'Sick Days')} />
+                          <KPIRow label="Other Absences" value={workforceKpis.hasAbsenceData ? workforceKpis.otherAbsenceCount : null}
+                            type="integer" alert={workforceKpis.otherAbsenceCount > 0}
+                            sub={`${fmt(workforceKpis.otherAbsenceHours, 'integer')} hrs`}
+                            title="May include unscheduled absences"
+                            onClick={workforceKpis.otherAbsenceCount > 0 ? () => openKpiPanel('absences-other', 'Other Absences') : undefined} />
                         </>
                       )}
                     </KPICard>
@@ -1186,7 +1198,23 @@ export default function OpsOverview() {
 
 function KpiDetailTable({ type, data, sort, setSort }) {
   const columns = {
-    absences: [
+    'absences-pto': [
+      { key: 'employeeName', label: 'Employee', align: 'left' },
+      { key: 'jobName', label: 'Job Name', align: 'left' },
+      { key: 'manager', label: 'Manager', align: 'left' },
+      { key: 'absenceDate', label: 'Date', align: 'left' },
+      { key: 'reason', label: 'Reason', align: 'left' },
+      { key: 'hours', label: 'Hours', align: 'right' },
+    ],
+    'absences-sick': [
+      { key: 'employeeName', label: 'Employee', align: 'left' },
+      { key: 'jobName', label: 'Job Name', align: 'left' },
+      { key: 'manager', label: 'Manager', align: 'left' },
+      { key: 'absenceDate', label: 'Date', align: 'left' },
+      { key: 'reason', label: 'Reason', align: 'left' },
+      { key: 'hours', label: 'Hours', align: 'right' },
+    ],
+    'absences-other': [
       { key: 'employeeName', label: 'Employee', align: 'left' },
       { key: 'jobName', label: 'Job Name', align: 'left' },
       { key: 'manager', label: 'Manager', align: 'left' },

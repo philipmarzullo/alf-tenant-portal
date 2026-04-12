@@ -19,7 +19,9 @@ function buildVPReportPrompt(data) {
       autoLines.push(`Overtime: ${w.overtimePct}% of ${Number(w.totalHours).toLocaleString()} total hours`);
     }
     if (w.hasAbsenceData) {
-      autoLines.push(`Unexcused Absences: ${w.unexcusedAbsences}`);
+      autoLines.push(`PTO: ${w.ptoCount} occurrences (${w.ptoHours} hrs)`);
+      autoLines.push(`Sick Days: ${w.sickCount} occurrences (${w.sickHours} hrs)`);
+      autoLines.push(`Other Absences: ${w.otherAbsenceCount} occurrences (${w.otherAbsenceHours} hrs)`);
     }
   }
 

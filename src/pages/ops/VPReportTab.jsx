@@ -446,10 +446,9 @@ export default function VPReportTab({
                   ? fmt(workforceKpis.overtimePct, 'pct')
                   : '—'}
               />
-              <DataRow
-                label="Unexcused Absences"
-                value={workforceKpis.hasAbsenceData ? fmt(workforceKpis.unexcusedAbsences, 'integer') : '—'}
-              />
+              <DataRow label="Paid Time Off" value={workforceKpis.hasAbsenceData ? `${fmt(workforceKpis.ptoCount, 'integer')} · ${fmt(workforceKpis.ptoHours, 'integer')} hrs` : '—'} />
+              <DataRow label="Sick Days" value={workforceKpis.hasAbsenceData ? `${fmt(workforceKpis.sickCount, 'integer')} · ${fmt(workforceKpis.sickHours, 'integer')} hrs` : '—'} />
+              <DataRow label="Other Absences" value={workforceKpis.hasAbsenceData ? `${fmt(workforceKpis.otherAbsenceCount, 'integer')} · ${fmt(workforceKpis.otherAbsenceHours, 'integer')} hrs` : '—'} />
             </>
           ) : <p className="text-gray-400 text-xs">Loading…</p>}
         </DataCard>
